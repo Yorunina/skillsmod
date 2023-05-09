@@ -72,6 +72,14 @@ public class PlayerAttributes {
 			Double.MAX_VALUE
 	).setTracked(true);
 
+	public static final Identifier MAX_AIR_ID = SkillsMod.createAttribute("player", "max_air");
+	public static final EntityAttribute MAX_AIR = create(
+			MAX_AIR_ID,
+			300.0,
+			0.0,
+			Double.MAX_VALUE
+	).setTracked(true);
+
 	private static EntityAttribute create(Identifier id, double fallback, double min, double max) {
 		return new ClampedEntityAttribute(
 				"attribute.name." + id.getPath(),
@@ -90,5 +98,6 @@ public class PlayerAttributes {
 		registrar.register(Registries.ATTRIBUTE, JUMP_ID, JUMP);
 		registrar.register(Registries.ATTRIBUTE, RESISTANCE_ID, RESISTANCE);
 		registrar.register(Registries.ATTRIBUTE, MINING_SPEED_ID, MINING_SPEED);
+		registrar.register(Registries.ATTRIBUTE, MAX_AIR_ID, MAX_AIR);
 	}
 }

@@ -23,6 +23,7 @@ public abstract class PlayerEntityMixin {
 				.add(PlayerAttributes.JUMP)
 				.add(PlayerAttributes.RESISTANCE)
 				.add(PlayerAttributes.MINING_SPEED)
+				.add(PlayerAttributes.MAX_AIR)
 		);
 	}
 
