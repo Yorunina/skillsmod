@@ -8,8 +8,7 @@ import net.puffish.skillsmod.api.json.JsonElementWrapper;
 import net.puffish.skillsmod.api.json.JsonPath;
 import net.puffish.skillsmod.utils.PathUtils;
 import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.failure.Failure;
-import net.puffish.skillsmod.api.utils.failure.SingleFailure;
+import net.puffish.skillsmod.api.utils.Failure;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -29,9 +28,9 @@ public class PackConfigReader extends ConfigReader {
 
 	public Result<JsonElementWrapper, Failure> readResource(Identifier id, Resource resource) {
 		try (var reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
-			return JsonElementWrapper.parseReader(reader, JsonPath.createNamed(id.toString()));
+			return JsonElementWrapper.parseReader(reader, JsonPath.named(id.toString()));
 		} catch (Exception e) {
-			return Result.failure(SingleFailure.of("Failed to read resource `" + id + "`"));
+			return Result.failure(Failure.message("Failed to read resource `" + id + "`"));
 		}
 	}
 
@@ -42,9 +41,9 @@ public class PackConfigReader extends ConfigReader {
 		try {
 			return readResource(id, resourceManager.getResource(id));
 		} catch (FileNotFoundException e) {
-			return Result.failure(SingleFailure.of("Resource `" + id + "` does not exist"));
+			return Result.failure(Failure.message("Resource `" + id + "` does not exist"));
 		} catch (IOException e) {
-			return Result.failure(SingleFailure.of("Failed to read resource `" + id + "`"));
+			return Result.failure(Failure.message("Failed to read resource `" + id + "`"));
 		}
 	}
 
