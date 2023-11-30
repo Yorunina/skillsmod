@@ -4,7 +4,7 @@ import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.JsonElementWrapper;
 import net.puffish.skillsmod.api.json.JsonObjectWrapper;
 import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.failure.Failure;
+import net.puffish.skillsmod.api.utils.Failure;
 
 public final class DamageTypeTagCondition implements Condition<String> {
 	private DamageTypeTagCondition() {
