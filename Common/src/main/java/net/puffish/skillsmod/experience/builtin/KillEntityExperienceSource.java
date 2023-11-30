@@ -25,8 +25,7 @@ import net.puffish.skillsmod.api.experience.calculation.parameter.ParameterFacto
 import net.puffish.skillsmod.api.json.JsonElementWrapper;
 import net.puffish.skillsmod.api.json.JsonObjectWrapper;
 import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.failure.Failure;
-import net.puffish.skillsmod.api.utils.failure.ManyFailures;
+import net.puffish.skillsmod.api.utils.Failure;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -88,7 +87,7 @@ public class KillEntityExperienceSource implements ExperienceSource {
 					optAntiFarming
 			));
 		} else {
-			return Result.failure(ManyFailures.ofList(failures));
+			return Result.failure(Failure.fromMany(failures));
 		}
 	}
 
@@ -124,7 +123,7 @@ public class KillEntityExperienceSource implements ExperienceSource {
 					return Result.success(Optional.empty());
 				}
 			} else {
-				return Result.failure(ManyFailures.ofList(failures));
+				return Result.failure(Failure.fromMany(failures));
 			}
 		}
 	}
