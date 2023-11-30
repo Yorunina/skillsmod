@@ -334,6 +334,10 @@ public class SkillsMod {
 		});
 	}
 
+	public Optional<Boolean> hasExperience(Identifier categoryId) {
+		return getCategory(categoryId).map(category -> category.getExperience().isPresent());
+	}
+
 	public void addExperience(ServerPlayerEntity player, Identifier categoryId, int amount) {
 		getCategory(categoryId).ifPresent(category -> {
 			if (category.getExperience().isEmpty()) {
@@ -418,10 +422,17 @@ public class SkillsMod {
 		});
 	}
 
-	public Optional<Integer> getRequiredExperience(ServerPlayerEntity player, Identifier categoryId) {
+	public Optional<Integer> getRequiredExperience(ServerPlayerEntity player, Identifier categoryId, int level) {
 		return getCategory(categoryId).map(category -> {
 			var categoryData = getPlayerData(player).getCategoryData(category);
-			return categoryData.getRequiredExperience(category);
+			return categoryData.getRequiredExperience(category, level);
+		});
+	}
+
+	public Optional<Integer> getRequiredTotalExperience(ServerPlayerEntity player, Identifier categoryId, int level) {
+		return getCategory(categoryId).map(category -> {
+			var categoryData = getPlayerData(player).getCategoryData(category);
+			return categoryData.getRequiredTotalExperience(category, level);
 		});
 	}
 
@@ -494,11 +505,12 @@ public class SkillsMod {
 	}
 
 	private void syncExperience(ServerPlayerEntity player, CategoryConfig category, CategoryData categoryData) {
+		int level = categoryData.getCurrentLevel(category);
 		packetSender.send(player, ExperienceUpdateOutPacket.write(
 				category.getId(),
-				categoryData.getCurrentLevel(category),
+				level,
 				categoryData.getCurrentExperience(category),
-				categoryData.getRequiredExperience(category)
+				categoryData.getRequiredExperience(category, level)
 		));
 	}
 
