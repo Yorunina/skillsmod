@@ -596,7 +596,12 @@ public class SkillsScreen extends Screen {
 			);
 
 			if (isInsideTab(mouse, i)) {
-				tooltip = textRenderer.wrapLines(category.getTitle(), LINE_WIDTH);
+				var lines = new ArrayList<OrderedText>();
+				lines.add(category.getTitle().asOrderedText());
+				if (client.options.advancedItemTooltips) {
+					lines.add(new LiteralText(category.getId().toString()).formatted(Formatting.DARK_GRAY).asOrderedText());
+				}
+				tooltip = lines;
 			}
 		}
 
