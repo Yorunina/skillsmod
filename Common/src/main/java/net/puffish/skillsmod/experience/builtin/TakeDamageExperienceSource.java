@@ -16,6 +16,7 @@ import net.puffish.skillsmod.api.experience.calculation.condition.DamageTypeCond
 import net.puffish.skillsmod.api.experience.calculation.condition.DamageTypeTagCondition;
 import net.puffish.skillsmod.api.experience.calculation.condition.EntityTypeCondition;
 import net.puffish.skillsmod.api.experience.calculation.condition.EntityTypeTagCondition;
+import net.puffish.skillsmod.api.experience.calculation.parameter.AttributeParameter;
 import net.puffish.skillsmod.api.experience.calculation.parameter.EffectParameter;
 import net.puffish.skillsmod.api.experience.calculation.parameter.ParameterFactory;
 import net.puffish.skillsmod.api.json.JsonObjectWrapper;
@@ -39,6 +40,7 @@ public class TakeDamageExperienceSource implements ExperienceSource {
 
 	private static final Map<String, ParameterFactory<Context>> PARAMETERS = Map.ofEntries(
 			Map.entry("player_effect", EffectParameter.factory().map(p -> p.map(Context::player))),
+			Map.entry("player_attribute", AttributeParameter.factory().map(p -> p.map(Context::player))),
 			Map.entry("damage", ParameterFactory.simple(ctx -> (double) ctx.damage()))
 	);
 
