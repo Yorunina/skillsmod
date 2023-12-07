@@ -1,5 +1,5 @@
 plugins {
-    id("fabric-loom") version "1.1-SNAPSHOT"
+    id("dev.architectury.loom")
     id("checkstyle")
 }
 
@@ -21,8 +21,6 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:${project.properties["junit_version"]}")
 }
 
-loom {
-    mixin {
-        useLegacyMixinAp.set(false)
-    }
+tasks.test {
+    useJUnitPlatform()
 }
