@@ -6,12 +6,7 @@ import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.hud.InGameHud;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.advancement.AdvancementObtainedStatus;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.OrderedText;
@@ -21,7 +16,7 @@ import net.minecraft.text.Texts;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec2f;
+import net.minecraft.util.math.Vector4f;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.client.SkillsClientMod;
 import net.puffish.skillsmod.client.data.ClientFrameData;
@@ -30,11 +25,13 @@ import net.puffish.skillsmod.client.data.ClientSkillCategoryData;
 import net.puffish.skillsmod.client.data.ClientSkillData;
 import net.puffish.skillsmod.client.data.ClientSkillDefinitionData;
 import net.puffish.skillsmod.client.network.packets.out.SkillClickOutPacket;
+import net.puffish.skillsmod.client.rendering.ConnectionBatchedRenderer;
+import net.puffish.skillsmod.client.rendering.ItemBatchedRenderer;
+import net.puffish.skillsmod.client.rendering.TextureBatchedRenderer;
 import net.puffish.skillsmod.skill.SkillState;
 import net.puffish.skillsmod.utils.Bounds2i;
 import net.puffish.skillsmod.utils.Vec2i;
 import org.lwjgl.glfw.GLFW;
-import org.lwjgl.opengl.GL11;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,9 +56,12 @@ public class SkillsScreen extends Screen {
 	private static final int HALF_FRAME_WIDTH = FRAME_WIDTH / 2;
 	private static final int HALF_FRAME_HEIGHT = FRAME_HEIGHT / 2;
 
+	private static final Vector4f COLOR_WHITE = new Vector4f(1f, 1f, 1f, 1f);
+	private static final Vector4f COLOR_GRAY = new Vector4f(0.25f, 0.25f, 0.25f, 1f);
+
 	private final List<ClientSkillCategoryData> categories;
 
-	private int activeCategory = 0;
+	private ClientSkillCategoryData activeCategory;
 
 	private float minScale = 1f;
 	private float maxScale = 1f;
@@ -89,15 +89,7 @@ public class SkillsScreen extends Screen {
 	public SkillsScreen(List<ClientSkillCategoryData> categories) {
 		super(ScreenTexts.EMPTY);
 		this.categories = categories;
-	}
-
-	private ClientSkillCategoryData getActiveCategory() {
-		return categories.get(activeCategory);
-	}
-
-	private void setActiveCategory(int activeCategory) {
-		this.activeCategory = activeCategory;
-		resize();
+		this.activeCategory = categories.get(0);
 	}
 
 	@Override
@@ -125,7 +117,7 @@ public class SkillsScreen extends Screen {
 		this.x = this.width / 2;
 		this.y = this.height / 2;
 
-		this.bounds = getActiveCategory().getBounds();
+		this.bounds = activeCategory.getBounds();
 		this.bounds.grow(CONTENT_GROW);
 		this.bounds.extend(new Vec2i(contentPaddingLeft - this.x, contentPaddingTop - this.y));
 		this.bounds.extend(new Vec2i(this.width - this.x - contentPaddingRight, this.height - this.y - contentPaddingBottom));
@@ -188,8 +180,8 @@ public class SkillsScreen extends Screen {
 		var transformedMouse = getTransformedMousePos(mouseX, mouseY);
 
 		if (isInsideContent(mouse)) {
-			for (var skill : getActiveCategory().getSkills().values()) {
-				var definition = getActiveCategory().getDefinitions().get(skill.getDefinitionId());
+			for (var skill : activeCategory.getSkills().values()) {
+				var definition = activeCategory.getDefinitions().get(skill.getDefinitionId());
 				if (definition == null) {
 					continue;
 				}
@@ -197,7 +189,7 @@ public class SkillsScreen extends Screen {
 				if (isInsideSkill(transformedMouse, skill, definition)) {
 					SkillsClientMod.getInstance()
 							.getPacketSender()
-							.send(SkillClickOutPacket.write(getActiveCategory().getId(), skill.getId()));
+							.send(SkillClickOutPacket.write(activeCategory.getId(), skill.getId()));
 				}
 			}
 
@@ -212,7 +204,8 @@ public class SkillsScreen extends Screen {
 
 		for (var i = 0; i < categories.size(); i++) {
 			if (isInsideTab(mouse, i)) {
-				setActiveCategory(i);
+				activeCategory = categories.get(i);
+				resize();
 			}
 		}
 
@@ -288,50 +281,46 @@ public class SkillsScreen extends Screen {
 		y = Math.max(y, Math.round(height - contentPaddingBottom - bounds.max().y * scale));
 	}
 
-	private void drawIcon(MatrixStack matrices, ClientIconData icon, float sizeScale, int x, int y) {
+	private void drawIcon(MatrixStack matrices, TextureBatchedRenderer textureRenderer, ItemBatchedRenderer itemRenderer, ClientIconData icon, float sizeScale, int x, int y) {
 		if (client == null) {
 			return;
 		}
 
+		matrices.push();
+
 		if (icon instanceof ClientIconData.ItemIconData itemIcon) {
-			matrices.push();
-			matrices.translate(x * (1f - sizeScale), y * (1f - sizeScale), 0);
+			matrices.translate(x * (1f - sizeScale), y * (1f - sizeScale), 1f);
 			matrices.scale(sizeScale, sizeScale, 1);
-			DrawUtils.drawItem(
+			itemRenderer.emitItem(
 					matrices,
-					x - 8,
-					y - 8,
-					itemIcon.getItem()
+					itemIcon.getItem(),
+					x, y
 			);
-			matrices.pop();
 		} else if (icon instanceof ClientIconData.EffectIconData effectIcon) {
+			matrices.translate(0f, 0f, 1f);
 			var sprite = client.getStatusEffectSpriteManager().getSprite(effectIcon.getEffect());
 			int halfSize = Math.round(9f * sizeScale);
 			var size = halfSize * 2;
-			RenderSystem.setShaderTexture(0, sprite.getAtlas().getId());
-			DrawUtils.drawSingleSprite(
-					matrices,
-					x - halfSize,
-					y - halfSize,
-					size,
-					size,
-					sprite
+			textureRenderer.emitSpriteStretch(
+					matrices, sprite,
+					x - halfSize, y - halfSize, size, size,
+					COLOR_WHITE
 			);
 		} else if (icon instanceof ClientIconData.TextureIconData textureIcon) {
-			int halfSize = Math.round(8f * sizeScale);
+			matrices.translate(0f, 0f, 1f);
+			var halfSize = Math.round(8f * sizeScale);
 			var size = halfSize * 2;
-			RenderSystem.setShaderTexture(0, textureIcon.getTexture());
-			DrawUtils.drawSingleTexture(
-					matrices,
-					x - halfSize,
-					y - halfSize,
-					size,
-					size
+			textureRenderer.emitTexture(
+					matrices, textureIcon.getTexture(),
+					x - halfSize, y - halfSize, size, size,
+					COLOR_WHITE
 			);
 		}
+
+		matrices.pop();
 	}
 
-	private void drawFrame(MatrixStack matrices, ClientFrameData frame, float sizeScale, int x, int y, SkillState state) {
+	private void drawFrame(MatrixStack matrices, TextureBatchedRenderer textureRenderer, ClientFrameData frame, float sizeScale, int x, int y, SkillState state) {
 		if (client == null) {
 			return;
 		}
@@ -341,67 +330,64 @@ public class SkillsScreen extends Screen {
 
 		if (frame instanceof ClientFrameData.AdvancementFrameData advancementFrame) {
 			var status = state == SkillState.UNLOCKED ? AdvancementObtainedStatus.OBTAINED : AdvancementObtainedStatus.UNOBTAINED;
-			switch (state) {
-				case LOCKED, EXCLUDED -> RenderSystem.setShaderColor(0.25f, 0.25f, 0.25f, 1f);
-				default -> RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-			}
+			var color = switch (state) {
+				case LOCKED, EXCLUDED -> COLOR_GRAY;
+				case AVAILABLE, UNLOCKED -> COLOR_WHITE;
+			};
 
-			RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE);
-			drawTexture(
-					matrices,
-					x - halfSize,
-					y - halfSize,
-					size,
-					size,
-					advancementFrame.getFrame().getTextureV(),
-					128 + status.getSpriteIndex() * 26,
-					26,
-					26,
-					TEXTURE_WIDTH,
-					TEXTURE_HEIGHT
+			textureRenderer.emitTexture(
+					matrices, WIDGETS_TEXTURE,
+					x - halfSize, y - halfSize, size, size,
+					(float) advancementFrame.getFrame().getTextureV() / TEXTURE_WIDTH,
+					(float) (128 + status.getSpriteIndex() * 26) / TEXTURE_HEIGHT,
+					(float) (advancementFrame.getFrame().getTextureV() + 26) / TEXTURE_WIDTH,
+					(float) (128 + status.getSpriteIndex() * 26 + 26) / TEXTURE_HEIGHT,
+					color
 			);
 		} else if (frame instanceof ClientFrameData.TextureFrameData textureFrame) {
-			var texture = switch (state) {
-				case AVAILABLE -> {
-					RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-					yield textureFrame.getAvailableTexture();
-				}
-				case UNLOCKED -> {
-					RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-					yield textureFrame.getUnlockedTexture();
-				}
+			switch (state) {
+				case AVAILABLE -> textureRenderer.emitTexture(
+						matrices, textureFrame.getAvailableTexture(),
+						x - halfSize, y - halfSize, size, size,
+						COLOR_WHITE
+				);
+				case UNLOCKED -> textureRenderer.emitTexture(
+						matrices, textureFrame.getUnlockedTexture(),
+						x - halfSize, y - halfSize, size, size,
+						COLOR_WHITE
+				);
 				case LOCKED -> {
 					if (textureFrame.getLockedTexture() != null) {
-						RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-						yield textureFrame.getLockedTexture();
+						textureRenderer.emitTexture(
+								matrices, textureFrame.getLockedTexture(),
+								x - halfSize, y - halfSize, size, size,
+								COLOR_WHITE
+						);
 					} else {
-						RenderSystem.setShaderColor(0.25f, 0.25f, 0.25f, 1f);
-						yield textureFrame.getAvailableTexture();
+						textureRenderer.emitTexture(
+								matrices, textureFrame.getAvailableTexture(),
+								x - halfSize, y - halfSize, size, size,
+								COLOR_GRAY
+						);
 					}
 				}
 				case EXCLUDED -> {
 					if (textureFrame.getExcludedTexture() != null) {
-						RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-						yield textureFrame.getExcludedTexture();
+						textureRenderer.emitTexture(
+								matrices, textureFrame.getExcludedTexture(),
+								x - halfSize, y - halfSize, size, size,
+								COLOR_WHITE
+						);
 					} else {
-						RenderSystem.setShaderColor(0.25f, 0.25f, 0.25f, 1f);
-						yield textureFrame.getAvailableTexture();
+						textureRenderer.emitTexture(
+								matrices, textureFrame.getAvailableTexture(),
+								x - halfSize, y - halfSize, size, size,
+								COLOR_GRAY
+						);
 					}
 				}
-			};
-
-			RenderSystem.setShaderTexture(0, texture);
-			drawTexture(
-					matrices,
-					x - halfSize,
-					y - halfSize,
-					0,
-					0,
-					size,
-					size,
-					size,
-					size
-			);
+				default -> throw new UnsupportedOperationException();
+			}
 		}
 	}
 
@@ -410,81 +396,65 @@ public class SkillsScreen extends Screen {
 			return;
 		}
 
+		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+		RenderSystem.colorMask(true, true, true, true);
+		RenderSystem.disableBlend();
+		RenderSystem.enableDepthTest();
+
 		var mouse = getMousePos(mouseX, mouseY);
 		var transformedMouse = getTransformedMousePos(mouseX, mouseY);
 
-		RenderSystem.enableBlend();
-		RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
-		RenderSystem.enableDepthTest();
-		RenderSystem.depthFunc(GL11.GL_ALWAYS);
-		RenderSystem.colorMask(false, false, false, false);
-
-		matrices.push();
-
-		matrices.translate(0f, 0f, 256f);
-		DrawableHelper.fill(
-				matrices,
-				0,
-				0,
-				this.width,
-				this.height,
-				0xff000000
-		);
-
-		matrices.translate(0f, 0f, -512f);
-		DrawableHelper.fill(
-				matrices,
+		DrawableHelper.enableScissor(
 				contentPaddingLeft - 4,
 				contentPaddingTop - 4,
 				this.width - contentPaddingRight + 4,
-				this.height - contentPaddingBottom + 4,
-				0xff000000
+				this.height - contentPaddingBottom + 4
 		);
 
-		RenderSystem.colorMask(true, true, true, true);
-		RenderSystem.depthFunc(GL11.GL_LEQUAL);
+		matrices.push();
 
-		matrices.translate(x, y, 128f);
+		matrices.translate(x, y, 0f);
 		matrices.scale(scale, scale, 1f);
 
 		RenderSystem.setShader(GameRenderer::getPositionTexShader);
 		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-		RenderSystem.setShaderTexture(0, getActiveCategory().getBackground());
-		DrawUtils.drawRepeatedTexture(
+		RenderSystem.setShaderTexture(0, activeCategory.getBackground());
+		DrawableHelper.drawTexture(
 				matrices,
 				bounds.min().x,
 				bounds.min().y,
+				0,
+				0,
 				bounds.width(),
 				bounds.height(),
-				0,
-				0,
 				16,
 				16
 		);
 
-		for (var connection : getActiveCategory().getNormalConnections()) {
-			var skillA = getActiveCategory().getSkills().get(connection.getSkillAId());
-			var skillB = getActiveCategory().getSkills().get(connection.getSkillBId());
+		var connectionRenderer = new ConnectionBatchedRenderer();
+
+		for (var connection : activeCategory.getNormalConnections()) {
+			var skillA = activeCategory.getSkills().get(connection.getSkillAId());
+			var skillB = activeCategory.getSkills().get(connection.getSkillBId());
 			if (skillA != null && skillB != null) {
-				drawConnection(
+				connectionRenderer.emitNormalConnection(
 						matrices,
 						skillA.getX(),
 						skillA.getY(),
 						skillB.getX(),
 						skillB.getY(),
-						!connection.isBidirectional(),
-						0xffffff
+						connection.isBidirectional()
 				);
 			}
 		}
 
 		if (isInsideContent(mouse)) {
-			var optHoveredSkill = getActiveCategory()
+			var optHoveredSkill = activeCategory
 					.getSkills()
 					.values()
 					.stream()
 					.filter(skill -> {
-						var definition = getActiveCategory().getDefinitions().get(skill.getDefinitionId());
+						var definition = activeCategory.getDefinitions().get(skill.getDefinitionId());
 						if (definition == null) {
 							return false;
 						}
@@ -494,7 +464,7 @@ public class SkillsScreen extends Screen {
 					.findFirst();
 
 			optHoveredSkill.ifPresent(hoveredSkill -> {
-				var definition = getActiveCategory().getDefinitions().get(hoveredSkill.getDefinitionId());
+				var definition = activeCategory.getDefinitions().get(hoveredSkill.getDefinitionId());
 				if (definition == null) {
 					return;
 				}
@@ -510,20 +480,19 @@ public class SkillsScreen extends Screen {
 				}
 				tooltip = lines;
 
-				var connections = getActiveCategory().getExclusiveConnections().get(hoveredSkill.getId());
+				var connections = activeCategory.getExclusiveConnections().get(hoveredSkill.getId());
 				if (connections != null) {
 					for (var connection : connections) {
-						var skillA = getActiveCategory().getSkills().get(connection.getSkillAId());
-						var skillB = getActiveCategory().getSkills().get(connection.getSkillBId());
+						var skillA = activeCategory.getSkills().get(connection.getSkillAId());
+						var skillB = activeCategory.getSkills().get(connection.getSkillBId());
 						if (skillA != null && skillB != null) {
-							drawConnection(
+							connectionRenderer.emitExclusiveConnection(
 									matrices,
 									skillA.getX(),
 									skillA.getY(),
 									skillB.getX(),
 									skillB.getY(),
-									!connection.isBidirectional(),
-									0xff0000
+									connection.isBidirectional()
 							);
 						}
 					}
@@ -531,119 +500,43 @@ public class SkillsScreen extends Screen {
 			});
 		}
 
-		for (var skill : getActiveCategory().getSkills().values()) {
-			var definition = getActiveCategory().getDefinitions().get(skill.getDefinitionId());
+		connectionRenderer.draw();
+
+		var textureRenderer = new TextureBatchedRenderer();
+		var itemRenderer = new ItemBatchedRenderer();
+
+		for (var skill : activeCategory.getSkills().values()) {
+			var definition = activeCategory.getDefinitions().get(skill.getDefinitionId());
 			if (definition == null) {
 				continue;
 			}
 
-			drawFrame(matrices, definition.getFrame(), definition.getSize(), skill.getX(), skill.getY(), skill.getState());
+			drawFrame(
+					matrices,
+					textureRenderer,
+					definition.getFrame(),
+					definition.getSize(),
+					skill.getX(),
+					skill.getY(),
+					skill.getState()
+			);
 
-			RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-			drawIcon(matrices, definition.getIcon(), definition.getSize(), skill.getX(), skill.getY());
+			drawIcon(
+					matrices,
+					textureRenderer,
+					itemRenderer,
+					definition.getIcon(),
+					definition.getSize(),
+					skill.getX(),
+					skill.getY()
+			);
 		}
+
+		textureRenderer.draw();
+		itemRenderer.draw();
 
 		matrices.pop();
-		matrices.push();
-
-		RenderSystem.depthFunc(GL11.GL_ALWAYS);
-		matrices.translate(0f, 0f, -512f);
-		RenderSystem.colorMask(false, false, false, false);
-		DrawableHelper.fill(
-				matrices,
-				0,
-				0,
-				this.width,
-				this.height,
-				0xff000000
-		);
-		RenderSystem.colorMask(true, true, true, true);
-		RenderSystem.depthFunc(GL11.GL_LEQUAL);
-
-		matrices.pop();
-	}
-
-	private void drawConnection(
-			MatrixStack matrices,
-			float startX,
-			float startY,
-			float endX,
-			float endY,
-			boolean unidirectional,
-			int rgb
-	) {
-		drawLine(matrices, startX, startY, endX, endY, 3, 0xff000000);
-		if (unidirectional) {
-			drawArrow(matrices, startX, startY, endX, endY, 8, 0xff000000);
-		}
-		drawLine(matrices, startX, startY, endX, endY, 1, rgb | 0xff000000);
-		if (unidirectional) {
-			drawArrow(matrices, startX, startY, endX, endY, 6, rgb | 0xff000000);
-		}
-	}
-
-	private void drawLine(
-			MatrixStack matrices,
-			float startX,
-			float startY,
-			float endX,
-			float endY,
-			int thickness,
-			int color
-	) {
-		float a = ((float) (color >> 24 & 0xff)) / 255f;
-		float r = ((float) (color >> 16 & 0xff)) / 255f;
-		float g = ((float) (color >> 8 & 0xff)) / 255f;
-		float b = ((float) (color & 0xff)) / 255f;
-		var matrix = matrices.peek().getPositionMatrix();
-		var tmp = new Vec2f(endX, endY)
-				.add(new Vec2f(-startX, -startY))
-				.normalize();
-
-		tmp = new Vec2f(tmp.y, -tmp.x).multiply(thickness / 2f);
-
-		RenderSystem.setShader(GameRenderer::getPositionColorShader);
-		BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
-		bufferBuilder.begin(VertexFormat.DrawMode.TRIANGLE_FAN, VertexFormats.POSITION_COLOR);
-		bufferBuilder.vertex(matrix, startX + tmp.x, startY + tmp.y, 0).color(r, g, b, a).next();
-		bufferBuilder.vertex(matrix, startX - tmp.x, startY - tmp.y, 0).color(r, g, b, a).next();
-		bufferBuilder.vertex(matrix, endX - tmp.x, endY - tmp.y, 0).color(r, g, b, a).next();
-		bufferBuilder.vertex(matrix, endX + tmp.x, endY + tmp.y, 0).color(r, g, b, a).next();
-		BufferRenderer.drawWithShader(bufferBuilder.end());
-	}
-
-	private void drawArrow(
-			MatrixStack matrices,
-			float startX,
-			float startY,
-			float endX,
-			float endY,
-			float thickness,
-			int argb
-	) {
-		var matrix = matrices.peek().getPositionMatrix();
-		var center = new Vec2f(endX, endY)
-				.add(new Vec2f(startX, startY))
-				.multiply(0.5f);
-		var normal = new Vec2f(endX, endY)
-				.add(new Vec2f(-startX, -startY))
-				.normalize();
-		var forward = new Vec2f(normal.x, normal.y)
-				.multiply(thickness);
-		var backward = new Vec2f(forward.x, forward.y)
-				.multiply(-0.5f);
-		var back = new Vec2f(center.x, center.y)
-				.add(backward);
-		var side = new Vec2f(backward.y, -backward.x)
-				.multiply(MathHelper.sqrt(3f));
-
-		RenderSystem.setShader(GameRenderer::getPositionColorShader);
-		BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
-		bufferBuilder.begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION_COLOR);
-		bufferBuilder.vertex(matrix, center.x + forward.x, center.y + forward.y, 0).color(argb).next();
-		bufferBuilder.vertex(matrix, back.x - side.x, back.y - side.y, 0).color(argb).next();
-		bufferBuilder.vertex(matrix, back.x + side.x, back.y + side.y, 0).color(argb).next();
-		BufferRenderer.drawWithShader(bufferBuilder.end());
+		DrawableHelper.disableScissor();
 	}
 
 	private void drawTabs(MatrixStack matrices, double mouseX, double mouseY) {
@@ -665,7 +558,7 @@ public class SkillsScreen extends Screen {
 					FRAME_PADDING + 32 * i,
 					FRAME_PADDING,
 					i > 0 ? 28 : 0,
-					activeCategory == i ? 32 : 0,
+					activeCategory == categories.get(i) ? 32 : 0,
 					28,
 					32,
 					TEXTURE_WIDTH,
@@ -675,11 +568,16 @@ public class SkillsScreen extends Screen {
 
 		var mouse = getMousePos(mouseX, mouseY);
 
+		var textureRenderer = new TextureBatchedRenderer();
+		var itemBatch = new ItemBatchedRenderer();
+
 		for (var i = 0; i < categories.size(); i++) {
 			var category = categories.get(i);
 
 			drawIcon(
 					matrices,
+					textureRenderer,
+					itemBatch,
 					category.getIcon(),
 					1f,
 					FRAME_PADDING + 32 * i + 6 + 8,
@@ -690,6 +588,9 @@ public class SkillsScreen extends Screen {
 				tooltip = textRenderer.wrapLines(category.getTitle(), LINE_WIDTH);
 			}
 		}
+
+		textureRenderer.draw();
+		itemBatch.draw();
 	}
 
 	private void drawWindow(MatrixStack matrices, double mouseX, double mouseY) {
@@ -734,7 +635,7 @@ public class SkillsScreen extends Screen {
 		);
 
 		// left
-		DrawUtils.drawScaledTexture(
+		DrawableHelper.drawTexture(
 				matrices,
 				FRAME_PADDING,
 				FRAME_PADDING + HALF_FRAME_HEIGHT,
@@ -749,7 +650,7 @@ public class SkillsScreen extends Screen {
 		);
 
 		// bottom
-		DrawUtils.drawScaledTexture(
+		DrawableHelper.drawTexture(
 				matrices,
 				FRAME_PADDING + HALF_FRAME_WIDTH,
 				this.height - FRAME_PADDING - HALF_FRAME_HEIGHT + 1,
@@ -764,7 +665,7 @@ public class SkillsScreen extends Screen {
 		);
 
 		// right
-		DrawUtils.drawScaledTexture(
+		DrawableHelper.drawTexture(
 				matrices,
 				this.width - FRAME_PADDING - HALF_FRAME_WIDTH + 1,
 				FRAME_PADDING + HALF_FRAME_HEIGHT,
@@ -828,7 +729,7 @@ public class SkillsScreen extends Screen {
 			);
 
 			// top
-			DrawUtils.drawScaledTexture(
+			DrawableHelper.drawTexture(
 					matrices,
 					FRAME_PADDING + HALF_FRAME_WIDTH,
 					FRAME_PADDING + TABS_HEIGHT,
@@ -841,7 +742,7 @@ public class SkillsScreen extends Screen {
 					TEXTURE_WIDTH,
 					TEXTURE_HEIGHT
 			);
-			DrawUtils.drawScaledTexture(
+			DrawableHelper.drawTexture(
 					matrices,
 					FRAME_PADDING + HALF_FRAME_WIDTH,
 					FRAME_PADDING + TABS_HEIGHT + FRAME_CUT,
@@ -882,7 +783,7 @@ public class SkillsScreen extends Screen {
 			);
 
 			// top
-			DrawUtils.drawScaledTexture(
+			DrawableHelper.drawTexture(
 					matrices,
 					FRAME_PADDING + HALF_FRAME_WIDTH,
 					FRAME_PADDING + TABS_HEIGHT,
@@ -915,22 +816,18 @@ public class SkillsScreen extends Screen {
 
 		var startX = tmpX;
 
-		var activeCategory = getActiveCategory();
-
 		tmpText = Text.literal(activeCategory.getPointsLeft()
 				+ (activeCategory.getSpentPointsLimit() == Integer.MAX_VALUE ? "" : "/" + activeCategory.getSpentPointsLeft())
 		);
 
 		tmpX -= this.textRenderer.getWidth(tmpText);
 		tmpX -= 1;
-		DrawUtils.drawTextWithBorder(
-				matrices,
-				tmpText,
-				tmpX,
-				tmpY,
-				0xff000000,
-				0xff80ff20
-		);
+
+		this.textRenderer.draw(matrices, tmpText, tmpX - 1, tmpY, 0xff000000);
+		this.textRenderer.draw(matrices, tmpText, tmpX, tmpY - 1, 0xff000000);
+		this.textRenderer.draw(matrices, tmpText, tmpX + 1, tmpY, 0xff000000);
+		this.textRenderer.draw(matrices, tmpText, tmpX, tmpY + 1, 0xff000000);
+		this.textRenderer.draw(matrices, tmpText, tmpX, tmpY, 0xff80ff20);
 		tmpX -= 1;
 
 		tmpText = SkillsMod.createTranslatable("text", "points_left");
@@ -974,7 +871,7 @@ public class SkillsScreen extends Screen {
 
 			RenderSystem.setShaderTexture(0, InGameHud.GUI_ICONS_TEXTURE);
 			drawTexture(matrices, tmpX, tmpY, 0, 64, 182, 5);
-			int width = Math.min(182, (int) (getActiveCategory().getExperienceProgress() * 183f));
+			var width = Math.min(182, (int) (activeCategory.getExperienceProgress() * 183f));
 			if (width > 0) {
 				drawTexture(matrices, tmpX, tmpY, 0, 69, width, 5);
 			}
