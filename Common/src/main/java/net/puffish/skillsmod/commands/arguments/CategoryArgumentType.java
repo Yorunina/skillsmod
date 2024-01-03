@@ -8,6 +8,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.serialize.ArgumentSerializer;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.command.ServerCommandSource;
@@ -19,7 +20,7 @@ import net.puffish.skillsmod.utils.CommandUtils;
 
 import java.util.concurrent.CompletableFuture;
 
-public class CategoryArgumentType implements ArgumentType<Category> {
+public class CategoryArgumentType implements ArgumentType<Identifier> {
 
 	private static final DynamicCommandExceptionType NO_SUCH_CATEGORY = new DynamicCommandExceptionType(
 			id -> SkillsMod.createTranslatable("command", "no_such_category", id)
@@ -40,28 +41,40 @@ public class CategoryArgumentType implements ArgumentType<Category> {
 	}
 
 	public static Category getCategory(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
-		return context.getArgument(name, Category.class);
+		var categoryId = SkillsMod.convertIdentifier(context.getArgument(name, Identifier.class));
+		return SkillsAPI.getCategory(categoryId)
+				.orElseThrow(() -> NO_SUCH_CATEGORY.create(categoryId));
 	}
 
-	@Override
-	public Category parse(StringReader reader) throws CommandSyntaxException {
-		var categoryId = SkillsMod.convertIdentifier(Identifier.fromCommandInput(reader));
+	public static Category getCategoryOnlyWithExperience(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
+		var categoryId = SkillsMod.convertIdentifier(context.getArgument(name, Identifier.class));
 		return SkillsAPI.getCategory(categoryId)
-				.filter(category -> !onlyWithExperience || category.getExperience().isPresent())
+				.filter(category -> category.getExperience().isPresent())
 				.orElseThrow(() -> NO_SUCH_CATEGORY.create(categoryId));
 	}
 
 	@Override
+	public Identifier parse(StringReader reader) throws CommandSyntaxException {
+		return Identifier.fromCommandInput(reader);
+	}
+
+	@Override
 	public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
-		CommandUtils.suggestIdentifiers(SkillsMod.getInstance().getCategories(onlyWithExperience), builder);
-		return builder.buildFuture();
+		S source = context.getSource();
+		if (source instanceof ServerCommandSource) {
+			CommandUtils.suggestIdentifiers(SkillsMod.getInstance().getCategories(onlyWithExperience), builder);
+			return builder.buildFuture();
+		} else if (source instanceof CommandSource commandSource) {
+			return commandSource.getCompletions(context);
+		}
+		return Suggestions.empty();
 	}
 
 	public static class Serializer implements ArgumentSerializer<CategoryArgumentType> {
 
 		@Override
-		public void toPacket(CategoryArgumentType categoryArgumentType, PacketByteBuf buf) {
-			buf.writeBoolean(categoryArgumentType.onlyWithExperience);
+		public void toPacket(CategoryArgumentType argumentType, PacketByteBuf buf) {
+			buf.writeBoolean(argumentType.onlyWithExperience);
 		}
 
 		@Override
@@ -70,8 +83,8 @@ public class CategoryArgumentType implements ArgumentType<Category> {
 		}
 
 		@Override
-		public void toJson(CategoryArgumentType categoryArgumentType, JsonObject jsonObject) {
-			jsonObject.addProperty("only_with_experience", categoryArgumentType.onlyWithExperience);
+		public void toJson(CategoryArgumentType argumentType, JsonObject jsonObject) {
+			jsonObject.addProperty("only_with_experience", argumentType.onlyWithExperience);
 		}
 	}
 }
