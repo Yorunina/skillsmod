@@ -30,10 +30,10 @@ import net.puffish.skillsmod.network.InPacket;
 import net.puffish.skillsmod.network.OutPacket;
 import net.puffish.skillsmod.server.event.ServerEventListener;
 import net.puffish.skillsmod.server.event.ServerEventReceiver;
-import net.puffish.skillsmod.server.setup.ServerRegistrar;
 import net.puffish.skillsmod.server.network.ServerPacketHandler;
 import net.puffish.skillsmod.server.network.ServerPacketReceiver;
 import net.puffish.skillsmod.server.network.ServerPacketSender;
+import net.puffish.skillsmod.server.setup.ServerRegistrar;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -111,6 +111,9 @@ public class ForgeMain {
 
 		@Override
 		public <A extends ArgumentType<?>, T extends ArgumentSerializer.ArgumentTypeProperties<A>> void registerArgumentType(Identifier id, Class<A> clazz, ArgumentSerializer<A, T> serializer) {
+			var deferredRegister = DeferredRegister.create(Registry.COMMAND_ARGUMENT_TYPE_KEY, id.getNamespace());
+			deferredRegister.register(id.getPath(), () -> serializer);
+			deferredRegister.register(FMLJavaModLoadingContext.get().getModEventBus());
 			ArgumentTypes.registerByClass(clazz, serializer);
 		}
 	}
