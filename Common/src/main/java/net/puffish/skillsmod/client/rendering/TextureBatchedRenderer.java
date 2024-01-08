@@ -1,9 +1,9 @@
 package net.puffish.skillsmod.client.rendering;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.texture.Sprite;
@@ -11,11 +11,23 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vector4f;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class TextureBatchedRenderer {
-	private final Map<Identifier, BufferBuilder> batch = new HashMap<>();
+	private final Map<Identifier, List<TextureEmit>> batch = new HashMap<>();
+
+	private record TextureEmit(
+			float x1, float y1, float z1,
+			float x2, float y2, float z2,
+			float x3, float y3, float z3,
+			float x4, float y4, float z4,
+
+			float minU, float minV, float maxU, float maxV,
+			Vector4f color
+	) { }
 
 	public void emitTexture(
 			MatrixStack matrices, Identifier texture,
@@ -66,26 +78,45 @@ public class TextureBatchedRenderer {
 			float minU, float minV, float maxU, float maxV,
 			Vector4f color
 	) {
-		var vertexConsumer = batch.computeIfAbsent(texture, key -> {
-			var bufferBuilder = new BufferBuilder(256);
-			bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR_TEXTURE);
-			return bufferBuilder;
-		});
+		var emits = batch.computeIfAbsent(texture, key -> new ArrayList<>());
 
 		var matrix = matrices.peek().getPositionMatrix();
-		vertexConsumer.vertex(matrix, minX, minY, 0f).color(color.getX(), color.getY(), color.getZ(), color.getW()).texture(minU, minV).next();
-		vertexConsumer.vertex(matrix, minX, maxY, 0f).color(color.getX(), color.getY(), color.getZ(), color.getW()).texture(minU, maxV).next();
-		vertexConsumer.vertex(matrix, maxX, maxY, 0f).color(color.getX(), color.getY(), color.getZ(), color.getW()).texture(maxU, maxV).next();
-		vertexConsumer.vertex(matrix, maxX, minY, 0f).color(color.getX(), color.getY(), color.getZ(), color.getW()).texture(maxU, minV).next();
+
+		var v1 = new Vector4f(minX, minY, 0f, 1f);
+		var v2 = new Vector4f(minX, maxY, 0f, 1f);
+		var v3 = new Vector4f(maxX, maxY, 0f, 1f);
+		var v4 = new Vector4f(maxX, minY, 0f, 1f);
+
+		v1.transform(matrix);
+		v2.transform(matrix);
+		v3.transform(matrix);
+		v4.transform(matrix);
+
+		emits.add(new TextureEmit(
+				v1.getX(), v1.getY(), v1.getZ(),
+				v2.getX(), v2.getY(), v2.getZ(),
+				v3.getX(), v3.getY(), v3.getZ(),
+				v4.getX(), v4.getY(), v4.getZ(),
+				minU, minV, maxU, maxV,
+				color
+		));
 	}
 
 	public void draw() {
 		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+		RenderSystem.setShader(GameRenderer::getPositionColorTexShader);
 		for (var entry : batch.entrySet()) {
 			RenderSystem.setShaderTexture(0, entry.getKey());
-			RenderSystem.setShader(GameRenderer::getPositionColorTexShader);
-			entry.getValue().end();
-			BufferRenderer.draw(entry.getValue());
+			var bufferBuilder = Tessellator.getInstance().getBuffer();
+			bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR_TEXTURE);
+			for (var emit : entry.getValue()) {
+				bufferBuilder.vertex(emit.x1, emit.y1, emit.z1).color(emit.color.getX(), emit.color.getY(), emit.color.getZ(), emit.color.getW()).texture(emit.minU, emit.minV).next();
+				bufferBuilder.vertex(emit.x2, emit.y2, emit.z2).color(emit.color.getX(), emit.color.getY(), emit.color.getZ(), emit.color.getW()).texture(emit.minU, emit.maxV).next();
+				bufferBuilder.vertex(emit.x3, emit.y3, emit.z3).color(emit.color.getX(), emit.color.getY(), emit.color.getZ(), emit.color.getW()).texture(emit.maxU, emit.maxV).next();
+				bufferBuilder.vertex(emit.x4, emit.y4, emit.z4).color(emit.color.getX(), emit.color.getY(), emit.color.getZ(), emit.color.getW()).texture(emit.maxU, emit.minV).next();
+			}
+			bufferBuilder.end();
+			BufferRenderer.draw(bufferBuilder);
 		}
 		batch.clear();
 	}

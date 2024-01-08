@@ -1,26 +1,30 @@
 package net.puffish.skillsmod.client.rendering;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec2f;
+import net.minecraft.util.math.Vector4f;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ConnectionBatchedRenderer {
-	private final BufferBuilder bufferBuilderNormal = new BufferBuilder(256);
-	private final BufferBuilder bufferBuilderExclusive = new BufferBuilder(256);
-	private final BufferBuilder bufferBuilderOutline = new BufferBuilder(256);
+	private final List<TriangleEmit> normalEmits = new ArrayList<>();
+	private final List<TriangleEmit> exclusiveEmits = new ArrayList<>();
+	private final List<TriangleEmit> outlineEmits = new ArrayList<>();
 
-	public ConnectionBatchedRenderer() {
-		bufferBuilderNormal.begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION);
-		bufferBuilderExclusive.begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION);
-		bufferBuilderOutline.begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION);
-	}
+	private record TriangleEmit(
+			float x1, float y1, float z1,
+			float x2, float y2, float z2,
+			float x3, float y3, float z3
+	) { }
 
 	public void emitNormalConnection(
 			MatrixStack matrices,
@@ -37,7 +41,7 @@ public class ConnectionBatchedRenderer {
 				endX,
 				endY,
 				bidirectional,
-				bufferBuilderNormal
+				normalEmits
 		);
 	}
 
@@ -56,34 +60,34 @@ public class ConnectionBatchedRenderer {
 				endX,
 				endY,
 				bidirectional,
-				bufferBuilderExclusive
+				exclusiveEmits
 		);
 	}
 
-	public void emitConnection(
+	private void emitConnection(
 			MatrixStack matrices,
 			float startX,
 			float startY,
 			float endX,
 			float endY,
 			boolean bidirectional,
-			BufferBuilder bufferBuilder
+			List<TriangleEmit> emits
 	) {
 		var matrix = matrices.peek().getPositionMatrix();
 
-		emitLine(matrix, bufferBuilderOutline, startX, startY, endX, endY, 3);
+		emitLine(matrix, outlineEmits, startX, startY, endX, endY, 3);
 		if (!bidirectional) {
-			emitArrow(matrix, bufferBuilderOutline, startX, startY, endX, endY, 8);
+			emitArrow(matrix, outlineEmits, startX, startY, endX, endY, 8);
 		}
-		emitLine(matrix, bufferBuilder, startX, startY, endX, endY, 1);
+		emitLine(matrix, emits, startX, startY, endX, endY, 1);
 		if (!bidirectional) {
-			emitArrow(matrix, bufferBuilder, startX, startY, endX, endY, 6);
+			emitArrow(matrix, emits, startX, startY, endX, endY, 6);
 		}
 	}
 
 	private void emitLine(
 			Matrix4f matrix,
-			BufferBuilder bufferBuilder,
+			List<TriangleEmit> emits,
 			float startX,
 			float startY,
 			float endX,
@@ -96,18 +100,23 @@ public class ConnectionBatchedRenderer {
 
 		side = new Vec2f(side.y, -side.x).multiply(thickness / 2f);
 
-		bufferBuilder.vertex(matrix, startX + side.x, startY + side.y, 0).next();
-		bufferBuilder.vertex(matrix, startX - side.x, startY - side.y, 0).next();
-		bufferBuilder.vertex(matrix, endX + side.x, endY + side.y, 0).next();
-
-		bufferBuilder.vertex(matrix, endX - side.x, endY - side.y, 0).next();
-		bufferBuilder.vertex(matrix, endX + side.x, endY + side.y, 0).next();
-		bufferBuilder.vertex(matrix, startX - side.x, startY - side.y, 0).next();
+		emitTriangle(
+				matrix, emits,
+				startX + side.x, startY + side.y,
+				startX - side.x, startY - side.y,
+				endX + side.x, endY + side.y
+		);
+		emitTriangle(
+				matrix, emits,
+				endX - side.x, endY - side.y,
+				endX + side.x, endY + side.y,
+				startX - side.x, startY - side.y
+		);
 	}
 
 	private void emitArrow(
 			Matrix4f matrix,
-			BufferBuilder bufferBuilder,
+			List<TriangleEmit> emits,
 			float startX,
 			float startY,
 			float endX,
@@ -129,22 +138,55 @@ public class ConnectionBatchedRenderer {
 		var side = new Vec2f(backward.y, -backward.x)
 				.multiply(MathHelper.sqrt(3f));
 
-		bufferBuilder.vertex(matrix, center.x + forward.x, center.y + forward.y, 0).next();
-		bufferBuilder.vertex(matrix, back.x - side.x, back.y - side.y, 0).next();
-		bufferBuilder.vertex(matrix, back.x + side.x, back.y + side.y, 0).next();
+		emitTriangle(
+				matrix, emits,
+				center.x + forward.x, center.y + forward.y,
+				back.x - side.x, back.y - side.y,
+				back.x + side.x, back.y + side.y
+		);
+	}
+
+	private void emitTriangle(
+			Matrix4f matrix,
+			List<TriangleEmit> emits,
+			float x1, float y1,
+			float x2, float y2,
+			float x3, float y3
+	) {
+		var v1 = new Vector4f(x1, y1, 0f, 1f);
+		var v2 = new Vector4f(x2, y2, 0f, 1f);
+		var v3 = new Vector4f(x3, y3, 0f, 1f);
+
+		v1.transform(matrix);
+		v2.transform(matrix);
+		v3.transform(matrix);
+
+		emits.add(new TriangleEmit(
+				v1.getX(), v1.getY(), v1.getZ(),
+				v2.getX(), v2.getY(), v2.getZ(),
+				v3.getX(), v3.getY(), v3.getZ()
+		));
 	}
 
 	public void draw() {
 		RenderSystem.setShader(GameRenderer::getPositionShader);
 		RenderSystem.setShaderColor(0f, 0f, 0f, 1f);
-		bufferBuilderOutline.end();
-		BufferRenderer.draw(bufferBuilderOutline);
+		drawBatch(outlineEmits);
 		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-		bufferBuilderNormal.end();
-		BufferRenderer.draw(bufferBuilderNormal);
+		drawBatch(normalEmits);
 		RenderSystem.setShaderColor(1f, 0f, 0f, 1f);
-		bufferBuilderExclusive.end();
-		BufferRenderer.draw(bufferBuilderExclusive);
-		RenderSystem.applyModelViewMatrix();
+		drawBatch(exclusiveEmits);
+	}
+
+	private void drawBatch(List<TriangleEmit> emits) {
+		var bufferBuilder = Tessellator.getInstance().getBuffer();
+		bufferBuilder.begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION);
+		for (var emit : emits) {
+			bufferBuilder.vertex(emit.x1, emit.y1, emit.z1).next();
+			bufferBuilder.vertex(emit.x2, emit.y2, emit.z2).next();
+			bufferBuilder.vertex(emit.x3, emit.y3, emit.z3).next();
+		}
+		bufferBuilder.end();
+		BufferRenderer.draw(bufferBuilder);
 	}
 }
