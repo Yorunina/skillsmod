@@ -131,12 +131,7 @@ public class KillEntityExperienceSource implements ExperienceSource {
 		}
 	}
 
-	private record Context(ServerPlayerEntity player, LivingEntity entity, ItemStack weapon, DamageSource damageSource) {
-		public double entityDroppedXp() {
-			var entityAccess = (LivingEntityInvoker) entity;
-			return entityAccess.invokeShouldDropXp() ? entityAccess.invokeGetXpToDrop(player) : 0.0;
-		}
-
+	private record Context(ServerPlayerEntity player, LivingEntity entity, ItemStack weapon, DamageSource damageSource, double entityDroppedXp) {
 		public double entityMaxHealth() {
 			return entity.getMaxHealth();
 		}
@@ -150,8 +145,8 @@ public class KillEntityExperienceSource implements ExperienceSource {
 		}
 	}
 
-	public int getValue(ServerPlayerEntity player, LivingEntity entity, ItemStack weapon, DamageSource damageSource) {
-		return manager.getValue(new Context(player, entity, weapon, damageSource));
+	public int getValue(ServerPlayerEntity player, LivingEntity entity, ItemStack weapon, DamageSource damageSource, double entityDroppedXp) {
+		return manager.getValue(new Context(player, entity, weapon, damageSource, entityDroppedXp));
 	}
 
 	public Optional<AntiFarming> getAntiFarming() {
