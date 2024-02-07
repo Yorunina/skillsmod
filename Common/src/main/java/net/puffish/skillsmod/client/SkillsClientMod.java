@@ -100,9 +100,7 @@ public class SkillsClientMod {
 	}
 
 	private void onOpenKeyPress() {
-		MinecraftClient.getInstance().setScreen(new SkillsScreen(
-				categories.values().stream().toList()
-		));
+		MinecraftClient.getInstance().setScreen(new SkillsScreen(categories));
 	}
 
 	private void onShowCategory(ShowCategoryInPacket packet) {
