@@ -31,7 +31,6 @@ import net.puffish.skillsmod.network.OutPacket;
 import net.puffish.skillsmod.server.event.ServerEventListener;
 import net.puffish.skillsmod.server.event.ServerEventReceiver;
 import net.puffish.skillsmod.server.network.ServerPacketHandler;
-import net.puffish.skillsmod.server.network.ServerPacketReceiver;
 import net.puffish.skillsmod.server.network.ServerPacketSender;
 import net.puffish.skillsmod.server.setup.ServerRegistrar;
 
@@ -56,8 +55,7 @@ public class ForgeMain {
 				FMLPaths.CONFIGDIR.get(),
 				new ServerRegistrarImpl(),
 				new ServerEventReceiverImpl(),
-				new ServerPacketSenderImpl(),
-				new ServerPacketReceiverImpl()
+				new ServerPacketSenderImpl()
 		);
 	}
 
@@ -113,25 +111,9 @@ public class ForgeMain {
 		public <A extends ArgumentType<?>> void registerArgumentType(Identifier id, Class<A> clazz, ArgumentSerializer<A> serializer) {
 			ArgumentTypes.register(id.toString(), clazz, serializer);
 		}
-	}
 
-	private class ServerEventReceiverImpl implements ServerEventReceiver {
 		@Override
-		public void registerListener(ServerEventListener eventListener) {
-			serverListeners.add(eventListener);
-		}
-	}
-
-	private static class ServerPacketSenderImpl implements ServerPacketSender {
-		@Override
-		public void send(ServerPlayerEntity player, OutPacket packet) {
-			player.networkHandler.sendPacket(new CustomPayloadS2CPacket(packet.getIdentifier(), packet.getBuf()));
-		}
-	}
-
-	private static class ServerPacketReceiverImpl implements ServerPacketReceiver {
-		@Override
-		public <T extends InPacket> void registerPacket(Identifier identifier, Function<PacketByteBuf, T> reader, ServerPacketHandler<T> handler) {
+		public <T extends InPacket> void registerInPacket(Identifier identifier, Function<PacketByteBuf, T> reader, ServerPacketHandler<T> handler) {
 			var channel = NetworkRegistry.newEventChannel(
 					identifier,
 					() -> "1",
@@ -149,6 +131,23 @@ public class ForgeMain {
 					context.setPacketHandled(true);
 				}
 			});
+		}
+
+		@Override
+		public void registerOutPacket(Identifier id) { }
+	}
+
+	private class ServerEventReceiverImpl implements ServerEventReceiver {
+		@Override
+		public void registerListener(ServerEventListener eventListener) {
+			serverListeners.add(eventListener);
+		}
+	}
+
+	private static class ServerPacketSenderImpl implements ServerPacketSender {
+		@Override
+		public void send(ServerPlayerEntity player, OutPacket packet) {
+			player.networkHandler.sendPacket(new CustomPayloadS2CPacket(packet.getIdentifier(), packet.getBuf()));
 		}
 	}
 }
