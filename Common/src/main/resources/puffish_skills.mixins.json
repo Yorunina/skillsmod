@@ -21,8 +21,12 @@
 		"WorldChunkMixin"
 	],
 	"client": [
+		"BufferBuilderMixin",
+		"BufferRendererMixin",
+		"DrawArrayParametersMixin",
 		"ImmediateMixin",
-		"MinecraftClientMixin"
+		"MinecraftClientMixin",
+		"VertexFormatMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

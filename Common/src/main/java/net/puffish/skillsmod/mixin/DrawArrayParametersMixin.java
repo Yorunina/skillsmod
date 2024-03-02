@@ -1,11 +1,10 @@
 package net.puffish.skillsmod.mixin;
 
 import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.VertexFormat;
 import net.minecraft.util.math.Matrix4f;
-import net.puffish.skillsmod.access.BufferBuilderAccess;
-import net.puffish.skillsmod.access.ImmediateAccess;
+import net.puffish.skillsmod.access.DrawArrayParametersAccess;
+import net.puffish.skillsmod.access.VertexFormatAccess;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -14,9 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 
-@Mixin(VertexConsumerProvider.Immediate.class)
-public class ImmediateMixin implements ImmediateAccess {
-
+@Mixin(BufferBuilder.DrawArrayParameters.class)
+public class DrawArrayParametersMixin implements DrawArrayParametersAccess {
 	@Unique
 	private List<Matrix4f> emits;
 
@@ -27,10 +25,10 @@ public class ImmediateMixin implements ImmediateAccess {
 	}
 
 	@Inject(
-			method = "getBufferInternal",
+			method = "getVertexFormat",
 			at = @At("RETURN")
 	)
-	private void injectAtGetBufferInternal(RenderLayer renderLayer, CallbackInfoReturnable<BufferBuilder> cir) {
-		((BufferBuilderAccess) cir.getReturnValue()).setEmits(emits);
+	private void getVertexFormat(CallbackInfoReturnable<VertexFormat> cir) {
+		((VertexFormatAccess) cir.getReturnValue()).setEmits(emits);
 	}
 }
