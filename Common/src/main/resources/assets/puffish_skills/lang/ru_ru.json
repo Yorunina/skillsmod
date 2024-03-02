@@ -11,17 +11,6 @@
 	"category.puffish_skills.skills": "Навыки",
 	"key.puffish_skills.open": "Открыть дерево улучшений",
 
-	"attribute.puffish_skills.player.stamina": "Выносливость",
-	"attribute.puffish_skills.player.melee_damage": "Урон в ближнем бою",
-	"attribute.puffish_skills.player.ranged_damage": "Урон в дальнем бою",
-	"attribute.puffish_skills.player.fortune": "Удача",
-	"attribute.puffish_skills.player.healing": "Регенерация",
-	"attribute.puffish_skills.player.jump": "Прыжок",
-	"attribute.puffish_skills.player.resistance": "Сопротивление",
-	"attribute.puffish_skills.player.mining_speed": "Скорость копания",
-	"attribute.puffish_skills.player.sprinting_speed": "Скорость бега",
-	"attribute.puffish_skills.player.knockback": "Отдача",
-
 	"chat.puffish_skills.new_point": "Вы получили новое очко навыка. Нажмите %s чтобы открыть Дерево навыков.",
 
 	"toast.puffish_skills.invalid_config.description": "Недопустимая конфигурация, проверьте логи игры.",
