@@ -1,10 +1,8 @@
 package net.puffish.skillsmod.mixin;
 
 import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumerProvider;
 import net.puffish.skillsmod.access.BufferBuilderAccess;
-import net.puffish.skillsmod.access.ImmediateAccess;
+import net.puffish.skillsmod.access.BuiltBufferAccess;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -14,9 +12,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 
-@Mixin(VertexConsumerProvider.Immediate.class)
-public class ImmediateMixin implements ImmediateAccess {
-
+@Mixin(BufferBuilder.class)
+public class BufferBuilderMixin implements BufferBuilderAccess {
 	@Unique
 	private List<Matrix4f> emits;
 
@@ -26,11 +23,9 @@ public class ImmediateMixin implements ImmediateAccess {
 		this.emits = emits;
 	}
 
-	@Inject(
-			method = "getBufferInternal",
-			at = @At("RETURN")
-	)
-	private void injectAtGetBufferInternal(RenderLayer renderLayer, CallbackInfoReturnable<BufferBuilder> cir) {
-		((BufferBuilderAccess) cir.getReturnValue()).setEmits(emits);
+	@Inject(method = "build", at = @At("RETURN"))
+	private void injectAtBuild(CallbackInfoReturnable<BufferBuilder.BuiltBuffer> cir) {
+		((BuiltBufferAccess) cir.getReturnValue()).setEmits(emits);
+		this.emits = null;
 	}
 }
