@@ -55,7 +55,6 @@ import net.puffish.skillsmod.server.network.packets.out.ShowCategoryOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.SkillUpdateOutPacket;
 import net.puffish.skillsmod.server.setup.ServerRegistrar;
 import net.puffish.skillsmod.server.setup.SkillsArgumentTypes;
-import net.puffish.skillsmod.server.setup.SkillsAttributes;
 import net.puffish.skillsmod.server.setup.SkillsGameRules;
 import net.puffish.skillsmod.skill.SkillState;
 import net.puffish.skillsmod.utils.ChangeListener;
@@ -69,7 +68,6 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -131,7 +129,6 @@ public class SkillsMod {
 
 		eventReceiver.registerListener(instance.new EventListener());
 
-		SkillsAttributes.register(registrar);
 		SkillsGameRules.register(registrar);
 		SkillsArgumentTypes.register(registrar);
 
@@ -163,10 +160,6 @@ public class SkillsMod {
 		return Text.translatable(Util.createTranslationKey(type, createIdentifier(path)), args);
 	}
 
-	public static Identifier createAttribute(String type, String name) {
-		return createIdentifier(type + "." + name);
-	}
-
 	public PrefixedLogger getLogger() {
 		return logger;
 	}
@@ -176,28 +169,6 @@ public class SkillsMod {
 				Path.of("config", "config.json"),
 				modConfigDir.resolve("config.json")
 		);
-
-		var categories = List.of(
-				"combat",
-				"mining"
-		);
-
-		var files = List.of(
-				"category.json",
-				"definitions.json",
-				"skills.json",
-				"connections.json",
-				"experience.json"
-		);
-
-		for (var category : categories) {
-			for (var file : files) {
-				PathUtils.copyFileFromJar(
-						Path.of("config", "categories", category, file),
-						modConfigDir.resolve(Path.of("categories", category, file))
-				);
-			}
-		}
 	}
 
 	private void loadModConfig(MinecraftServer server) {
