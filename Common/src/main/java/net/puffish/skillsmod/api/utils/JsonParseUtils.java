@@ -23,6 +23,7 @@ import net.minecraft.stat.StatType;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.api.json.JsonElementWrapper;
 
 import java.util.ArrayList;
@@ -202,7 +203,13 @@ public class JsonParseUtils {
 
 	public static Result<EntityAttribute, Failure> parseAttribute(JsonElementWrapper element) {
 		try {
-			return parseIdentifier(element).mapSuccess(id -> Registries.ATTRIBUTE.getOrEmpty(id).orElseThrow());
+			return parseIdentifier(element).mapSuccess(id -> {
+				// Backwards compatibility.
+				if (id.getNamespace().equals(SkillsAPI.MOD_ID)) {
+					id = new Identifier("puffish_attributes", id.getPath());
+				}
+				return Registries.ATTRIBUTE.getOrEmpty(id).orElseThrow();
+			});
 		} catch (Exception e) {
 			return Result.failure(element.getPath().createFailure("Expected valid attribute"));
 		}

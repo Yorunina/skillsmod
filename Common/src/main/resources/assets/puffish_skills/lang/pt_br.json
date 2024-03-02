@@ -11,15 +11,6 @@
 	"category.puffish_skills.skills": "Habilidades",
 	"key.puffish_skills.open": "Abrir Árvore de talentos",
 
-	"attribute.puffish_skills.player.stamina": "Estâmina",
-	"attribute.puffish_skills.player.melee_damage": "Dano corpo a corpo",
-	"attribute.puffish_skills.player.ranged_damage": "Dano à distância",
-	"attribute.puffish_skills.player.fortune": "Fortuna",
-	"attribute.puffish_skills.player.healing": "Cura",
-	"attribute.puffish_skills.player.jump": "Pulo",
-	"attribute.puffish_skills.player.resistance": "Resistência",
-	"attribute.puffish_skills.player.mining_speed": "Velocídade de mineração",
-
 	"chat.puffish_skills.new_point": "Você tem um novo ponto de habilidade. Aperte %s para abrir a árvore de habilidade.",
 
 	"toast.puffish_skills.invalid_config.description": "Configuração inválida, verifique os logs do jogo.",
