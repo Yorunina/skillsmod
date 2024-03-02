@@ -20,6 +20,9 @@
 		"WorldChunkMixin"
 	],
 	"client": [
+		"BufferBuilderMixin",
+		"BufferRendererMixin",
+		"BuiltBufferMixin",
 		"ImmediateMixin",
 		"MinecraftClientMixin"
 	],
