@@ -18,6 +18,7 @@ import net.minecraft.stat.StatType;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.puffish.skillsmod.api.SkillsAPI;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntryList;
 import net.puffish.skillsmod.api.json.JsonElementWrapper;
@@ -183,7 +184,13 @@ public class JsonParseUtils {
 
 	public static Result<EntityAttribute, Failure> parseAttribute(JsonElementWrapper element) {
 		try {
-			return parseIdentifier(element).mapSuccess(id -> Registry.ATTRIBUTE.getOrEmpty(id).orElseThrow());
+			return parseIdentifier(element).mapSuccess(id -> {
+				// Backwards compatibility.
+				if (id.getNamespace().equals(SkillsAPI.MOD_ID)) {
+					id = new Identifier("puffish_attributes", id.getPath());
+				}
+				return Registry.ATTRIBUTE.getOrEmpty(id).orElseThrow();
+			});
 		} catch (Exception e) {
 			return Result.failure(element.getPath().createFailure("Expected valid attribute"));
 		}

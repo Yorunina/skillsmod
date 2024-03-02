@@ -11,17 +11,6 @@
 	"category.puffish_skills.skills": "技能",
 	"key.puffish_skills.open": "打开技能树",
 
-	"attribute.puffish_skills.player.stamina": "体力",
-	"attribute.puffish_skills.player.melee_damage": "近战伤害",
-	"attribute.puffish_skills.player.ranged_damage": "远程伤害",
-	"attribute.puffish_skills.player.fortune": "时运",
-	"attribute.puffish_skills.player.healing": "治疗",
-	"attribute.puffish_skills.player.jump": "跳跃",
-	"attribute.puffish_skills.player.resistance": "抗性",
-	"attribute.puffish_skills.player.mining_speed": "挖掘速度",
-	"attribute.puffish_skills.player.sprinting_speed": "冲刺速度",
-	"attribute.puffish_skills.player.knockback": "击退",
-
 	"chat.puffish_skills.new_point": "你获得了一个新的技能点，按%s开启技能树。",
 
 	"toast.puffish_skills.invalid_config.description": "无效的配置，请检查游戏日志。",
