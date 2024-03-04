@@ -1,13 +1,16 @@
 package net.puffish.skillsmod.impl.json;
 
+import com.google.common.collect.Streams;
 import com.google.gson.JsonArray;
 import net.puffish.skillsmod.api.json.JsonArrayWrapper;
+import net.puffish.skillsmod.api.json.JsonElementWrapper;
 import net.puffish.skillsmod.api.json.JsonListReader;
 import net.puffish.skillsmod.api.json.JsonPath;
 import net.puffish.skillsmod.api.utils.Result;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class JsonArrayWrapperImpl extends JsonWrapperImpl implements JsonArrayWrapper {
 	private final JsonArray json;
@@ -15,6 +18,14 @@ public class JsonArrayWrapperImpl extends JsonWrapperImpl implements JsonArrayWr
 	public JsonArrayWrapperImpl(JsonArray json, JsonPath path) {
 		super(path);
 		this.json = json;
+	}
+
+	@Override
+	public Stream<JsonElementWrapper> stream() {
+		return Streams.mapWithIndex(
+				json.asList().stream(),
+				(jsonElement, i) -> new JsonElementWrapperImpl(jsonElement, path.thenArray(i))
+		);
 	}
 
 	@Override

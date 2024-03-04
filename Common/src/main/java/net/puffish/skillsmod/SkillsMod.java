@@ -13,6 +13,21 @@ import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.api.experience.ExperienceSource;
 import net.puffish.skillsmod.api.utils.Failure;
 import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.BlockCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.BlockStateCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.DamageTypeCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.EffectOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.EntityTypeCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.ItemCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.ItemStackCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.StatCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.StatTypeCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.SwitchOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyBlockTagCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyDamageTypeTagCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyEntityTypeTagCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyItemTagCondition;
 import net.puffish.skillsmod.commands.CategoryCommand;
 import net.puffish.skillsmod.commands.ExperienceCommand;
 import net.puffish.skillsmod.commands.OpenCommand;
@@ -33,12 +48,12 @@ import net.puffish.skillsmod.experience.builtin.KillEntityExperienceSource;
 import net.puffish.skillsmod.experience.builtin.MineBlockExperienceSource;
 import net.puffish.skillsmod.experience.builtin.TakeDamageExperienceSource;
 import net.puffish.skillsmod.impl.config.ConfigContextImpl;
-import net.puffish.skillsmod.impl.rewards.RewardContextImpl;
+import net.puffish.skillsmod.impl.rewards.RewardUpdateContextImpl;
 import net.puffish.skillsmod.network.Packets;
-import net.puffish.skillsmod.rewards.builtin.AttributeReward;
-import net.puffish.skillsmod.rewards.builtin.CommandReward;
-import net.puffish.skillsmod.rewards.builtin.ScoreboardReward;
-import net.puffish.skillsmod.rewards.builtin.TagReward;
+import net.puffish.skillsmod.reward.builtin.AttributeReward;
+import net.puffish.skillsmod.reward.builtin.CommandReward;
+import net.puffish.skillsmod.reward.builtin.ScoreboardReward;
+import net.puffish.skillsmod.reward.builtin.TagReward;
 import net.puffish.skillsmod.server.data.CategoryData;
 import net.puffish.skillsmod.server.data.PlayerData;
 import net.puffish.skillsmod.server.data.ServerData;
@@ -49,9 +64,9 @@ import net.puffish.skillsmod.server.network.packets.in.SkillClickInPacket;
 import net.puffish.skillsmod.server.network.packets.out.ExperienceUpdateOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.HideCategoryOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.OpenScreenOutPacket;
-import net.puffish.skillsmod.server.network.packets.out.ShowToastOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.PointsUpdateOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.ShowCategoryOutPacket;
+import net.puffish.skillsmod.server.network.packets.out.ShowToastOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.SkillUpdateOutPacket;
 import net.puffish.skillsmod.server.setup.ServerRegistrar;
 import net.puffish.skillsmod.server.setup.SkillsArgumentTypes;
@@ -137,12 +152,29 @@ public class SkillsMod {
 		ScoreboardReward.register();
 		TagReward.register();
 
-		MineBlockExperienceSource.register();
-		KillEntityExperienceSource.register();
-		EatFoodExperienceSource.register();
+		LegacyBlockTagCondition.register();
+		LegacyDamageTypeTagCondition.register();
+		LegacyEntityTypeTagCondition.register();
+		LegacyItemTagCondition.register();
+
+		AttributeOperation.register();
+		BlockCondition.register();
+		BlockStateCondition.register();
+		DamageTypeCondition.register();
+		EffectOperation.register();
+		EntityTypeCondition.register();
+		ItemCondition.register();
+		ItemStackCondition.register();
+		StatCondition.register();
+		StatTypeCondition.register();
+		SwitchOperation.register();
+
 		CraftItemExperienceSource.register();
-		TakeDamageExperienceSource.register();
+		EatFoodExperienceSource.register();
 		IncreaseStatExperienceSource.register();
+		KillEntityExperienceSource.register();
+		MineBlockExperienceSource.register();
+		TakeDamageExperienceSource.register();
 	}
 
 	public static Identifier createIdentifier(String path) {
@@ -537,7 +569,7 @@ public class SkillsMod {
 	private void resetRewards(ServerPlayerEntity player, CategoryConfig category) {
 		for (var definition : category.getDefinitions().getAll()) {
 			for (var reward : definition.getRewards()) {
-				reward.getInstance().update(player, new RewardContextImpl(0, false));
+				reward.getInstance().update(player, new RewardUpdateContextImpl(0, false));
 			}
 		}
 	}
