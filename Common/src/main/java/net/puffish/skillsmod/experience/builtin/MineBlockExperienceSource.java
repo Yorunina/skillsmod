@@ -1,71 +1,123 @@
 package net.puffish.skillsmod.experience.builtin;
 
 import net.minecraft.block.BlockState;
+import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
-import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.SkillsMod;
-import net.puffish.skillsmod.api.config.ConfigContext;
+import net.puffish.skillsmod.api.SkillsAPI;
+import net.puffish.skillsmod.api.calculation.Calculation;
+import net.puffish.skillsmod.api.calculation.operation.OperationFactory;
+import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
+import net.puffish.skillsmod.api.calculation.prototype.Prototype;
 import net.puffish.skillsmod.api.experience.ExperienceSource;
-import net.puffish.skillsmod.experience.calculation.CalculationManager;
-import net.puffish.skillsmod.api.experience.calculation.condition.BlockCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.BlockStateCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.BlockTagCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.ConditionFactory;
-import net.puffish.skillsmod.api.experience.calculation.condition.ItemCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.ItemNbtCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.ItemTagCondition;
-import net.puffish.skillsmod.api.experience.calculation.parameter.AttributeParameter;
-import net.puffish.skillsmod.api.experience.calculation.parameter.EffectParameter;
-import net.puffish.skillsmod.api.experience.calculation.parameter.ParameterFactory;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.experience.ExperienceSourceConfigContext;
 import net.puffish.skillsmod.api.utils.Failure;
-
-import java.util.Map;
+import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.calculation.LegacyCalculation;
+import net.puffish.skillsmod.calculation.operation.LegacyOperationRegistry;
+import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.BlockStateCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.EffectOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.ItemStackCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyBlockTagCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyItemTagCondition;
 
 public class MineBlockExperienceSource implements ExperienceSource {
-	public static final Identifier ID = SkillsMod.createIdentifier("mine_block");
+	private static final Identifier ID = SkillsMod.createIdentifier("mine_block");
+	private static final Prototype<Data> PROTOTYPE = Prototype.create(ID);
 
-	private static final Map<String, ConditionFactory<Context>> CONDITIONS = Map.ofEntries(
-			Map.entry("block", BlockCondition.factory().map(c -> c.map(Context::blockState))),
-			Map.entry("block_state", BlockStateCondition.factory().map(c -> c.map(Context::blockState))),
-			Map.entry("block_tag", BlockTagCondition.factory().map(c -> c.map(Context::blockState))),
-			Map.entry("tool", ItemCondition.factory().map(c -> c.map(Context::tool))),
-			Map.entry("tool_nbt", ItemNbtCondition.factory().map(c -> c.map(Context::tool))),
-			Map.entry("tool_tag", ItemTagCondition.factory().map(c -> c.map(Context::tool)))
-	);
+	static {
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("player"),
+				BuiltinPrototypes.PLAYER,
+				OperationFactory.create(Data::player)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("mined_block_state"),
+				BuiltinPrototypes.BLOCK_STATE,
+				OperationFactory.create(Data::blockState)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("tool_item_stack"),
+				BuiltinPrototypes.ITEM_STACK,
+				OperationFactory.create(Data::tool)
+		);
 
-	private static final Map<String, ParameterFactory<Context>> PARAMETERS = Map.ofEntries(
-			Map.entry("player_effect", EffectParameter.factory().map(p -> p.map(Context::player))),
-			Map.entry("player_attribute", AttributeParameter.factory().map(p -> p.map(Context::player)))
-	);
-
-	private final CalculationManager<Context> manager;
-
-	private MineBlockExperienceSource(CalculationManager<Context> calculated) {
-		this.manager = calculated;
-	}
-
-	public static void register() {
-		SkillsAPI.registerExperienceSourceWithData(
-				ID,
-				(json, context) -> json.getAsObject().andThen(rootObject -> MineBlockExperienceSource.create(rootObject, context))
+		// Backwards compatibility.
+		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
+		legacy.registerBooleanFunction(
+				"block",
+				BlockStateCondition::parse,
+				Data::blockState
+		);
+		legacy.registerBooleanFunction(
+				"block_state",
+				BlockStateCondition::parse,
+				Data::blockState
+		);
+		legacy.registerBooleanFunction(
+				"block_tag",
+				LegacyBlockTagCondition::parse,
+				Data::blockState
+		);
+		legacy.registerBooleanFunction(
+				"tool",
+				ItemStackCondition::parse,
+				Data::tool
+		);
+		legacy.registerBooleanFunction(
+				"tool_nbt",
+				ItemStackCondition::parse,
+				Data::tool
+		);
+		legacy.registerBooleanFunction(
+				"tool_tag",
+				LegacyItemTagCondition::parse,
+				Data::tool
+		);
+		legacy.registerNumberFunction(
+				"player_effect",
+				effect -> (double) (effect.getAmplifier() + 1),
+				EffectOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"player_attribute",
+				EntityAttributeInstance::getValue,
+				AttributeOperation::parse,
+				Data::player
 		);
 	}
 
-	private static Result<MineBlockExperienceSource, Failure> create(JsonObjectWrapper rootObject, ConfigContext context) {
-		return CalculationManager.create(rootObject, CONDITIONS, PARAMETERS, context).mapSuccess(MineBlockExperienceSource::new);
+	private final Calculation<Data> calculation;
+
+	private MineBlockExperienceSource(Calculation<Data> calculation) {
+		this.calculation = calculation;
 	}
 
-	private record Context(ServerPlayerEntity player, BlockState blockState, ItemStack tool) {
-
+	public static void register() {
+		SkillsAPI.registerExperienceSource(
+				ID,
+				MineBlockExperienceSource::parse
+		);
 	}
+
+	private static Result<MineBlockExperienceSource, Failure> parse(ExperienceSourceConfigContext context) {
+		return context.getData().andThen(rootElement ->
+				LegacyCalculation.parse(rootElement, PROTOTYPE, context)
+						.mapSuccess(MineBlockExperienceSource::new)
+		);
+	}
+
+	private record Data(ServerPlayerEntity player, BlockState blockState, ItemStack tool) { }
 
 	public int getValue(ServerPlayerEntity player, BlockState blockState, ItemStack tool) {
-		return manager.getValue(new Context(player, blockState, tool));
+		return (int) Math.round(calculation.evaluate(
+				new Data(player, blockState, tool)
+		));
 	}
 
 	@Override
