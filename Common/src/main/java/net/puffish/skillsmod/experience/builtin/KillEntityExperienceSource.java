@@ -1,84 +1,154 @@
 package net.puffish.skillsmod.experience.builtin;
 
-import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.DamageType;
 import net.minecraft.item.ItemStack;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
-import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.SkillsMod;
+import net.puffish.skillsmod.api.SkillsAPI;
+import net.puffish.skillsmod.api.calculation.Calculation;
+import net.puffish.skillsmod.api.calculation.operation.OperationFactory;
+import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
+import net.puffish.skillsmod.api.calculation.prototype.Prototype;
 import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.experience.ExperienceSource;
-import net.puffish.skillsmod.api.experience.calculation.condition.DamageTypeCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.DamageTypeTagCondition;
-import net.puffish.skillsmod.experience.calculation.CalculationManager;
-import net.puffish.skillsmod.api.experience.calculation.condition.ConditionFactory;
-import net.puffish.skillsmod.api.experience.calculation.condition.EntityTypeCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.EntityTypeTagCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.ItemCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.ItemNbtCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.ItemTagCondition;
-import net.puffish.skillsmod.api.experience.calculation.parameter.AttributeParameter;
-import net.puffish.skillsmod.api.experience.calculation.parameter.EffectParameter;
-import net.puffish.skillsmod.api.experience.calculation.parameter.ParameterFactory;
+import net.puffish.skillsmod.api.experience.ExperienceSourceConfigContext;
 import net.puffish.skillsmod.api.json.JsonElementWrapper;
 import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Result;
 import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.calculation.LegacyCalculation;
+import net.puffish.skillsmod.calculation.operation.LegacyOperationRegistry;
+import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.DamageTypeCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.EffectOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.EntityTypeCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.ItemStackCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyDamageTypeTagCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyEntityTypeTagCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyItemTagCondition;
 
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
 public class KillEntityExperienceSource implements ExperienceSource {
-	public static final Identifier ID = SkillsMod.createIdentifier("kill_entity");
+	private static final Identifier ID = SkillsMod.createIdentifier("kill_entity");
+	private static final Prototype<Data> PROTOTYPE = Prototype.create(ID);
 
-	private static final Map<String, ConditionFactory<Context>> CONDITIONS = Map.ofEntries(
-			Map.entry("entity", EntityTypeCondition.factory().map(c -> c.map(Context::entityType))),
-			Map.entry("entity_tag", EntityTypeTagCondition.factory().map(c -> c.map(Context::entityType))),
-			Map.entry("weapon", ItemCondition.factory().map(c -> c.map(Context::weapon))),
-			Map.entry("weapon_nbt", ItemNbtCondition.factory().map(c -> c.map(Context::weapon))),
-			Map.entry("weapon_tag", ItemTagCondition.factory().map(c -> c.map(Context::weapon))),
-			Map.entry("damage_type", DamageTypeCondition.factory().map(c -> c.map(Context::damageType))),
-			Map.entry("damage_type_tag", DamageTypeTagCondition.factory().map(c -> c.map(Context::damageType)))
-	);
+	static {
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("player"),
+				BuiltinPrototypes.PLAYER,
+				OperationFactory.create(Data::player)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("weapon_item_stack"),
+				BuiltinPrototypes.ITEM_STACK,
+				OperationFactory.create(Data::weapon)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("killed_living_entity"),
+				BuiltinPrototypes.LIVING_ENTITY,
+				OperationFactory.create(Data::entity)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("dropped_experience"),
+				BuiltinPrototypes.NUMBER,
+				OperationFactory.create(Data::entityDroppedXp)
+		);
 
-	private static final Map<String, ParameterFactory<Context>> PARAMETERS = Map.ofEntries(
-			Map.entry("player_effect", EffectParameter.factory().map(p -> p.map(Context::player))),
-			Map.entry("player_attribute", AttributeParameter.factory().map(p -> p.map(Context::player))),
-			Map.entry("entity_dropped_experience", ParameterFactory.simple(Context::entityDroppedXp)),
-			Map.entry("entity_max_health", ParameterFactory.simple(Context::entityMaxHealth))
-	);
+		// Backwards compatibility.
+		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
+		legacy.registerBooleanFunction(
+				"entity",
+				EntityTypeCondition::parse,
+				data -> data.entity().getType()
+		);
+		legacy.registerBooleanFunction(
+				"entity_tag",
+				LegacyEntityTypeTagCondition::parse,
+				data -> data.entity().getType()
+		);
+		legacy.registerBooleanFunction(
+				"weapon",
+				ItemStackCondition::parse,
+				Data::weapon
+		);
+		legacy.registerBooleanFunction(
+				"weapon_nbt",
+				ItemStackCondition::parse,
+				Data::weapon
+		);
+		legacy.registerBooleanFunction(
+				"weapon_tag",
+				LegacyItemTagCondition::parse,
+				Data::weapon
+		);
+		legacy.registerBooleanFunction(
+				"damage_type",
+				DamageTypeCondition::parse,
+				data -> data.damageSource().getType()
+		);
+		legacy.registerBooleanFunction(
+				"damage_type_tag",
+				LegacyDamageTypeTagCondition::parse,
+				data -> data.damageSource().getType()
+		);
+		legacy.registerNumberFunction(
+				"player_effect",
+				effect -> (double) (effect.getAmplifier() + 1),
+				EffectOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"player_attribute",
+				EntityAttributeInstance::getValue,
+				AttributeOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"entity_dropped_experience",
+				Data::entityDroppedXp
+		);
+		legacy.registerNumberFunction(
+				"entity_max_health",
+				data -> (double) data.entity().getMaxHealth()
+		);
+	}
 
-	private final CalculationManager<Context> manager;
+	private final Calculation<Data> calculation;
 	private final Optional<AntiFarming> optAntiFarming;
 
-	private KillEntityExperienceSource(CalculationManager<Context> calculated, Optional<AntiFarming> optAntiFarming) {
-		this.manager = calculated;
+	private KillEntityExperienceSource(Calculation<Data> calculation, Optional<AntiFarming> optAntiFarming) {
+		this.calculation = calculation;
 		this.optAntiFarming = optAntiFarming;
 	}
 
 	public static void register() {
-		SkillsAPI.registerExperienceSourceWithData(
+		SkillsAPI.registerExperienceSource(
 				ID,
-				(json, context) -> json.getAsObject().andThen(rootObject -> KillEntityExperienceSource.create(rootObject, context))
+				KillEntityExperienceSource::parse
 		);
 	}
 
-	private static Result<KillEntityExperienceSource, Failure> create(JsonObjectWrapper rootObject, ConfigContext context) {
+	private static Result<KillEntityExperienceSource, Failure> parse(ExperienceSourceConfigContext context) {
+		return context.getData()
+				.andThen(JsonElementWrapper::getAsObject)
+				.andThen(rootObject -> parse(rootObject, context));
+	}
+	private static Result<KillEntityExperienceSource, Failure> parse(JsonObjectWrapper rootObject, ConfigContext context) {
 		var failures = new ArrayList<Failure>();
 
-		var optCalculated = CalculationManager.create(rootObject, CONDITIONS, PARAMETERS, context)
+		var optCalculation = LegacyCalculation.parse(rootObject, PROTOTYPE, context)
 				.ifFailure(failures::add)
 				.getSuccess();
 
 		var optAntiFarming = rootObject.get("anti_farming")
-				.getSuccess()
+				.getSuccess() // ignore failure because this property is optional
 				.flatMap(element -> AntiFarming.parse(element)
 						.ifFailure(failures::add)
 						.getSuccess()
@@ -87,7 +157,7 @@ public class KillEntityExperienceSource implements ExperienceSource {
 
 		if (failures.isEmpty()) {
 			return Result.success(new KillEntityExperienceSource(
-					optCalculated.orElseThrow(),
+					optCalculation.orElseThrow(),
 					optAntiFarming
 			));
 		} else {
@@ -132,22 +202,12 @@ public class KillEntityExperienceSource implements ExperienceSource {
 		}
 	}
 
-	private record Context(ServerPlayerEntity player, LivingEntity entity, ItemStack weapon, DamageSource damageSource, double entityDroppedXp) {
-		public double entityMaxHealth() {
-			return entity.getMaxHealth();
-		}
-
-		public EntityType<?> entityType() {
-			return entity.getType();
-		}
-
-		RegistryEntry<DamageType> damageType() {
-			return damageSource.getTypeRegistryEntry();
-		}
-	}
+	private record Data(ServerPlayerEntity player, LivingEntity entity, ItemStack weapon, DamageSource damageSource, double entityDroppedXp) { }
 
 	public int getValue(ServerPlayerEntity player, LivingEntity entity, ItemStack weapon, DamageSource damageSource, double entityDroppedXp) {
-		return manager.getValue(new Context(player, entity, weapon, damageSource, entityDroppedXp));
+		return (int) Math.round(calculation.evaluate(
+				new Data(player, entity, weapon, damageSource, entityDroppedXp)
+		));
 	}
 
 	public Optional<AntiFarming> getAntiFarming() {

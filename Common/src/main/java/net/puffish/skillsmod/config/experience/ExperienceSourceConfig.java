@@ -11,6 +11,7 @@ import net.puffish.skillsmod.api.json.JsonPath;
 import net.puffish.skillsmod.api.utils.JsonParseUtils;
 import net.puffish.skillsmod.api.utils.Result;
 import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.impl.experience.ExperienceSourceConfigContextImpl;
 
 import java.util.ArrayList;
 
@@ -56,7 +57,9 @@ public class ExperienceSourceConfig {
 
 	private static Result<ExperienceSourceConfig, Failure> build(Identifier type, Result<JsonElementWrapper, Failure> maybeDataElement, JsonPath typeElementPath, ConfigContext context) {
 		return ExperienceSourceRegistry.getFactory(type)
-				.map(factory -> factory.create(maybeDataElement, context).mapSuccess(instance -> new ExperienceSourceConfig(type, instance)))
+				.map(factory -> factory.create(new ExperienceSourceConfigContextImpl(context, maybeDataElement))
+						.mapSuccess(instance -> new ExperienceSourceConfig(type, instance))
+				)
 				.orElseGet(() -> Result.failure(typeElementPath.createFailure("Expected a valid source type")));
 	}
 
