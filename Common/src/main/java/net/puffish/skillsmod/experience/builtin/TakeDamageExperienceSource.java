@@ -1,84 +1,129 @@
 package net.puffish.skillsmod.experience.builtin;
 
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
+import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.DamageType;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
-import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.SkillsMod;
-import net.puffish.skillsmod.api.config.ConfigContext;
+import net.puffish.skillsmod.api.SkillsAPI;
+import net.puffish.skillsmod.api.calculation.Calculation;
+import net.puffish.skillsmod.api.calculation.operation.OperationFactory;
+import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
+import net.puffish.skillsmod.api.calculation.prototype.Prototype;
 import net.puffish.skillsmod.api.experience.ExperienceSource;
-import net.puffish.skillsmod.experience.calculation.CalculationManager;
-import net.puffish.skillsmod.api.experience.calculation.condition.ConditionFactory;
-import net.puffish.skillsmod.api.experience.calculation.condition.DamageTypeCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.DamageTypeTagCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.EntityTypeCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.EntityTypeTagCondition;
-import net.puffish.skillsmod.api.experience.calculation.parameter.AttributeParameter;
-import net.puffish.skillsmod.api.experience.calculation.parameter.EffectParameter;
-import net.puffish.skillsmod.api.experience.calculation.parameter.ParameterFactory;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.experience.ExperienceSourceConfigContext;
 import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.calculation.LegacyCalculation;
+import net.puffish.skillsmod.calculation.operation.LegacyOperationRegistry;
+import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.DamageTypeCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.EffectOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.EntityTypeCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyDamageTypeTagCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyEntityTypeTagCondition;
 
-import java.util.Map;
 import java.util.Optional;
 
 public class TakeDamageExperienceSource implements ExperienceSource {
-	public static final Identifier ID = SkillsMod.createIdentifier("take_damage");
+	private static final Identifier ID = SkillsMod.createIdentifier("take_damage");
+	private static final Prototype<Data> PROTOTYPE = Prototype.create(ID);
 
-	private static final Map<String, ConditionFactory<Context>> CONDITIONS = Map.ofEntries(
-			Map.entry("damage_type", DamageTypeCondition.factory().map(c -> c.map(Context::damageType))),
-			Map.entry("damage_type_tag", DamageTypeTagCondition.factory().map(c -> c.map(Context::damageType))),
-			Map.entry("attacker", EntityTypeCondition.factory().map(c -> ctx -> ctx.attacker().map(c::test).orElse(false))),
-			Map.entry("attacker_tag", EntityTypeTagCondition.factory().map(c -> ctx -> ctx.attacker().map(c::test).orElse(false))),
-			Map.entry("source", EntityTypeCondition.factory().map(c -> ctx -> ctx.source().map(c::test).orElse(false))),
-			Map.entry("source_tag", EntityTypeTagCondition.factory().map(c -> ctx -> ctx.source().map(c::test).orElse(false)))
-	);
+	static {
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("player"),
+				BuiltinPrototypes.PLAYER,
+				OperationFactory.create(Data::player)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("damage_source"),
+				BuiltinPrototypes.DAMAGE_SOURCE,
+				OperationFactory.create(Data::damageSource)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("damage"),
+				BuiltinPrototypes.NUMBER,
+				OperationFactory.create(data -> (double) data.damage())
+		);
 
-	private static final Map<String, ParameterFactory<Context>> PARAMETERS = Map.ofEntries(
-			Map.entry("player_effect", EffectParameter.factory().map(p -> p.map(Context::player))),
-			Map.entry("player_attribute", AttributeParameter.factory().map(p -> p.map(Context::player))),
-			Map.entry("damage", ParameterFactory.simple(ctx -> (double) ctx.damage()))
-	);
-
-	private final CalculationManager<Context> manager;
-
-	private TakeDamageExperienceSource(CalculationManager<Context> calculated) {
-		this.manager = calculated;
-	}
-
-	public static void register() {
-		SkillsAPI.registerExperienceSourceWithData(
-				ID,
-				(json, context) -> json.getAsObject().andThen(rootObjet -> TakeDamageExperienceSource.create(rootObjet, context))
+		// Backwards compatibility.
+		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
+		legacy.registerBooleanFunction(
+				"damage_type",
+				DamageTypeCondition::parse,
+				data -> data.damageSource().getType()
+		);
+		legacy.registerBooleanFunction(
+				"damage_type_tag",
+				LegacyDamageTypeTagCondition::parse,
+				data -> data.damageSource().getType()
+		);
+		legacy.registerOptionalBooleanFunction(
+				"attacker",
+				EntityTypeCondition::parse,
+				data -> Optional.ofNullable(data.damageSource().getAttacker()).map(Entity::getType)
+		);
+		legacy.registerOptionalBooleanFunction(
+				"attacker_tag",
+				LegacyEntityTypeTagCondition::parse,
+				data -> Optional.ofNullable(data.damageSource().getAttacker()).map(Entity::getType)
+		);
+		legacy.registerOptionalBooleanFunction(
+				"source",
+				EntityTypeCondition::parse,
+				data -> Optional.ofNullable(data.damageSource().getSource()).map(Entity::getType)
+		);
+		legacy.registerOptionalBooleanFunction(
+				"source_tag",
+				LegacyEntityTypeTagCondition::parse,
+				data -> Optional.ofNullable(data.damageSource().getSource()).map(Entity::getType)
+		);
+		legacy.registerNumberFunction(
+				"player_effect",
+				effect -> (double) (effect.getAmplifier() + 1),
+				EffectOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"player_attribute",
+				EntityAttributeInstance::getValue,
+				AttributeOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"damage",
+				data -> (double) data.damage()
 		);
 	}
 
-	private static Result<TakeDamageExperienceSource, Failure> create(JsonObjectWrapper rootObject, ConfigContext context) {
-		return CalculationManager.create(rootObject, CONDITIONS, PARAMETERS, context).mapSuccess(TakeDamageExperienceSource::new);
+	private final Calculation<Data> calculation;
+
+	private TakeDamageExperienceSource(Calculation<Data> calculation) {
+		this.calculation = calculation;
 	}
 
-	private record Context(ServerPlayerEntity player, float damage, DamageSource damageSource) {
-		RegistryEntry<DamageType> damageType() {
-			return damageSource.getTypeRegistryEntry();
-		}
-
-		Optional<EntityType<?>> source() {
-			return Optional.ofNullable(damageSource.getSource()).map(Entity::getType);
-		}
-
-		Optional<EntityType<?>> attacker() {
-			return Optional.ofNullable(damageSource.getAttacker()).map(Entity::getType);
-		}
+	public static void register() {
+		SkillsAPI.registerExperienceSource(
+				ID,
+				TakeDamageExperienceSource::parse
+		);
 	}
+
+	private static Result<TakeDamageExperienceSource, Failure> parse(ExperienceSourceConfigContext context) {
+		return context.getData().andThen(rootElement ->
+				LegacyCalculation.parse(rootElement, PROTOTYPE, context)
+						.mapSuccess(TakeDamageExperienceSource::new)
+		);
+	}
+
+	private record Data(ServerPlayerEntity player, float damage, DamageSource damageSource) { }
 
 	public int getValue(ServerPlayerEntity player, float damage, DamageSource damageSource) {
-		return manager.getValue(new Context(player, damage, damageSource));
+		return (int) Math.round(calculation.evaluate(
+				new Data(player, damage, damageSource)
+		));
 	}
 
 	@Override

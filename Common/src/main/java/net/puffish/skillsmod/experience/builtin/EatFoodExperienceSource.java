@@ -1,75 +1,114 @@
 package net.puffish.skillsmod.experience.builtin;
 
+import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
-import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.SkillsMod;
-import net.puffish.skillsmod.api.config.ConfigContext;
+import net.puffish.skillsmod.api.SkillsAPI;
+import net.puffish.skillsmod.api.calculation.Calculation;
+import net.puffish.skillsmod.api.calculation.operation.OperationFactory;
+import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
+import net.puffish.skillsmod.api.calculation.prototype.Prototype;
 import net.puffish.skillsmod.api.experience.ExperienceSource;
-import net.puffish.skillsmod.experience.calculation.CalculationManager;
-import net.puffish.skillsmod.api.experience.calculation.condition.ConditionFactory;
-import net.puffish.skillsmod.api.experience.calculation.condition.ItemCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.ItemNbtCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.ItemTagCondition;
-import net.puffish.skillsmod.api.experience.calculation.parameter.AttributeParameter;
-import net.puffish.skillsmod.api.experience.calculation.parameter.EffectParameter;
-import net.puffish.skillsmod.api.experience.calculation.parameter.ParameterFactory;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.experience.ExperienceSourceConfigContext;
 import net.puffish.skillsmod.api.utils.Failure;
-
-import java.util.Map;
+import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.calculation.LegacyCalculation;
+import net.puffish.skillsmod.calculation.operation.LegacyOperationRegistry;
+import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.EffectOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.ItemStackCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyItemTagCondition;
 
 public class EatFoodExperienceSource implements ExperienceSource {
+	private static final Identifier ID = SkillsMod.createIdentifier("eat_food");
+	private static final Prototype<Data> PROTOTYPE = Prototype.create(ID);
 
-	public static final Identifier ID = SkillsMod.createIdentifier("eat_food");
+	static {
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("player"),
+				BuiltinPrototypes.PLAYER,
+				OperationFactory.create(Data::player)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("eaten_item_stack"),
+				BuiltinPrototypes.ITEM_STACK,
+				OperationFactory.create(Data::itemStack)
+		);
 
-	private static final Map<String, ConditionFactory<Context>> CONDITIONS = Map.ofEntries(
-			Map.entry("item", ItemCondition.factory().map(c -> c.map(Context::item))),
-			Map.entry("item_nbt", ItemNbtCondition.factory().map(c -> c.map(Context::item))),
-			Map.entry("item_tag", ItemTagCondition.factory().map(c -> c.map(Context::item)))
-	);
-
-	private static final Map<String, ParameterFactory<Context>> PARAMETERS = Map.ofEntries(
-			Map.entry("player_effect", EffectParameter.factory().map(p -> p.map(Context::player))),
-			Map.entry("player_attribute", AttributeParameter.factory().map(p -> p.map(Context::player))),
-			Map.entry("food_hunger", ParameterFactory.simple(Context::hunger)),
-			Map.entry("food_saturation", ParameterFactory.simple(Context::saturation))
-	);
-
-	private final CalculationManager<Context> manager;
-
-	private EatFoodExperienceSource(CalculationManager<Context> calculated) {
-		this.manager = calculated;
-	}
-
-	public static void register() {
-		SkillsAPI.registerExperienceSourceWithData(
-				ID,
-				(json, context) -> json.getAsObject().andThen(rootObject -> EatFoodExperienceSource.create(rootObject, context))
+		// Backwards compatibility.
+		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
+		legacy.registerBooleanFunction(
+				"item",
+				ItemStackCondition::parse,
+				Data::itemStack
+		);
+		legacy.registerBooleanFunction(
+				"item_nbt",
+				ItemStackCondition::parse,
+				Data::itemStack
+		);
+		legacy.registerBooleanFunction(
+				"item_tag",
+				LegacyItemTagCondition::parse,
+				Data::itemStack
+		);
+		legacy.registerNumberFunction(
+				"player_effect",
+				effect -> (double) (effect.getAmplifier() + 1),
+				EffectOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"player_attribute",
+				EntityAttributeInstance::getValue,
+				AttributeOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"food_hunger",
+				data -> {
+					var fc = data.itemStack().getItem().getFoodComponent();
+					return fc == null ? 0.0 : fc.getHunger();
+				}
+		);
+		legacy.registerNumberFunction(
+				"food_saturation",
+				data -> {
+					var fc = data.itemStack().getItem().getFoodComponent();
+					return fc == null ? 0.0 : fc.getSaturationModifier();
+				}
 		);
 	}
 
-	private static Result<EatFoodExperienceSource, Failure> create(JsonObjectWrapper rootObject, ConfigContext context) {
-		return CalculationManager.create(rootObject, CONDITIONS, PARAMETERS, context).mapSuccess(EatFoodExperienceSource::new);
+	private final Calculation<Data> calculation;
+
+	private EatFoodExperienceSource(Calculation<Data> calculation) {
+		this.calculation = calculation;
 	}
 
-	private record Context(ServerPlayerEntity player, ItemStack item) {
-		public double hunger() {
-			var fc = item.getItem().getFoodComponent();
-			return fc == null ? 0.0 : fc.getHunger();
-		}
-
-		public double saturation() {
-			var fc = item.getItem().getFoodComponent();
-			return fc == null ? 0.0 : fc.getSaturationModifier();
-		}
+	public static void register() {
+		SkillsAPI.registerExperienceSource(
+				ID,
+				EatFoodExperienceSource::parse
+		);
 	}
+
+	private static Result<EatFoodExperienceSource, Failure> parse(ExperienceSourceConfigContext context) {
+		return context.getData().andThen(rootElement ->
+				LegacyCalculation.parse(rootElement, PROTOTYPE, context)
+						.mapSuccess(EatFoodExperienceSource::new)
+		);
+	}
+
+	private record Data(ServerPlayerEntity player, ItemStack itemStack) { }
 
 	public int getValue(ServerPlayerEntity player, ItemStack itemStack) {
-		return manager.getValue(new Context(player, itemStack));
+		return (int) Math.round(calculation.evaluate(
+				new Data(player, itemStack)
+		));
 	}
 
 	@Override

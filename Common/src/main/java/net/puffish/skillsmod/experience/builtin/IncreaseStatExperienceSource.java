@@ -1,59 +1,98 @@
 package net.puffish.skillsmod.experience.builtin;
 
+import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.stat.Stat;
 import net.minecraft.util.Identifier;
-import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.SkillsMod;
-import net.puffish.skillsmod.api.config.ConfigContext;
+import net.puffish.skillsmod.api.SkillsAPI;
+import net.puffish.skillsmod.api.calculation.Calculation;
+import net.puffish.skillsmod.api.calculation.operation.OperationFactory;
+import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
+import net.puffish.skillsmod.api.calculation.prototype.Prototype;
 import net.puffish.skillsmod.api.experience.ExperienceSource;
-import net.puffish.skillsmod.experience.calculation.CalculationManager;
-import net.puffish.skillsmod.api.experience.calculation.condition.ConditionFactory;
-import net.puffish.skillsmod.api.experience.calculation.condition.StatCondition;
-import net.puffish.skillsmod.api.experience.calculation.parameter.AttributeParameter;
-import net.puffish.skillsmod.api.experience.calculation.parameter.EffectParameter;
-import net.puffish.skillsmod.api.experience.calculation.parameter.ParameterFactory;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.experience.ExperienceSourceConfigContext;
 import net.puffish.skillsmod.api.utils.Failure;
-
-import java.util.Map;
+import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.calculation.LegacyCalculation;
+import net.puffish.skillsmod.calculation.operation.LegacyOperationRegistry;
+import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.EffectOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.StatCondition;
 
 public class IncreaseStatExperienceSource implements ExperienceSource {
-	public static final Identifier ID = SkillsMod.createIdentifier("increase_stat");
+	private static final Identifier ID = SkillsMod.createIdentifier("increase_stat");
+	private static final Prototype<Data> PROTOTYPE = Prototype.create(ID);
 
-	private static final Map<String, ConditionFactory<Context>> CONDITIONS = Map.ofEntries(
-			Map.entry("stat", StatCondition.factory().map(p -> p.map(Context::stat)))
-	);
+	static {
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("player"),
+				BuiltinPrototypes.PLAYER,
+				OperationFactory.create(Data::player)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("stat"),
+				BuiltinPrototypes.STAT,
+				OperationFactory.create(Data::stat)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("amount"),
+				BuiltinPrototypes.NUMBER,
+				OperationFactory.create(data -> (double) data.amount())
+		);
 
-	private static final Map<String, ParameterFactory<Context>> PARAMETERS = Map.ofEntries(
-			Map.entry("player_effect", EffectParameter.factory().map(p -> p.map(Context::player))),
-			Map.entry("player_attribute", AttributeParameter.factory().map(p -> p.map(Context::player))),
-			Map.entry("amount", ParameterFactory.simple(ctx -> (double) ctx.amount()))
-	);
-
-	private final CalculationManager<Context> manager;
-
-	private IncreaseStatExperienceSource(CalculationManager<Context> calculated) {
-		this.manager = calculated;
-	}
-
-	public static void register() {
-		SkillsAPI.registerExperienceSourceWithData(
-				ID,
-				(json, context) -> json.getAsObject().andThen(rootObjet -> IncreaseStatExperienceSource.create(rootObjet, context))
+		// Backwards compatibility.
+		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
+		legacy.registerBooleanFunction(
+				"stat",
+				StatCondition::parse,
+				Data::stat
+		);
+		legacy.registerNumberFunction(
+				"player_effect",
+				effect -> (double) (effect.getAmplifier() + 1),
+				EffectOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"player_attribute",
+				EntityAttributeInstance::getValue,
+				AttributeOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"amount",
+				data -> (double) data.amount()
 		);
 	}
 
-	private static Result<IncreaseStatExperienceSource, Failure> create(JsonObjectWrapper rootObject, ConfigContext context) {
-		return CalculationManager.create(rootObject, CONDITIONS, PARAMETERS, context).mapSuccess(IncreaseStatExperienceSource::new);
+	private final Calculation<Data> calculation;
+
+	private IncreaseStatExperienceSource(Calculation<Data> calculation) {
+		this.calculation = calculation;
 	}
 
-	private record Context(ServerPlayerEntity player, Stat<?> stat, int amount) { }
+	public static void register() {
+		SkillsAPI.registerExperienceSource(
+				ID,
+				IncreaseStatExperienceSource::parse
+		);
+	}
+
+	private static Result<IncreaseStatExperienceSource, Failure> parse(ExperienceSourceConfigContext context) {
+		return context.getData().andThen(rootElement ->
+				LegacyCalculation.parse(rootElement, PROTOTYPE, context)
+						.mapSuccess(IncreaseStatExperienceSource::new)
+		);
+	}
+
+	private record Data(ServerPlayerEntity player, Stat<?> stat, int amount) { }
 
 	public int getValue(ServerPlayerEntity player, Stat<?> stat, int amount) {
-		return manager.getValue(new Context(player, stat, amount));
+		return (int) Math.round(calculation.evaluate(
+				new Data(player, stat, amount)
+		));
 	}
 
 	@Override

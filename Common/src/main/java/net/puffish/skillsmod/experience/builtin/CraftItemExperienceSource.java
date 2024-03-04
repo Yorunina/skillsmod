@@ -1,65 +1,100 @@
 package net.puffish.skillsmod.experience.builtin;
 
+import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.SkillsAPI;
-import net.puffish.skillsmod.api.config.ConfigContext;
+import net.puffish.skillsmod.api.calculation.Calculation;
+import net.puffish.skillsmod.api.calculation.operation.OperationFactory;
+import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
+import net.puffish.skillsmod.api.calculation.prototype.Prototype;
 import net.puffish.skillsmod.api.experience.ExperienceSource;
-import net.puffish.skillsmod.api.experience.calculation.condition.ConditionFactory;
-import net.puffish.skillsmod.api.experience.calculation.condition.ItemCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.ItemNbtCondition;
-import net.puffish.skillsmod.api.experience.calculation.condition.ItemTagCondition;
-import net.puffish.skillsmod.api.experience.calculation.parameter.AttributeParameter;
-import net.puffish.skillsmod.api.experience.calculation.parameter.EffectParameter;
-import net.puffish.skillsmod.api.experience.calculation.parameter.ParameterFactory;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
+import net.puffish.skillsmod.api.experience.ExperienceSourceConfigContext;
 import net.puffish.skillsmod.api.utils.Failure;
 import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.experience.calculation.CalculationManager;
-
-import java.util.Map;
+import net.puffish.skillsmod.calculation.LegacyCalculation;
+import net.puffish.skillsmod.calculation.operation.LegacyOperationRegistry;
+import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.EffectOperation;
+import net.puffish.skillsmod.calculation.operation.builtin.ItemStackCondition;
+import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyItemTagCondition;
 
 public class CraftItemExperienceSource implements ExperienceSource {
+	private static final Identifier ID = SkillsMod.createIdentifier("craft_item");
+	private static final Prototype<Data> PROTOTYPE = Prototype.create(ID);
 
-	public static final Identifier ID = SkillsMod.createIdentifier("craft_item");
+	static {
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("player"),
+				BuiltinPrototypes.PLAYER,
+				OperationFactory.create(Data::player)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("crafted_item_stack"),
+				BuiltinPrototypes.ITEM_STACK,
+				OperationFactory.create(Data::itemStack)
+		);
 
-	private static final Map<String, ConditionFactory<Context>> CONDITIONS = Map.ofEntries(
-			Map.entry("item", ItemCondition.factory().map(c -> c.map(Context::item))),
-			Map.entry("item_nbt", ItemNbtCondition.factory().map(c -> c.map(Context::item))),
-			Map.entry("item_tag", ItemTagCondition.factory().map(c -> c.map(Context::item)))
-	);
-
-	private static final Map<String, ParameterFactory<Context>> PARAMETERS = Map.ofEntries(
-			Map.entry("player_effect", EffectParameter.factory().map(p -> p.map(Context::player))),
-			Map.entry("player_attribute", AttributeParameter.factory().map(p -> p.map(Context::player)))
-	);
-
-	private final CalculationManager<Context> manager;
-
-	private CraftItemExperienceSource(CalculationManager<Context> calculated) {
-		this.manager = calculated;
-	}
-
-	public static void register() {
-		SkillsAPI.registerExperienceSourceWithData(
-				ID,
-				(json, context) -> json.getAsObject().andThen(rootObject -> CraftItemExperienceSource.create(rootObject, context))
+		// Backwards compatibility.
+		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
+		legacy.registerBooleanFunction(
+				"item",
+				ItemStackCondition::parse,
+				Data::itemStack
+		);
+		legacy.registerBooleanFunction(
+				"item_nbt",
+				ItemStackCondition::parse,
+				Data::itemStack
+		);
+		legacy.registerBooleanFunction(
+				"item_tag",
+				LegacyItemTagCondition::parse,
+				Data::itemStack
+		);
+		legacy.registerNumberFunction(
+				"player_effect",
+				effect -> (double) (effect.getAmplifier() + 1),
+				EffectOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"player_attribute",
+				EntityAttributeInstance::getValue,
+				AttributeOperation::parse,
+				Data::player
 		);
 	}
 
-	private static Result<CraftItemExperienceSource, Failure> create(JsonObjectWrapper rootObject, ConfigContext context) {
-		return CalculationManager.create(rootObject, CONDITIONS, PARAMETERS, context).mapSuccess(CraftItemExperienceSource::new);
+	private final Calculation<Data> calculation;
+
+	private CraftItemExperienceSource(Calculation<Data> calculation) {
+		this.calculation = calculation;
 	}
 
-	private record Context(ServerPlayerEntity player, ItemStack item) {
-
+	public static void register() {
+		SkillsAPI.registerExperienceSource(
+				ID,
+				CraftItemExperienceSource::parse
+		);
 	}
+
+	private static Result<CraftItemExperienceSource, Failure> parse(ExperienceSourceConfigContext context) {
+		return context.getData().andThen(rootElement ->
+				LegacyCalculation.parse(rootElement, PROTOTYPE, context)
+						.mapSuccess(CraftItemExperienceSource::new)
+		);
+	}
+
+	private record Data(ServerPlayerEntity player, ItemStack itemStack) { }
 
 	public int getValue(ServerPlayerEntity player, ItemStack itemStack) {
-		return manager.getValue(new Context(player, itemStack));
+		return (int) Math.round(calculation.evaluate(
+				new Data(player, itemStack)
+		));
 	}
 
 	@Override
