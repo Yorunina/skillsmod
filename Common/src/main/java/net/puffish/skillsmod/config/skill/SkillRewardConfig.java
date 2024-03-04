@@ -7,8 +7,9 @@ import net.puffish.skillsmod.api.json.JsonElementWrapper;
 import net.puffish.skillsmod.api.json.JsonObjectWrapper;
 import net.puffish.skillsmod.api.json.JsonPath;
 import net.puffish.skillsmod.api.rewards.Reward;
-import net.puffish.skillsmod.rewards.RewardRegistry;
-import net.puffish.skillsmod.rewards.builtin.DummyReward;
+import net.puffish.skillsmod.impl.rewards.RewardConfigContextImpl;
+import net.puffish.skillsmod.reward.RewardRegistry;
+import net.puffish.skillsmod.reward.builtin.DummyReward;
 import net.puffish.skillsmod.api.utils.JsonParseUtils;
 import net.puffish.skillsmod.api.utils.Result;
 import net.puffish.skillsmod.api.utils.Failure;
@@ -68,7 +69,9 @@ public class SkillRewardConfig {
 
 	private static Result<SkillRewardConfig, Failure> build(Identifier type, Result<JsonElementWrapper, Failure> maybeDataElement, JsonPath typePath, ConfigContext context) {
 		return RewardRegistry.getFactory(type)
-				.map(factory -> factory.create(maybeDataElement, context).mapSuccess(instance -> new SkillRewardConfig(type, instance)))
+				.map(factory -> factory.create(new RewardConfigContextImpl(context, maybeDataElement))
+						.mapSuccess(instance -> new SkillRewardConfig(type, instance))
+				)
 				.orElseGet(() -> Result.failure(typePath.createFailure("Expected a valid reward type")));
 	}
 

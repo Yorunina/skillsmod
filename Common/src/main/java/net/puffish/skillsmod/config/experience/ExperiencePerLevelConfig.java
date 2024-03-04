@@ -1,7 +1,7 @@
 package net.puffish.skillsmod.config.experience;
 
 import net.puffish.skillsmod.SkillsMod;
-import net.puffish.skillsmod.expression.ArithmeticParser;
+import net.puffish.skillsmod.expression.DefaultParser;
 import net.puffish.skillsmod.api.json.JsonElementWrapper;
 import net.puffish.skillsmod.api.json.JsonObjectWrapper;
 import net.puffish.skillsmod.api.json.JsonPath;
@@ -58,7 +58,7 @@ public class ExperiencePerLevelConfig {
 				.andThen(JsonElementWrapper::getAsObject)
 				.andThen(dataObject -> dataObject.get("expression"))
 				.andThen(expressionElement -> expressionElement.getAsString()
-						.andThen(expression -> ArithmeticParser.parse(expression, Set.of("level")))
+						.andThen(expression -> DefaultParser.parse(expression, Set.of("level")))
 						.mapSuccess(expression -> level -> {
 							var value = expression.eval(Map.ofEntries(Map.entry("level", (double) level)));
 							if (Double.isFinite(value)) {

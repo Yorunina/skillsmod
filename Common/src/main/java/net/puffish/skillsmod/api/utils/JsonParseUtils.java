@@ -13,23 +13,24 @@ import net.minecraft.nbt.StringNbtReader;
 import net.minecraft.predicate.NbtPredicate;
 import net.minecraft.predicate.StatePredicate;
 import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.stat.Stat;
 import net.minecraft.stat.StatType;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
 import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.api.json.JsonElementWrapper;
 
 import java.util.ArrayList;
+import java.util.function.Supplier;
 
 public class JsonParseUtils {
 	public static Result<Identifier, Failure> parseIdentifier(JsonElementWrapper element) {
 		try {
-			return Result.success(new Identifier(JsonHelper.asString(element.getJson(), "")));
+			return Result.success(new Identifier(element.getJson().getAsString()));
 		} catch (Exception e) {
 			return Result.failure(element.getPath().createFailure("Expected valid identifier"));
 		}
@@ -37,26 +38,70 @@ public class JsonParseUtils {
 
 	public static Result<String, Failure> parseIdentifierPath(JsonElementWrapper element) {
 		try {
-			return Result.success(new Identifier(Identifier.DEFAULT_NAMESPACE, JsonHelper.asString(element.getJson(), "")).getPath());
+			return Result.success(new Identifier(Identifier.DEFAULT_NAMESPACE, element.getJson().getAsString()).getPath());
 		} catch (Exception e) {
 			return Result.failure(element.getPath().createFailure("Expected valid identifier path"));
 		}
 	}
 
 	public static Result<StatusEffect, Failure> parseEffect(JsonElementWrapper element) {
-		try {
-			return parseIdentifier(element).mapSuccess(id -> Registries.STATUS_EFFECT.getOrEmpty(id).orElseThrow());
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createFailure("Expected valid effect"));
-		}
+		return parseSomething(Registries.STATUS_EFFECT, element, () -> "Expected valid effect");
+	}
+
+	public static Result<RegistryEntryList<StatusEffect>, Failure> parseEffectTag(JsonElementWrapper element) {
+		return parseSomethingTag(Registries.STATUS_EFFECT, element, () -> "Expected valid effect tag");
+	}
+
+	public static Result<RegistryEntryList<StatusEffect>, Failure> parseEffectOrEffectTag(JsonElementWrapper element) {
+		return parseSomethingOrSomethingTag(Registries.STATUS_EFFECT, element, () -> "Expected valid effect or effect tag");
 	}
 
 	public static Result<Block, Failure> parseBlock(JsonElementWrapper element) {
-		try {
-			return parseIdentifier(element).mapSuccess(id -> Registries.BLOCK.getOrEmpty(id).orElseThrow());
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createFailure("Expected valid block"));
-		}
+		return parseSomething(Registries.BLOCK, element, () -> "Expected valid block");
+	}
+
+	public static Result<RegistryEntryList<Block>, Failure> parseBlockTag(JsonElementWrapper element) {
+		return parseSomethingTag(Registries.BLOCK, element, () -> "Expected valid block tag");
+	}
+
+	public static Result<RegistryEntryList<Block>, Failure> parseBlockOrBlockTag(JsonElementWrapper element) {
+		return parseSomethingOrSomethingTag(Registries.BLOCK, element, () -> "Expected valid block or block tag");
+	}
+
+	public static Result<EntityType<?>, Failure> parseEntityType(JsonElementWrapper element) {
+		return parseSomething(Registries.ENTITY_TYPE, element, () -> "Expected valid entity type");
+	}
+
+	public static Result<RegistryEntryList<EntityType<?>>, Failure> parseEntityTypeTag(JsonElementWrapper element) {
+		return parseSomethingTag(Registries.ENTITY_TYPE, element, () -> "Expected valid entity type tag");
+	}
+
+	public static Result<RegistryEntryList<EntityType<?>>, Failure> parseEntityTypeOrEntityTypeTag(JsonElementWrapper element) {
+		return parseSomethingOrSomethingTag(Registries.ENTITY_TYPE, element, () -> "Expected valid entity type or entity type tag");
+	}
+
+	public static Result<Item, Failure> parseItem(JsonElementWrapper element) {
+		return parseSomething(Registries.ITEM, element, () -> "Expected valid item");
+	}
+
+	public static Result<RegistryEntryList<Item>, Failure> parseItemTag(JsonElementWrapper element) {
+		return parseSomethingTag(Registries.ITEM, element, () -> "Expected valid item tag");
+	}
+
+	public static Result<RegistryEntryList<Item>, Failure> parseItemOrItemTag(JsonElementWrapper element) {
+		return parseSomethingOrSomethingTag(Registries.ITEM, element, () -> "Expected valid item or item tag");
+	}
+
+	public static Result<StatType<?>, Failure> parseStatType(JsonElementWrapper element) {
+		return parseSomething(Registries.STAT_TYPE, element, () -> "Expected valid stat type");
+	}
+
+	public static Result<RegistryEntryList<StatType<?>>, Failure> parseStatTypeTag(JsonElementWrapper element) {
+		return parseSomethingTag(Registries.STAT_TYPE, element, () -> "Expected valid stat type tag");
+	}
+
+	public static Result<RegistryEntryList<StatType<?>>, Failure> parseStatTypeOrStatTypeTag(JsonElementWrapper element) {
+		return parseSomethingOrSomethingTag(Registries.STAT_TYPE, element, () -> "Expected valid stat type or stat type tag");
 	}
 
 	public static Result<StatePredicate, Failure> parseStatePredicate(JsonElementWrapper element) {
@@ -75,37 +120,13 @@ public class JsonParseUtils {
 		}
 	}
 
-	public static Result<RegistryEntryList.Named<Block>, Failure> parseBlockTag(JsonElementWrapper element) {
-		try {
-			return parseIdentifier(element).mapSuccess(id -> Registries.BLOCK.getTagCreatingWrapper().getOptional(TagKey.of(RegistryKeys.BLOCK, id)).orElseThrow());
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createFailure("Expected valid block tag"));
-		}
-	}
-
-	public static Result<EntityType<?>, Failure> parseEntityType(JsonElementWrapper element) {
-		try {
-			return parseIdentifier(element).mapSuccess(id -> Registries.ENTITY_TYPE.getOrEmpty(id).orElseThrow());
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createFailure("Expected valid entity type"));
-		}
-	}
-
-	public static Result<RegistryEntryList.Named<EntityType<?>>, Failure> parseEntityTypeTag(JsonElementWrapper element) {
-		try {
-			return parseIdentifier(element).mapSuccess(id -> Registries.ENTITY_TYPE.getTagCreatingWrapper().getOptional(TagKey.of(RegistryKeys.ENTITY_TYPE, id)).orElseThrow());
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createFailure("Expected valid entity type tag"));
-		}
-	}
-
 	public static Result<Stat<?>, Failure> parseStat(JsonElementWrapper element) {
 		try {
 			return parseIdentifier(element).mapSuccess(id -> getOrCreateStat(Registries.STAT_TYPE.getOrEmpty(
 					Identifier.splitOn(id.getNamespace(), '.')
 			).orElseThrow(), Identifier.splitOn(id.getPath(), '.')));
 		} catch (Exception e) {
-			return Result.failure(element.getPath().createFailure("Expected valid statistic"));
+			return Result.failure(element.getPath().createFailure("Expected valid stat"));
 		}
 	}
 
@@ -113,25 +134,9 @@ public class JsonParseUtils {
 		return statType.getOrCreateStat(statType.getRegistry().getOrEmpty(id).orElseThrow());
 	}
 
-	public static Result<Item, Failure> parseItem(JsonElementWrapper element) {
-		try {
-			return Result.success(JsonHelper.asItem(element.getJson(), ""));
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createFailure("Expected valid item"));
-		}
-	}
-
-	public static Result<RegistryEntryList.Named<Item>, Failure> parseItemTag(JsonElementWrapper element) {
-		try {
-			return parseIdentifier(element).mapSuccess(id -> Registries.ITEM.getTagCreatingWrapper().getOptional(TagKey.of(RegistryKeys.ITEM, id)).orElseThrow());
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createFailure("Expected valid item tag"));
-		}
-	}
-
 	public static Result<NbtCompound, Failure> parseNbt(JsonElementWrapper element) {
 		try {
-			return Result.success(StringNbtReader.parse(JsonHelper.asString(element.getJson(), "")));
+			return Result.success(StringNbtReader.parse(element.getJson().getAsString()));
 		} catch (Exception e) {
 			return Result.failure(element.getPath().createFailure("Expected valid nbt"));
 		}
@@ -204,5 +209,39 @@ public class JsonParseUtils {
 			case "multiply_total" -> Result.success(EntityAttributeModifier.Operation.MULTIPLY_TOTAL);
 			default -> Result.failure(element.getPath().createFailure("Expected valid attribute operation"));
 		});
+	}
+
+	private static <T> Result<T, Failure> parseSomething(Registry<T> registry, JsonElementWrapper element, Supplier<String> message) {
+		try {
+			var string = element.getJson().getAsString();
+			return Result.success(registry.getOrEmpty(new Identifier(string)).orElseThrow());
+		} catch (Exception ignored) {
+			return Result.failure(element.getPath().createFailure(message.get()));
+		}
+	}
+
+	private static <T> Result<RegistryEntryList<T>, Failure> parseSomethingTag(Registry<T> registry, JsonElementWrapper element, Supplier<String> message) {
+		try {
+			var string = element.getJson().getAsString();
+			if (string.startsWith("#")) {
+				string = string.substring(1);
+			}
+			return Result.success(registry.getReadOnlyWrapper().getOptional(TagKey.of(registry.getKey(), new Identifier(string))).orElseThrow());
+		} catch (Exception ignored) {
+			return Result.failure(element.getPath().createFailure(message.get()));
+		}
+	}
+
+	private static <T> Result<RegistryEntryList<T>, Failure> parseSomethingOrSomethingTag(Registry<T> registry, JsonElementWrapper element, Supplier<String> message) {
+		try {
+			var string = element.getJson().getAsString();
+			if (string.startsWith("#")) {
+				return Result.success(registry.getReadOnlyWrapper().getOptional(TagKey.of(registry.getKey(), new Identifier(string.substring(1)))).orElseThrow());
+			} else {
+				return Result.success(RegistryEntryList.of(registry.getEntry(RegistryKey.of(registry.getKey(), new Identifier(string))).orElseThrow()));
+			}
+		} catch (Exception ignored) {
+			return Result.failure(element.getPath().createFailure(message.get()));
+		}
 	}
 }
