@@ -2,6 +2,7 @@ package net.puffish.skillsmod.client.config;
 
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.puffish.skillsmod.client.config.colors.ClientColorsConfig;
 import net.puffish.skillsmod.client.config.skill.ClientSkillConfig;
 import net.puffish.skillsmod.client.config.skill.ClientSkillConnectionConfig;
 import net.puffish.skillsmod.client.config.skill.ClientSkillDefinitionConfig;
@@ -18,23 +19,27 @@ public record ClientCategoryConfig(
 		Identifier id,
 		Text title,
 		ClientIconConfig icon,
-		Identifier background,
+		ClientBackgroundConfig background,
+		ClientColorsConfig colors,
 		boolean exclusiveRoot,
 		int spentPointsLimit,
 		Map<String, ClientSkillDefinitionConfig> definitions,
 		Map<String, ClientSkillConfig> skills,
 		Collection<ClientSkillConnectionConfig> normalConnections,
-		Map<String, Collection<String>> normalNeighbors,
-		Map<String, Collection<String>> exclusiveNeighbors,
-		Map<String, Collection<ClientSkillConnectionConfig>> exclusiveConnections,
-		Map<String, Collection<String>> normalNeighborsReversed,
-		Map<String, Collection<String>> exclusiveNeighborsReversed
+		Collection<ClientSkillConnectionConfig> exclusiveConnections,
+		Map<String, Collection<ClientSkillConnectionConfig>> skillNormalConnections,
+		Map<String, Collection<ClientSkillConnectionConfig>> skillExclusiveConnections,
+		Map<String, Collection<String>> skillNormalNeighbors,
+		Map<String, Collection<String>> skillExclusiveNeighbors,
+		Map<String, Collection<String>> skillNormalNeighborsReversed,
+		Map<String, Collection<String>> skillExclusiveNeighborsReversed
 ) {
 	public ClientCategoryConfig(
 			Identifier id,
 			Text title,
 			ClientIconConfig icon,
-			Identifier background,
+			ClientBackgroundConfig background,
+			ClientColorsConfig colors,
 			boolean exclusiveRoot,
 			int spentPointsLimit,
 			Map<String, ClientSkillDefinitionConfig> definitions,
@@ -47,11 +52,14 @@ public record ClientCategoryConfig(
 			title,
 			icon,
 			background,
+			colors,
 			exclusiveRoot,
 			spentPointsLimit,
 			definitions,
 			skills,
 			normalConnections,
+			exclusiveConnections,
+			new HashMap<>(),
 			new HashMap<>(),
 			new HashMap<>(),
 			new HashMap<>(),
@@ -63,27 +71,30 @@ public record ClientCategoryConfig(
 			var a = connection.skillAId();
 			var b = connection.skillBId();
 
-			normalNeighbors.computeIfAbsent(a, key -> new HashSet<>()).add(b);
-			normalNeighborsReversed.computeIfAbsent(b, key -> new HashSet<>()).add(a);
+			skillNormalNeighbors.computeIfAbsent(a, key -> new HashSet<>()).add(b);
+			skillNormalNeighborsReversed.computeIfAbsent(b, key -> new HashSet<>()).add(a);
 			if (connection.bidirectional()) {
-				normalNeighbors.computeIfAbsent(b, key -> new HashSet<>()).add(a);
-				normalNeighborsReversed.computeIfAbsent(a, key -> new HashSet<>()).add(b);
+				skillNormalNeighbors.computeIfAbsent(b, key -> new HashSet<>()).add(a);
+				skillNormalNeighborsReversed.computeIfAbsent(a, key -> new HashSet<>()).add(b);
 			}
+
+			skillNormalConnections.computeIfAbsent(a, key -> new HashSet<>()).add(connection);
+			skillNormalConnections.computeIfAbsent(b, key -> new HashSet<>()).add(connection);
 		}
 
 		for (var connection : exclusiveConnections) {
 			var a = connection.skillAId();
 			var b = connection.skillBId();
 
-			exclusiveNeighbors.computeIfAbsent(a, key -> new HashSet<>()).add(b);
-			exclusiveNeighborsReversed.computeIfAbsent(b, key -> new HashSet<>()).add(a);
+			skillExclusiveNeighbors.computeIfAbsent(a, key -> new HashSet<>()).add(b);
+			skillExclusiveNeighborsReversed.computeIfAbsent(b, key -> new HashSet<>()).add(a);
 			if (connection.bidirectional()) {
-				exclusiveNeighbors.computeIfAbsent(b, key -> new HashSet<>()).add(a);
-				exclusiveNeighborsReversed.computeIfAbsent(a, key -> new HashSet<>()).add(b);
+				skillExclusiveNeighbors.computeIfAbsent(b, key -> new HashSet<>()).add(a);
+				skillExclusiveNeighborsReversed.computeIfAbsent(a, key -> new HashSet<>()).add(b);
 			}
 
-			this.exclusiveConnections.computeIfAbsent(a, key -> new HashSet<>()).add(connection);
-			this.exclusiveConnections.computeIfAbsent(b, key -> new HashSet<>()).add(connection);
+			this.skillExclusiveConnections.computeIfAbsent(a, key -> new HashSet<>()).add(connection);
+			this.skillExclusiveConnections.computeIfAbsent(b, key -> new HashSet<>()).add(connection);
 		}
 	}
 
