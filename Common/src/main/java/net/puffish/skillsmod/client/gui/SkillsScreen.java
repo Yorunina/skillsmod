@@ -19,6 +19,7 @@ import net.minecraft.util.math.MathHelper;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.Skill;
 import net.puffish.skillsmod.client.SkillsClientMod;
+import net.puffish.skillsmod.client.config.ClientBackgroundConfig;
 import net.puffish.skillsmod.client.config.ClientFrameConfig;
 import net.puffish.skillsmod.client.config.ClientIconConfig;
 import net.puffish.skillsmod.client.data.ClientCategoryData;
@@ -105,6 +106,7 @@ public class SkillsScreen extends Screen {
 	@Override
 	protected void init() {
 		super.init();
+		resize();
 	}
 
 	private void resize() {
@@ -434,6 +436,74 @@ public class SkillsScreen extends Screen {
 		}
 	}
 
+	private void drawBackground(DrawContext context, ClientBackgroundConfig background) {
+		var position = background.position();
+
+		switch (position) {
+			case TILE -> {
+				context.drawTexture(
+						background.texture(),
+						bounds.min().x(),
+						bounds.min().y(),
+						0,
+						0,
+						bounds.width(),
+						bounds.height(),
+						background.width(),
+						background.height()
+				);
+				return;
+			}
+			case FILL -> {
+				if (bounds.width() * background.height() > background.width() * bounds.height()) {
+					position = ClientBackgroundConfig.Position.FILL_WIDTH;
+				} else {
+					position = ClientBackgroundConfig.Position.FILL_HEIGHT;
+				}
+			}
+			default -> { }
+		}
+
+		int x;
+		int y;
+		int width;
+		int height;
+
+		switch (position) {
+			case NONE -> {
+				width = background.width();
+				height = background.height();
+				x = width / -2;
+				y = height / -2;
+			}
+			case FILL_WIDTH -> {
+				x = bounds.min().x();
+				width = bounds.width();
+				y = -MathHelper.ceilDiv(background.height() * width, 2 * background.width());
+				height = -2 * y;
+			}
+			case FILL_HEIGHT -> {
+				y = bounds.min().y();
+				height = bounds.height();
+				x = -MathHelper.ceilDiv(background.width() * height, 2 * background.height());
+				width = -2 * x;
+			}
+			default -> throw new IllegalStateException();
+		}
+
+		context.drawTexture(
+				background.texture(),
+				x,
+				y,
+				0,
+				0,
+				width,
+				height,
+				width,
+				height
+		);
+	}
+
 	private void drawContent(DrawContext context, double mouseX, double mouseY) {
 		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 		RenderSystem.colorMask(true, true, true, true);
@@ -446,6 +516,8 @@ public class SkillsScreen extends Screen {
 				this.width - contentPaddingRight + 4,
 				this.height - contentPaddingBottom + 4
 		);
+
+		context.fill(0, 0, width, height, 0xff000000);
 
 		optActiveCategoryData.ifPresentOrElse(
 				activeCategoryData -> drawContentWithCategory(context, mouseX, mouseY, activeCategoryData),
@@ -470,33 +542,22 @@ public class SkillsScreen extends Screen {
 		matrices.translate(x, y, 0f);
 		matrices.scale(scale, scale, 1f);
 
-		context.drawTexture(
-				activeCategory.background(),
-				bounds.min().x(),
-				bounds.min().y(),
-				0,
-				0,
-				bounds.width(),
-				bounds.height(),
-				16,
-				16
-		);
+		drawBackground(context, activeCategory.background());
 
 		var connectionRenderer = new ConnectionBatchedRenderer();
 
 		for (var connection : activeCategory.normalConnections()) {
-			var skillA = activeCategory.skills().get(connection.skillAId());
-			var skillB = activeCategory.skills().get(connection.skillBId());
-			if (skillA != null && skillB != null) {
-				connectionRenderer.emitNormalConnection(
-						context,
-						skillA.x(),
-						skillA.y(),
-						skillB.x(),
-						skillB.y(),
-						connection.bidirectional()
-				);
-			}
+			activeCategoryData.getConnection(connection)
+					.ifPresent(relation -> connectionRenderer.emitConnection(
+							context,
+							relation.getSkillA().x(),
+							relation.getSkillA().y(),
+							relation.getSkillB().x(),
+							relation.getSkillB().y(),
+							connection.bidirectional(),
+							relation.getColor().fill().argb(),
+							relation.getColor().stroke().argb()
+					));
 		}
 
 		if (isInsideContent(mouse)) {
@@ -519,30 +580,35 @@ public class SkillsScreen extends Screen {
 
 				var lines = new ArrayList<OrderedText>();
 				lines.add(definition.title().asOrderedText());
-				lines.addAll(Tooltip.wrapLines(client, Texts.setStyleIfAbsent(definition.description().copy(), Style.EMPTY.withFormatting(Formatting.GRAY))));
+				lines.addAll(Tooltip.wrapLines(client, Texts.setStyleIfAbsent(
+						definition.description().copy(),
+						Style.EMPTY.withFormatting(Formatting.GRAY)
+				)));
 				if (Screen.hasShiftDown()) {
-					lines.addAll(Tooltip.wrapLines(client, Texts.setStyleIfAbsent(definition.extraDescription().copy(), Style.EMPTY.withFormatting(Formatting.GRAY))));
+					lines.addAll(Tooltip.wrapLines(client, Texts.setStyleIfAbsent(
+							definition.extraDescription().copy(),
+							Style.EMPTY.withFormatting(Formatting.GRAY)
+					)));
 				}
 				if (client.options.advancedItemTooltips) {
 					lines.add(Text.literal(hoveredSkill.id()).formatted(Formatting.DARK_GRAY).asOrderedText());
 				}
 				setTooltip(lines);
 
-				var connections = activeCategory.exclusiveConnections().get(hoveredSkill.id());
+				var connections = activeCategory.skillExclusiveConnections().get(hoveredSkill.id());
 				if (connections != null) {
 					for (var connection : connections) {
-						var skillA = activeCategory.skills().get(connection.skillAId());
-						var skillB = activeCategory.skills().get(connection.skillBId());
-						if (skillA != null && skillB != null) {
-							connectionRenderer.emitExclusiveConnection(
-									context,
-									skillA.x(),
-									skillA.y(),
-									skillB.x(),
-									skillB.y(),
-									connection.bidirectional()
-							);
-						}
+						activeCategoryData.getConnection(connection)
+								.ifPresent(relation -> connectionRenderer.emitConnection(
+										context,
+										relation.getSkillA().x(),
+										relation.getSkillA().y(),
+										relation.getSkillB().x(),
+										relation.getSkillB().y(),
+										connection.bidirectional(),
+										relation.getColor().fill().argb(),
+										relation.getColor().stroke().argb()
+								));
 					}
 				}
 			});
@@ -585,8 +651,6 @@ public class SkillsScreen extends Screen {
 	}
 
 	private void drawContentWithoutCategory(DrawContext context) {
-		context.fill(0, 0, width, height, 0xff000000);
-
 		var tmpX = contentPaddingLeft + (width - contentPaddingLeft - contentPaddingRight) / 2;
 
 		context.drawCenteredTextWithShadow(
@@ -900,11 +964,14 @@ public class SkillsScreen extends Screen {
 		tmpX -= this.textRenderer.getWidth(tmpText);
 		tmpX -= 1;
 
-		context.drawText(this.textRenderer, tmpText, tmpX - 1, tmpY, 0xff000000, false);
-		context.drawText(this.textRenderer, tmpText, tmpX, tmpY - 1, 0xff000000, false);
-		context.drawText(this.textRenderer, tmpText, tmpX + 1, tmpY, 0xff000000, false);
-		context.drawText(this.textRenderer, tmpText, tmpX, tmpY + 1, 0xff000000, false);
-		context.drawText(this.textRenderer, tmpText, tmpX, tmpY, 0xff80ff20, false);
+		var pointsColor = activeCategory.colors().points();
+		var pointsStrokeColor = pointsColor.stroke().argb();
+		var pointsFillColor = pointsColor.fill().argb();
+		context.drawText(this.textRenderer, tmpText, tmpX - 1, tmpY, pointsStrokeColor, false);
+		context.drawText(this.textRenderer, tmpText, tmpX, tmpY - 1, pointsStrokeColor, false);
+		context.drawText(this.textRenderer, tmpText, tmpX + 1, tmpY, pointsStrokeColor, false);
+		context.drawText(this.textRenderer, tmpText, tmpX, tmpY + 1, pointsStrokeColor, false);
+		context.drawText(this.textRenderer, tmpText, tmpX, tmpY, pointsFillColor, false);
 		tmpX -= 1;
 
 		tmpText = SkillsMod.createTranslatable("text", "points_left");

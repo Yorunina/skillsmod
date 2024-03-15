@@ -1,6 +1,8 @@
 package net.puffish.skillsmod.client.rendering;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.GameRenderer;
@@ -16,9 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ConnectionBatchedRenderer {
-	private final List<TriangleEmit> normalEmits = new ArrayList<>();
-	private final List<TriangleEmit> exclusiveEmits = new ArrayList<>();
-	private final List<TriangleEmit> outlineEmits = new ArrayList<>();
+	private final Int2ObjectMap<List<TriangleEmit>> strokeBatch = new Int2ObjectOpenHashMap<>();
+	private final Int2ObjectMap<List<TriangleEmit>> fillBatch = new Int2ObjectOpenHashMap<>();
 
 	private record TriangleEmit(
 			float x1, float y1, float z1,
@@ -26,68 +27,32 @@ public class ConnectionBatchedRenderer {
 			float x3, float y3, float z3
 	) { }
 
-	public void emitNormalConnection(
-			DrawContext context,
-			float startX,
-			float startY,
-			float endX,
-			float endY,
-			boolean bidirectional
-	) {
-		emitConnection(
-				context,
-				startX,
-				startY,
-				endX,
-				endY,
-				bidirectional,
-				normalEmits
-		);
-	}
-
-	public void emitExclusiveConnection(
-			DrawContext context,
-			float startX,
-			float startY,
-			float endX,
-			float endY,
-			boolean bidirectional
-	) {
-		emitConnection(
-				context,
-				startX,
-				startY,
-				endX,
-				endY,
-				bidirectional,
-				exclusiveEmits
-		);
-	}
-
-	private void emitConnection(
+	public void emitConnection(
 			DrawContext context,
 			float startX,
 			float startY,
 			float endX,
 			float endY,
 			boolean bidirectional,
-			List<TriangleEmit> emits
+			int fillColor,
+			int strokeColor
 	) {
 		var matrix = context.getMatrices().peek().getPositionMatrix();
 
-		emitLine(matrix, outlineEmits, startX, startY, endX, endY, 3);
+		emitLine(strokeBatch, matrix, strokeColor, startX, startY, endX, endY, 3);
 		if (!bidirectional) {
-			emitArrow(matrix, outlineEmits, startX, startY, endX, endY, 8);
+			emitArrow(strokeBatch, matrix, strokeColor, startX, startY, endX, endY, 8);
 		}
-		emitLine(matrix, emits, startX, startY, endX, endY, 1);
+		emitLine(fillBatch, matrix, fillColor, startX, startY, endX, endY, 1);
 		if (!bidirectional) {
-			emitArrow(matrix, emits, startX, startY, endX, endY, 6);
+			emitArrow(fillBatch, matrix, fillColor, startX, startY, endX, endY, 6);
 		}
 	}
 
 	private void emitLine(
+			Int2ObjectMap<List<TriangleEmit>> batch,
 			Matrix4f matrix,
-			List<TriangleEmit> emits,
+			int color,
 			float startX,
 			float startY,
 			float endX,
@@ -101,13 +66,13 @@ public class ConnectionBatchedRenderer {
 				.mul(thickness / 2f);
 
 		emitTriangle(
-				matrix, emits,
+				batch, matrix, color,
 				startX + side.x, startY + side.y,
 				startX - side.x, startY - side.y,
 				endX + side.x, endY + side.y
 		);
 		emitTriangle(
-				matrix, emits,
+				batch, matrix, color,
 				endX - side.x, endY - side.y,
 				endX + side.x, endY + side.y,
 				startX - side.x, startY - side.y
@@ -115,8 +80,9 @@ public class ConnectionBatchedRenderer {
 	}
 
 	private void emitArrow(
+			Int2ObjectMap<List<TriangleEmit>> batch,
 			Matrix4f matrix,
-			List<TriangleEmit> emits,
+			int color,
 			float startX,
 			float startY,
 			float endX,
@@ -140,7 +106,7 @@ public class ConnectionBatchedRenderer {
 				.mul(MathHelper.sqrt(3f));
 
 		emitTriangle(
-				matrix, emits,
+				batch, matrix, color,
 				center.x + forward.x, center.y + forward.y,
 				back.x - side.x, back.y - side.y,
 				back.x + side.x, back.y + side.y
@@ -148,15 +114,19 @@ public class ConnectionBatchedRenderer {
 	}
 
 	private void emitTriangle(
+			Int2ObjectMap<List<TriangleEmit>> batch,
 			Matrix4f matrix,
-			List<TriangleEmit> emits,
+			int color,
 			float x1, float y1,
 			float x2, float y2,
 			float x3, float y3
+
 	) {
 		var v1 = matrix.transformPosition(new Vector3f(x1, y1, 0f));
 		var v2 = matrix.transformPosition(new Vector3f(x2, y2, 0f));
 		var v3 = matrix.transformPosition(new Vector3f(x3, y3, 0f));
+
+		var emits = batch.computeIfAbsent(color, key -> new ArrayList<>());
 
 		emits.add(new TriangleEmit(
 				v1.x, v1.y, v1.z,
@@ -167,22 +137,32 @@ public class ConnectionBatchedRenderer {
 
 	public void draw() {
 		RenderSystem.setShader(GameRenderer::getPositionProgram);
-		RenderSystem.setShaderColor(0f, 0f, 0f, 1f);
-		drawBatch(outlineEmits);
-		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-		drawBatch(normalEmits);
-		RenderSystem.setShaderColor(1f, 0f, 0f, 1f);
-		drawBatch(exclusiveEmits);
+
+		drawBatch(strokeBatch);
+		drawBatch(fillBatch);
 	}
 
-	private void drawBatch(List<TriangleEmit> emits) {
-		var bufferBuilder = Tessellator.getInstance().getBuffer();
-		bufferBuilder.begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION);
-		for (var emit : emits) {
-			bufferBuilder.vertex(emit.x1, emit.y1, emit.z1).next();
-			bufferBuilder.vertex(emit.x2, emit.y2, emit.z2).next();
-			bufferBuilder.vertex(emit.x3, emit.y3, emit.z3).next();
+	private void drawBatch(Int2ObjectMap<List<TriangleEmit>> batch) {
+		RenderSystem.setShader(GameRenderer::getPositionProgram);
+
+		for (var entry : batch.int2ObjectEntrySet()) {
+			var color = entry.getIntKey();
+			var a = (float) ((color >> 24) & 0xff) / 255f;
+			var r = (float) ((color >> 16) & 0xff) / 255f;
+			var g = (float) ((color >> 8) & 0xff) / 255f;
+			var b = (float) (color & 0xff) / 255f;
+			RenderSystem.setShaderColor(r, g, b, a);
+
+			var bufferBuilder = Tessellator.getInstance().getBuffer();
+			bufferBuilder.begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION);
+			for (var emit : entry.getValue()) {
+				bufferBuilder.vertex(emit.x1, emit.y1, emit.z1).next();
+				bufferBuilder.vertex(emit.x2, emit.y2, emit.z2).next();
+				bufferBuilder.vertex(emit.x3, emit.y3, emit.z3).next();
+			}
+			BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
 		}
-		BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
+
+		batch.clear();
 	}
 }
