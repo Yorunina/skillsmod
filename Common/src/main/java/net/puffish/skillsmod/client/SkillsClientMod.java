@@ -141,9 +141,10 @@ public class SkillsClientMod {
 	private void onPointsUpdatePacket(PointsUpdateInPacket packet) {
 		getCategoryById(packet.getCategoryId()).ifPresent(category -> {
 			var oldPointsLeft = category.getPointsLeft();
-			category.setSpentPoints(packet.getSpentPoints());
-			category.setEarnedPoints(packet.getEarnedPoints());
-			category.updatePointsDependencies();
+			category.updatePoints(
+					packet.getSpentPoints(),
+					packet.getEarnedPoints()
+			);
 			var newPointsLeft = category.getPointsLeft();
 
 			if (packet.announceNewPoints()

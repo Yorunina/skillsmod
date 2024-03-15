@@ -1,10 +1,9 @@
 package net.puffish.skillsmod.config;
 
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
-import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 
@@ -13,15 +12,25 @@ import java.util.ArrayList;
 public class GeneralConfig {
 	private final Text title;
 	private final IconConfig icon;
-	private final Identifier background;
+	private final BackgroundConfig background;
+	private final com.google.gson.JsonElement colors;
 	private final boolean unlockedByDefault;
 	private final boolean exclusiveRoot;
 	private final int spentPointsLimit;
 
-	private GeneralConfig(Text title, IconConfig icon, Identifier background, boolean unlockedByDefault, boolean exclusiveRoot, int spentPointsLimit) {
+	private GeneralConfig(
+			Text title,
+			IconConfig icon,
+			BackgroundConfig background,
+			com.google.gson.JsonElement colors,
+			boolean unlockedByDefault,
+			boolean exclusiveRoot,
+			int spentPointsLimit
+	) {
 		this.title = title;
 		this.icon = icon;
 		this.background = background;
+		this.colors = colors;
 		this.unlockedByDefault = unlockedByDefault;
 		this.exclusiveRoot = exclusiveRoot;
 		this.spentPointsLimit = spentPointsLimit;
@@ -46,9 +55,14 @@ public class GeneralConfig {
 				.getSuccess();
 
 		var optBackground = rootObject.get("background")
-				.andThen(BuiltinJson::parseIdentifier)
+				.andThen(BackgroundConfig::parse)
 				.ifFailure(problems::add)
 				.getSuccess();
+
+		var colors = rootObject.get("colors")
+				.getSuccess() // ignore failure because this property is optional
+				.map(JsonElement::getJson)
+				.orElse(new com.google.gson.JsonObject());
 
 		var optUnlockedByDefault = rootObject.getBoolean("unlocked_by_default")
 				.ifFailure(problems::add)
@@ -71,6 +85,7 @@ public class GeneralConfig {
 					optTitle.orElseThrow(),
 					optIcon.orElseThrow(),
 					optBackground.orElseThrow(),
+					colors,
 					optUnlockedByDefault.orElseThrow(),
 					exclusiveRoot,
 					spentPointsLimit
@@ -96,8 +111,12 @@ public class GeneralConfig {
 		return icon;
 	}
 
-	public Identifier getBackground() {
+	public BackgroundConfig getBackground() {
 		return background;
+	}
+
+	public com.google.gson.JsonElement getColors() {
+		return colors;
 	}
 
 	public int getSpentPointsLimit() {
