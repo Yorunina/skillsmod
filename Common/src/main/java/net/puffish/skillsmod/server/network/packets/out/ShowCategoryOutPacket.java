@@ -2,6 +2,7 @@ package net.puffish.skillsmod.server.network.packets.out;
 
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
+import net.puffish.skillsmod.config.BackgroundConfig;
 import net.puffish.skillsmod.config.CategoryConfig;
 import net.puffish.skillsmod.config.FrameConfig;
 import net.puffish.skillsmod.config.GeneralConfig;
@@ -60,7 +61,8 @@ public class ShowCategoryOutPacket extends OutPacket {
 	public static void write(PacketByteBuf buf, GeneralConfig general) {
 		buf.writeText(general.getTitle());
 		write(buf, general.getIcon());
-		buf.writeIdentifier(general.getBackground());
+		write(buf, general.getBackground());
+		buf.writeNullable(general.getColors(), (buf1, element) -> buf1.writeString(element.toString()));
 		buf.writeBoolean(general.isExclusiveRoot());
 		buf.writeInt(general.getSpentPointsLimit());
 	}
@@ -109,6 +111,10 @@ public class ShowCategoryOutPacket extends OutPacket {
 	public static void write(PacketByteBuf buf, FrameConfig frame) {
 		buf.writeString(frame.getType());
 		buf.writeNullable(frame.getData(), (buf1, element) -> buf1.writeString(element.toString()));
+	}
+
+	public static void write(PacketByteBuf buf, BackgroundConfig background) {
+		buf.writeNullable(background.getData(), (buf1, element) -> buf1.writeString(element.toString()));
 	}
 
 	@Override
