@@ -19,11 +19,11 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vector4f;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.client.SkillsClientMod;
-import net.puffish.skillsmod.client.data.ClientFrameData;
-import net.puffish.skillsmod.client.data.ClientIconData;
-import net.puffish.skillsmod.client.data.ClientSkillCategoryData;
-import net.puffish.skillsmod.client.data.ClientSkillData;
-import net.puffish.skillsmod.client.data.ClientSkillDefinitionData;
+import net.puffish.skillsmod.client.config.ClientFrameConfig;
+import net.puffish.skillsmod.client.config.ClientIconConfig;
+import net.puffish.skillsmod.client.data.ClientCategoryData;
+import net.puffish.skillsmod.client.config.skill.ClientSkillConfig;
+import net.puffish.skillsmod.client.config.skill.ClientSkillDefinitionConfig;
 import net.puffish.skillsmod.client.network.packets.out.SkillClickOutPacket;
 import net.puffish.skillsmod.client.rendering.ConnectionBatchedRenderer;
 import net.puffish.skillsmod.client.rendering.ItemBatchedRenderer;
@@ -63,9 +63,9 @@ public class SkillsScreen extends Screen {
 	private static final Vector4f COLOR_WHITE = new Vector4f(1f, 1f, 1f, 1f);
 	private static final Vector4f COLOR_GRAY = new Vector4f(0.25f, 0.25f, 0.25f, 1f);
 
-	private final Map<Identifier, ClientSkillCategoryData> categories;
+	private final Map<Identifier, ClientCategoryData> categories;
 
-	private Optional<ClientSkillCategoryData> optActiveCategory = Optional.empty();
+	private Optional<ClientCategoryData> optActiveCategoryData = Optional.empty();
 
 	private int activeCategoryIndex = 0;
 
@@ -90,7 +90,7 @@ public class SkillsScreen extends Screen {
 
 	private List<OrderedText> tooltip;
 
-	public SkillsScreen(Map<Identifier, ClientSkillCategoryData> categories, Optional<Identifier> optCategoryId) {
+	public SkillsScreen(Map<Identifier, ClientCategoryData> categories, Optional<Identifier> optCategoryId) {
 		super(ScreenTexts.EMPTY);
 		this.categories = categories;
 		optCategoryId.ifPresent(categoryId -> {
@@ -109,8 +109,8 @@ public class SkillsScreen extends Screen {
 	}
 
 	private void resize() {
-		this.small = optActiveCategory
-				.map(activeCategory -> activeCategory.hasExperience() && this.width < 450)
+		this.small = optActiveCategoryData
+				.map(activeCategoryData -> activeCategoryData.hasExperience() && this.width < 450)
 				.orElse(false);
 
 		if (this.small) {
@@ -128,8 +128,8 @@ public class SkillsScreen extends Screen {
 		this.x = this.width / 2;
 		this.y = this.height / 2;
 
-		this.bounds = optActiveCategory
-				.map(ClientSkillCategoryData::getBounds)
+		this.bounds = optActiveCategoryData
+				.map(activeCategoryData -> activeCategoryData.getConfig().getBounds())
 				.orElseGet(Bounds2i::zero);
 		this.bounds.grow(CONTENT_GROW);
 		this.bounds.extend(new Vec2i(contentPaddingLeft - this.x, contentPaddingTop - this.y));
@@ -170,9 +170,9 @@ public class SkillsScreen extends Screen {
 		return mouse.x >= FRAME_PADDING + i * 32 && mouse.y >= FRAME_PADDING && mouse.x < FRAME_PADDING + i * 32 + 28 && mouse.y < FRAME_PADDING + 32;
 	}
 
-	private boolean isInsideSkill(Vec2i transformedMouse, ClientSkillData skill, ClientSkillDefinitionData definition) {
-		var halfSize = Math.round(13f * definition.getSize());
-		return transformedMouse.x >= skill.getX() - halfSize && transformedMouse.y >= skill.getY() - halfSize && transformedMouse.x < skill.getX() + halfSize && transformedMouse.y < skill.getY() + halfSize;
+	private boolean isInsideSkill(Vec2i transformedMouse, ClientSkillConfig skill, ClientSkillDefinitionConfig definition) {
+		var halfSize = Math.round(13f * definition.size());
+		return transformedMouse.x >= skill.x() - halfSize && transformedMouse.y >= skill.y() - halfSize && transformedMouse.x < skill.x() + halfSize && transformedMouse.y < skill.y() + halfSize;
 	}
 
 	private boolean isInsideContent(Vec2i mouse) {
@@ -192,13 +192,13 @@ public class SkillsScreen extends Screen {
 				.stream()
 				.skip(Math.max(0, Math.min(this.activeCategoryIndex, categories.size() - 1)))
 				.findFirst();
-		if (!Objects.equals(opt, optActiveCategory)) {
-			optActiveCategory = opt;
+		if (!Objects.equals(opt, optActiveCategoryData)) {
+			optActiveCategoryData = opt;
 			resize();
 		}
 	}
 
-	private void forEachCategory(BiConsumer<Integer, ClientSkillCategoryData> consumer) {
+	private void forEachCategory(BiConsumer<Integer, ClientCategoryData> consumer) {
 		var it = categories.values().iterator();
 		var i = 0;
 		while (it.hasNext()) {
@@ -209,20 +209,21 @@ public class SkillsScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
-		optActiveCategory.ifPresent(activeCategory ->
-				mouseClickedWithCategory(mouseX, mouseY, button, activeCategory)
+		optActiveCategoryData.ifPresent(activeCategoryData ->
+				mouseClickedWithCategory(mouseX, mouseY, button, activeCategoryData)
 		);
 
 		return super.mouseClicked(mouseX, mouseY, button);
 	}
 
-	private void mouseClickedWithCategory(double mouseX, double mouseY, int button, ClientSkillCategoryData activeCategory) {
+	private void mouseClickedWithCategory(double mouseX, double mouseY, int button, ClientCategoryData activeCategoryData) {
 		var mouse = getMousePos(mouseX, mouseY);
 		var transformedMouse = getTransformedMousePos(mouseX, mouseY);
+		var activeCategory = activeCategoryData.getConfig();
 
 		if (isInsideContent(mouse)) {
-			for (var skill : activeCategory.getSkills().values()) {
-				var definition = activeCategory.getDefinitions().get(skill.getDefinitionId());
+			for (var skill : activeCategory.skills().values()) {
+				var definition = activeCategory.definitions().get(skill.definitionId());
 				if (definition == null) {
 					continue;
 				}
@@ -230,7 +231,7 @@ public class SkillsScreen extends Screen {
 				if (isInsideSkill(transformedMouse, skill, definition)) {
 					SkillsClientMod.getInstance()
 							.getPacketSender()
-							.send(SkillClickOutPacket.write(activeCategory.getId(), skill.getId()));
+							.send(SkillClickOutPacket.write(activeCategory.id(), skill.id()));
 				}
 			}
 
@@ -322,24 +323,24 @@ public class SkillsScreen extends Screen {
 		y = Math.max(y, Math.round(height - contentPaddingBottom - bounds.max().y * scale));
 	}
 
-	private void drawIcon(MatrixStack matrices, TextureBatchedRenderer textureRenderer, ItemBatchedRenderer itemRenderer, ClientIconData icon, float sizeScale, int x, int y) {
+	private void drawIcon(MatrixStack matrices, TextureBatchedRenderer textureRenderer, ItemBatchedRenderer itemRenderer, ClientIconConfig icon, float sizeScale, int x, int y) {
 		if (client == null) {
 			return;
 		}
 
 		matrices.push();
 
-		if (icon instanceof ClientIconData.ItemIconData itemIcon) {
+		if (icon instanceof ClientIconConfig.ItemIconConfig itemIcon) {
 			matrices.translate(x * (1f - sizeScale), y * (1f - sizeScale), 1f);
 			matrices.scale(sizeScale, sizeScale, 1);
 			itemRenderer.emitItem(
 					matrices,
-					itemIcon.getItem(),
+					itemIcon.item(),
 					x, y
 			);
-		} else if (icon instanceof ClientIconData.EffectIconData effectIcon) {
+		} else if (icon instanceof ClientIconConfig.EffectIconConfig effectIcon) {
 			matrices.translate(0f, 0f, 1f);
-			var sprite = client.getStatusEffectSpriteManager().getSprite(effectIcon.getEffect());
+			var sprite = client.getStatusEffectSpriteManager().getSprite(effectIcon.effect());
 			int halfSize = Math.round(9f * sizeScale);
 			var size = halfSize * 2;
 			textureRenderer.emitSpriteStretch(
@@ -347,12 +348,12 @@ public class SkillsScreen extends Screen {
 					x - halfSize, y - halfSize, size, size,
 					COLOR_WHITE
 			);
-		} else if (icon instanceof ClientIconData.TextureIconData textureIcon) {
+		} else if (icon instanceof ClientIconConfig.TextureIconConfig textureIcon) {
 			matrices.translate(0f, 0f, 1f);
 			var halfSize = Math.round(8f * sizeScale);
 			var size = halfSize * 2;
 			textureRenderer.emitTexture(
-					matrices, textureIcon.getTexture(),
+					matrices, textureIcon.texture(),
 					x - halfSize, y - halfSize, size, size,
 					COLOR_WHITE
 			);
@@ -361,7 +362,7 @@ public class SkillsScreen extends Screen {
 		matrices.pop();
 	}
 
-	private void drawFrame(MatrixStack matrices, TextureBatchedRenderer textureRenderer, ClientFrameData frame, float sizeScale, int x, int y, SkillState state) {
+	private void drawFrame(MatrixStack matrices, TextureBatchedRenderer textureRenderer, ClientFrameConfig frame, float sizeScale, int x, int y, SkillState state) {
 		if (client == null) {
 			return;
 		}
@@ -369,7 +370,7 @@ public class SkillsScreen extends Screen {
 		var halfSize = Math.round(13f * sizeScale);
 		var size = halfSize * 2;
 
-		if (frame instanceof ClientFrameData.AdvancementFrameData advancementFrame) {
+		if (frame instanceof ClientFrameConfig.AdvancementFrameConfig advancementFrame) {
 			var status = state == SkillState.UNLOCKED ? AdvancementObtainedStatus.OBTAINED : AdvancementObtainedStatus.UNOBTAINED;
 			var color = switch (state) {
 				case LOCKED, EXCLUDED -> COLOR_GRAY;
@@ -379,49 +380,49 @@ public class SkillsScreen extends Screen {
 			textureRenderer.emitTexture(
 					matrices, WIDGETS_TEXTURE,
 					x - halfSize, y - halfSize, size, size,
-					(float) advancementFrame.getFrame().getTextureV() / TEXTURE_WIDTH,
+					(float) advancementFrame.frame().getTextureV() / TEXTURE_WIDTH,
 					(float) (128 + status.getSpriteIndex() * 26) / TEXTURE_HEIGHT,
-					(float) (advancementFrame.getFrame().getTextureV() + 26) / TEXTURE_WIDTH,
+					(float) (advancementFrame.frame().getTextureV() + 26) / TEXTURE_WIDTH,
 					(float) (128 + status.getSpriteIndex() * 26 + 26) / TEXTURE_HEIGHT,
 					color
 			);
-		} else if (frame instanceof ClientFrameData.TextureFrameData textureFrame) {
+		} else if (frame instanceof ClientFrameConfig.TextureFrameConfig textureFrame) {
 			switch (state) {
 				case AVAILABLE -> textureRenderer.emitTexture(
-						matrices, textureFrame.getAvailableTexture(),
+						matrices, textureFrame.availableTexture(),
 						x - halfSize, y - halfSize, size, size,
 						COLOR_WHITE
 				);
 				case UNLOCKED -> textureRenderer.emitTexture(
-						matrices, textureFrame.getUnlockedTexture(),
+						matrices, textureFrame.unlockedTexture(),
 						x - halfSize, y - halfSize, size, size,
 						COLOR_WHITE
 				);
 				case LOCKED -> {
-					if (textureFrame.getLockedTexture() != null) {
+					if (textureFrame.lockedTexture() != null) {
 						textureRenderer.emitTexture(
-								matrices, textureFrame.getLockedTexture(),
+								matrices, textureFrame.lockedTexture(),
 								x - halfSize, y - halfSize, size, size,
 								COLOR_WHITE
 						);
 					} else {
 						textureRenderer.emitTexture(
-								matrices, textureFrame.getAvailableTexture(),
+								matrices, textureFrame.availableTexture(),
 								x - halfSize, y - halfSize, size, size,
 								COLOR_GRAY
 						);
 					}
 				}
 				case EXCLUDED -> {
-					if (textureFrame.getExcludedTexture() != null) {
+					if (textureFrame.excludedTexture() != null) {
 						textureRenderer.emitTexture(
-								matrices, textureFrame.getExcludedTexture(),
+								matrices, textureFrame.excludedTexture(),
 								x - halfSize, y - halfSize, size, size,
 								COLOR_WHITE
 						);
 					} else {
 						textureRenderer.emitTexture(
-								matrices, textureFrame.getAvailableTexture(),
+								matrices, textureFrame.availableTexture(),
 								x - halfSize, y - halfSize, size, size,
 								COLOR_GRAY
 						);
@@ -445,21 +446,22 @@ public class SkillsScreen extends Screen {
 				this.height - contentPaddingBottom + 4
 		);
 
-		optActiveCategory.ifPresentOrElse(
-				activeCategory -> drawContentWithCategory(matrices, mouseX, mouseY, activeCategory),
+		optActiveCategoryData.ifPresentOrElse(
+				activeCategoryData -> drawContentWithCategory(matrices, mouseX, mouseY, activeCategoryData),
 				() -> drawContentWithoutCategory(matrices)
 		);
 
 		DrawableHelper.disableScissor();
 	}
 
-	private void drawContentWithCategory(MatrixStack matrices, double mouseX, double mouseY, ClientSkillCategoryData activeCategory) {
+	private void drawContentWithCategory(MatrixStack matrices, double mouseX, double mouseY, ClientCategoryData activeCategoryData) {
 		if (client == null) {
 			return;
 		}
 
 		var mouse = getMousePos(mouseX, mouseY);
 		var transformedMouse = getTransformedMousePos(mouseX, mouseY);
+		var activeCategory = activeCategoryData.getConfig();
 
 		matrices.push();
 
@@ -468,7 +470,7 @@ public class SkillsScreen extends Screen {
 
 		RenderSystem.setShader(GameRenderer::getPositionTexShader);
 		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-		RenderSystem.setShaderTexture(0, activeCategory.getBackground());
+		RenderSystem.setShaderTexture(0, activeCategory.background());
 		DrawableHelper.drawTexture(
 				matrices,
 				bounds.min().x,
@@ -483,66 +485,63 @@ public class SkillsScreen extends Screen {
 
 		var connectionRenderer = new ConnectionBatchedRenderer();
 
-		for (var connection : activeCategory.getNormalConnections()) {
-			var skillA = activeCategory.getSkills().get(connection.getSkillAId());
-			var skillB = activeCategory.getSkills().get(connection.getSkillBId());
+		for (var connection : activeCategory.normalConnections()) {
+			var skillA = activeCategory.skills().get(connection.skillAId());
+			var skillB = activeCategory.skills().get(connection.skillBId());
 			if (skillA != null && skillB != null) {
 				connectionRenderer.emitNormalConnection(
 						matrices,
-						skillA.getX(),
-						skillA.getY(),
-						skillB.getX(),
-						skillB.getY(),
-						connection.isBidirectional()
+						skillA.x(),
+						skillA.y(),
+						skillB.x(),
+						skillB.y(),
+						connection.bidirectional()
 				);
 			}
 		}
 
 		if (isInsideContent(mouse)) {
 			var optHoveredSkill = activeCategory
-					.getSkills()
+					.skills()
 					.values()
 					.stream()
-					.filter(skill -> {
-						var definition = activeCategory.getDefinitions().get(skill.getDefinitionId());
-						if (definition == null) {
-							return false;
-						}
-
-						return isInsideSkill(transformedMouse, skill, definition);
-					})
+					.filter(skill -> activeCategory
+							.getDefinitionById(skill.definitionId())
+							.map(definition -> isInsideSkill(transformedMouse, skill, definition))
+							.orElse(false)
+					)
 					.findFirst();
 
 			optHoveredSkill.ifPresent(hoveredSkill -> {
-				var definition = activeCategory.getDefinitions().get(hoveredSkill.getDefinitionId());
+				var definition = activeCategory.definitions().get(hoveredSkill.definitionId());
 				if (definition == null) {
 					return;
 				}
 
 				var lines = new ArrayList<OrderedText>();
-				lines.add(definition.getTitle().asOrderedText());
-				lines.addAll(textRenderer.wrapLines(Texts.setStyleIfAbsent(definition.getDescription().copy(), Style.EMPTY.withFormatting(Formatting.GRAY)), LINE_WIDTH));
+				lines.add(definition.title().asOrderedText());
+				lines.addAll(textRenderer.wrapLines(Texts.setStyleIfAbsent(definition.description().copy(), Style.EMPTY.withFormatting(Formatting.GRAY)), LINE_WIDTH));
 				if (Screen.hasShiftDown()) {
-					lines.addAll(textRenderer.wrapLines(Texts.setStyleIfAbsent(definition.getExtraDescription().copy(), Style.EMPTY.withFormatting(Formatting.GRAY)), LINE_WIDTH));
+					lines.addAll(textRenderer.wrapLines(Texts.setStyleIfAbsent(definition.extraDescription().copy(), Style.EMPTY.withFormatting(Formatting.GRAY)), LINE_WIDTH));
 				}
 				if (client.options.advancedItemTooltips) {
-					lines.add(Text.literal(hoveredSkill.getId()).formatted(Formatting.DARK_GRAY).asOrderedText());
+					lines.add(Text.literal(hoveredSkill.id()).formatted(Formatting.DARK_GRAY).asOrderedText());
 				}
 				tooltip = lines;
 
-				var connections = activeCategory.getExclusiveConnections().get(hoveredSkill.getId());
+				var connections = activeCategory.exclusiveConnections().get(hoveredSkill.id());
 				if (connections != null) {
 					for (var connection : connections) {
-						var skillA = activeCategory.getSkills().get(connection.getSkillAId());
-						var skillB = activeCategory.getSkills().get(connection.getSkillBId());
+						var skillA = activeCategory.skills().get(connection.skillAId());
+						var skillB = activeCategory.skills().get(connection.skillBId());
 						if (skillA != null && skillB != null) {
 							connectionRenderer.emitExclusiveConnection(
 									matrices,
-									skillA.getX(),
-									skillA.getY(),
-									skillB.getX(),
-									skillB.getY(),
-									connection.isBidirectional()
+									skillA.x(),
+									skillA.y(),
+									skillB.x(),
+									skillB.y(),
+									connection.bidirectional()
 							);
 						}
 					}
@@ -555,31 +554,29 @@ public class SkillsScreen extends Screen {
 		var textureRenderer = new TextureBatchedRenderer();
 		var itemRenderer = new ItemBatchedRenderer();
 
-		for (var skill : activeCategory.getSkills().values()) {
-			var definition = activeCategory.getDefinitions().get(skill.getDefinitionId());
-			if (definition == null) {
-				continue;
-			}
-
-			drawFrame(
+		for (var skill : activeCategory.skills().values()) {
+			activeCategory
+					.getDefinitionById(skill.definitionId())
+					.ifPresent(definition -> {
+						drawFrame(
 					matrices,
-					textureRenderer,
-					definition.getFrame(),
-					definition.getSize(),
-					skill.getX(),
-					skill.getY(),
-					skill.getState()
-			);
-
-			drawIcon(
+								textureRenderer,
+								definition.frame(),
+								definition.size(),
+								skill.x(),
+								skill.y(),
+								activeCategoryData.getSkillState(skill)
+						);
+						drawIcon(
 					matrices,
-					textureRenderer,
-					itemRenderer,
-					definition.getIcon(),
-					definition.getSize(),
-					skill.getX(),
-					skill.getY()
-			);
+								textureRenderer,
+								itemRenderer,
+								definition.icon(),
+								definition.size(),
+								skill.x(),
+								skill.y()
+						);
+					});
 		}
 
 		textureRenderer.draw();
@@ -629,7 +626,7 @@ public class SkillsScreen extends Screen {
 				FRAME_PADDING + 32 * i,
 				FRAME_PADDING,
 				i > 0 ? 28 : 0,
-				optActiveCategory.orElse(null) == category ? 32 : 0,
+				optActiveCategoryData.orElse(null) == category ? 32 : 0,
 				28,
 				32,
 				TEXTURE_WIDTH,
@@ -642,11 +639,13 @@ public class SkillsScreen extends Screen {
 		var itemBatch = new ItemBatchedRenderer();
 
 		forEachCategory((i, category) -> {
+			var categoryConfig = category.getConfig();
+
 			drawIcon(
 					matrices,
 					textureRenderer,
 					itemBatch,
-					category.getIcon(),
+					categoryConfig.icon(),
 					1f,
 					FRAME_PADDING + 32 * i + 6 + 8,
 					FRAME_PADDING + 9 + 8
@@ -654,9 +653,9 @@ public class SkillsScreen extends Screen {
 
 			if (isInsideTab(mouse, i)) {
 				var lines = new ArrayList<OrderedText>();
-				lines.add(category.getTitle().asOrderedText());
+				lines.add(categoryConfig.title().asOrderedText());
 				if (client.options.advancedItemTooltips) {
-					lines.add(Text.literal(category.getId().toString()).formatted(Formatting.DARK_GRAY).asOrderedText());
+					lines.add(Text.literal(categoryConfig.id().toString()).formatted(Formatting.DARK_GRAY).asOrderedText());
 				}
 				tooltip = lines;
 			}
@@ -881,13 +880,14 @@ public class SkillsScreen extends Screen {
 				0xff404040
 		);
 
-		optActiveCategory.ifPresent(activeCategory ->
-				drawWindowWithCategory(matrices, mouseX, mouseY, tmpText, tmpX, tmpY, activeCategory)
+		optActiveCategoryData.ifPresent(activeCategoryData ->
+				drawWindowWithCategory(matrices, mouseX, mouseY, tmpText, tmpX, tmpY, activeCategoryData)
 		);
 	}
 
-	private void drawWindowWithCategory(MatrixStack matrices, double mouseX, double mouseY, Text tmpText, int tmpX, int tmpY, ClientSkillCategoryData activeCategory) {
+	private void drawWindowWithCategory(MatrixStack matrices, double mouseX, double mouseY, Text tmpText, int tmpX, int tmpY, ClientCategoryData activeCategoryData) {
 		var mouse = getMousePos(mouseX, mouseY);
+		var activeCategory = activeCategoryData.getConfig();
 
 		var leftX = tmpX + this.textRenderer.getWidth(tmpText);
 
@@ -895,8 +895,8 @@ public class SkillsScreen extends Screen {
 
 		var startX = tmpX;
 
-		tmpText = Text.literal(activeCategory.getPointsLeft()
-				+ (activeCategory.getSpentPointsLimit() == Integer.MAX_VALUE ? "" : "/" + activeCategory.getSpentPointsLeft())
+		tmpText = Text.literal(activeCategoryData.getPointsLeft()
+				+ (activeCategory.spentPointsLimit() == Integer.MAX_VALUE ? "" : "/" + activeCategoryData.getSpentPointsLeft())
 		);
 
 		tmpX -= this.textRenderer.getWidth(tmpText);
@@ -925,13 +925,13 @@ public class SkillsScreen extends Screen {
 			lines.add(SkillsMod.createTranslatable(
 					"tooltip",
 					"earned_points",
-					activeCategory.getEarnedPoints()
+					activeCategoryData.getEarnedPoints()
 			).asOrderedText());
 			lines.add(SkillsMod.createTranslatable(
 					"tooltip",
 					"spent_points",
-					activeCategory.getSpentPoints()
-							+ (activeCategory.getSpentPointsLimit() == Integer.MAX_VALUE ? "" : "/" + activeCategory.getSpentPointsLimit())
+					activeCategoryData.getSpentPoints()
+							+ (activeCategory.spentPointsLimit() == Integer.MAX_VALUE ? "" : "/" + activeCategory.spentPointsLimit())
 			).asOrderedText());
 
 			tooltip = lines;
@@ -939,7 +939,7 @@ public class SkillsScreen extends Screen {
 
 		var rightX = tmpX;
 
-		if (activeCategory.hasExperience()) {
+		if (activeCategoryData.hasExperience()) {
 			if (small) {
 				tmpX = this.width - FRAME_PADDING - 8 - 182;
 				tmpY = TABS_HEIGHT + 25;
@@ -950,7 +950,7 @@ public class SkillsScreen extends Screen {
 
 			RenderSystem.setShaderTexture(0, InGameHud.GUI_ICONS_TEXTURE);
 			drawTexture(matrices, tmpX, tmpY, 0, 64, 182, 5);
-			var width = Math.min(182, (int) (activeCategory.getExperienceProgress() * 183f));
+			var width = Math.min(182, (int) (activeCategoryData.getExperienceProgress() * 183f));
 			if (width > 0) {
 				drawTexture(matrices, tmpX, tmpY, 0, 69, width, 5);
 			}
@@ -961,19 +961,19 @@ public class SkillsScreen extends Screen {
 				lines.add(SkillsMod.createTranslatable(
 						"tooltip",
 						"current_level",
-						activeCategory.getCurrentLevel()
+						activeCategoryData.getCurrentLevel()
 				).asOrderedText());
 				lines.add(SkillsMod.createTranslatable(
 						"tooltip",
 						"experience_progress",
-						activeCategory.getCurrentExperience(),
-						activeCategory.getRequiredExperience(),
-						MathHelper.floor(activeCategory.getExperienceProgress() * 100f)
+						activeCategoryData.getCurrentExperience(),
+						activeCategoryData.getRequiredExperience(),
+						MathHelper.floor(activeCategoryData.getExperienceProgress() * 100f)
 				).asOrderedText());
 				lines.add(SkillsMod.createTranslatable(
 						"tooltip",
 						"to_next_level",
-						activeCategory.getExperienceToNextLevel()
+						activeCategoryData.getExperienceToNextLevel()
 				).asOrderedText());
 
 				tooltip = lines;

@@ -33,4 +33,8 @@ public class SkillsConfig {
 	public Collection<SkillConfig> getAll() {
 		return skills.values();
 	}
+
+	public Map<String, SkillConfig> getMap() {
+		return skills;
+	}
 }
