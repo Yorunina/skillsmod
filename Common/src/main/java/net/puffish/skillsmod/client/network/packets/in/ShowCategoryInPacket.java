@@ -1,14 +1,15 @@
 package net.puffish.skillsmod.client.network.packets.in;
 
 import net.minecraft.network.PacketByteBuf;
-import net.puffish.skillsmod.client.data.ClientFrameData;
-import net.puffish.skillsmod.client.data.ClientIconData;
-import net.puffish.skillsmod.client.data.ClientSkillCategoryData;
-import net.puffish.skillsmod.client.data.ClientSkillConnectionData;
-import net.puffish.skillsmod.client.data.ClientSkillData;
-import net.puffish.skillsmod.client.data.ClientSkillDefinitionData;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonPath;
+import net.puffish.skillsmod.client.config.ClientCategoryConfig;
+import net.puffish.skillsmod.client.config.ClientFrameConfig;
+import net.puffish.skillsmod.client.config.ClientIconConfig;
+import net.puffish.skillsmod.client.config.skill.ClientSkillConfig;
+import net.puffish.skillsmod.client.config.skill.ClientSkillConnectionConfig;
+import net.puffish.skillsmod.client.config.skill.ClientSkillDefinitionConfig;
+import net.puffish.skillsmod.client.data.ClientCategoryData;
 import net.puffish.skillsmod.network.InPacket;
 import net.puffish.skillsmod.skill.SkillState;
 
@@ -16,9 +17,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class ShowCategoryInPacket implements InPacket {
-	private final ClientSkillCategoryData category;
+	private final ClientCategoryData category;
 
-	private ShowCategoryInPacket(ClientSkillCategoryData category) {
+	private ShowCategoryInPacket(ClientCategoryData category) {
 		this.category = category;
 	}
 
@@ -28,7 +29,7 @@ public class ShowCategoryInPacket implements InPacket {
 		return new ShowCategoryInPacket(category);
 	}
 
-	public static ClientSkillCategoryData readCategory(PacketByteBuf buf) {
+	public static ClientCategoryData readCategory(PacketByteBuf buf) {
 		var id = buf.readIdentifier();
 
 		var title = buf.readText();
@@ -39,14 +40,19 @@ public class ShowCategoryInPacket implements InPacket {
 
 		var definitions = buf.readList(ShowCategoryInPacket::readDefinition)
 				.stream()
-				.collect(Collectors.toMap(ClientSkillDefinitionData::getId, definition -> definition));
+				.collect(Collectors.toMap(ClientSkillDefinitionConfig::id, definition -> definition));
 
 		var skills = buf.readList(ShowCategoryInPacket::readSkill)
 				.stream()
-				.collect(Collectors.toMap(ClientSkillData::getId, skill -> skill));
+				.collect(Collectors.toMap(ClientSkillConfig::id, skill -> skill));
 
 		var normalConnections = buf.readList(ShowCategoryInPacket::readSkillConnection);
 		var exclusiveConnections = buf.readList(ShowCategoryInPacket::readSkillConnection);
+
+		var skillsStates = buf.readMap(
+				PacketByteBuf::readString,
+				buf1 -> buf1.readEnumConstant(SkillState.class)
+		);
 
 		var spentPoints = buf.readInt();
 		var earnedPoints = buf.readInt();
@@ -60,7 +66,7 @@ public class ShowCategoryInPacket implements InPacket {
 			requiredExperience = buf.readInt();
 		}
 
-		return new ClientSkillCategoryData(
+		var category = new ClientCategoryConfig(
 				id,
 				title,
 				icon,
@@ -70,7 +76,12 @@ public class ShowCategoryInPacket implements InPacket {
 				definitions,
 				skills,
 				normalConnections,
-				exclusiveConnections,
+				exclusiveConnections
+		);
+
+		return new ClientCategoryData(
+				category,
+				skillsStates,
 				spentPoints,
 				earnedPoints,
 				currentLevel,
@@ -79,7 +90,7 @@ public class ShowCategoryInPacket implements InPacket {
 		);
 	}
 
-	public static ClientSkillDefinitionData readDefinition(PacketByteBuf buf) {
+	public static ClientSkillDefinitionConfig readDefinition(PacketByteBuf buf) {
 		var id = buf.readString();
 		var title = buf.readText();
 		var description = buf.readText();
@@ -88,52 +99,51 @@ public class ShowCategoryInPacket implements InPacket {
 		var icon = readSkillIcon(buf);
 		var size = buf.readFloat();
 
-		return new ClientSkillDefinitionData(id, title, description, extraDescription, frame, icon, size);
+		return new ClientSkillDefinitionConfig(id, title, description, extraDescription, frame, icon, size);
 	}
 
-	public static ClientIconData readSkillIcon(PacketByteBuf buf) {
+	public static ClientIconConfig readSkillIcon(PacketByteBuf buf) {
 		var type = buf.readString();
 		return buf.readOptional(PacketByteBuf::readString)
 				.flatMap(data -> JsonElement.parseString(data, JsonPath.create("Client Skill Icon")).getSuccess())
 				.flatMap(rootElement -> switch (type) {
-					case "item" -> ClientIconData.ItemIconData.parse(rootElement).getSuccess();
-					case "effect" -> ClientIconData.EffectIconData.parse(rootElement).getSuccess();
-					case "texture" -> ClientIconData.TextureIconData.parse(rootElement).getSuccess();
+					case "item" -> ClientIconConfig.ItemIconConfig.parse(rootElement).getSuccess();
+					case "effect" -> ClientIconConfig.EffectIconConfig.parse(rootElement).getSuccess();
+					case "texture" -> ClientIconConfig.TextureIconConfig.parse(rootElement).getSuccess();
 					default -> Optional.empty();
-				}).orElseGet(ClientIconData.TextureIconData::createMissing);
+				}).orElseGet(ClientIconConfig.TextureIconConfig::createMissing);
 	}
 
-	public static ClientFrameData readFrameIcon(PacketByteBuf buf) {
+	public static ClientFrameConfig readFrameIcon(PacketByteBuf buf) {
 		var type = buf.readString();
 		return buf.readOptional(PacketByteBuf::readString)
 				.flatMap(data -> JsonElement.parseString(data, JsonPath.create("Client Frame Icon")).getSuccess())
 				.flatMap(rootElement -> switch (type) {
-					case "advancement" -> ClientFrameData.AdvancementFrameData.parse(rootElement).getSuccess();
-					case "texture" -> ClientFrameData.TextureFrameData.parse(rootElement).getSuccess();
+					case "advancement" -> ClientFrameConfig.AdvancementFrameConfig.parse(rootElement).getSuccess();
+					case "texture" -> ClientFrameConfig.TextureFrameConfig.parse(rootElement).getSuccess();
 					default -> Optional.empty();
-				}).orElseGet(ClientFrameData.TextureFrameData::createMissing);
+				}).orElseGet(ClientFrameConfig.TextureFrameConfig::createMissing);
 	}
 
-	public static ClientSkillData readSkill(PacketByteBuf buf) {
+	public static ClientSkillConfig readSkill(PacketByteBuf buf) {
 		var id = buf.readString();
 		var x = buf.readInt();
 		var y = buf.readInt();
 		var definition = buf.readString();
 		var isRoot = buf.readBoolean();
-		var state = buf.readEnumConstant(SkillState.class);
 
-		return new ClientSkillData(id, x, y, definition, isRoot, state);
+		return new ClientSkillConfig(id, x, y, definition, isRoot);
 	}
 
-	public static ClientSkillConnectionData readSkillConnection(PacketByteBuf buf) {
+	public static ClientSkillConnectionConfig readSkillConnection(PacketByteBuf buf) {
 		var skillAId = buf.readString();
 		var skillBId = buf.readString();
 		var bidirectional = buf.readBoolean();
 
-		return new ClientSkillConnectionData(skillAId, skillBId, bidirectional);
+		return new ClientSkillConnectionConfig(skillAId, skillBId, bidirectional);
 	}
 
-	public ClientSkillCategoryData getCategory() {
+	public ClientCategoryData getCategory() {
 		return category;
 	}
 }

@@ -26,10 +26,16 @@ public class ShowCategoryOutPacket extends OutPacket {
 	public static void write(PacketByteBuf buf, CategoryConfig category, CategoryData categoryData) {
 		buf.writeIdentifier(category.getId());
 		write(buf, category.getGeneral());
-		buf.writeInt(categoryData.getSpentPointsLimit(category));
 		write(buf, category.getDefinitions());
-		write(buf, category.getSkills(), category, categoryData);
+		write(buf, category.getSkills());
 		write(buf, category.getConnections());
+		buf.writeMap(
+				category.getSkills().getMap(),
+				PacketByteBuf::writeString,
+				(buf1, skill) -> buf1.writeEnumConstant(
+						categoryData.getSkillState(category, skill)
+				)
+		);
 		buf.writeInt(categoryData.getSpentPoints(category));
 		buf.writeInt(categoryData.getEarnedPoints(category));
 		if (category.getExperience().isPresent()) {
@@ -52,6 +58,7 @@ public class ShowCategoryOutPacket extends OutPacket {
 		write(buf, general.getIcon());
 		buf.writeIdentifier(general.getBackground());
 		buf.writeBoolean(general.isExclusiveRoot());
+		buf.writeInt(general.getSpentPointsLimit());
 	}
 
 	public static void write(PacketByteBuf buf, SkillDefinitionConfig definition) {
@@ -64,8 +71,8 @@ public class ShowCategoryOutPacket extends OutPacket {
 		buf.writeFloat(definition.getSize());
 	}
 
-	public static void write(PacketByteBuf buf, SkillsConfig skills, CategoryConfig category, CategoryData categoryData) {
-		buf.writeCollection(skills.getAll(), (buf2, skill) -> write(buf2, skill, category, categoryData));
+	public static void write(PacketByteBuf buf, SkillsConfig skills) {
+		buf.writeCollection(skills.getAll(), ShowCategoryOutPacket::write);
 	}
 
 	public static void write(PacketByteBuf buf, SkillConnectionsConfig connections) {
@@ -73,13 +80,12 @@ public class ShowCategoryOutPacket extends OutPacket {
 		buf.writeCollection(connections.getExclusive().getAll(), ShowCategoryOutPacket::write);
 	}
 
-	public static void write(PacketByteBuf buf, SkillConfig skill, CategoryConfig category, CategoryData categoryData) {
+	public static void write(PacketByteBuf buf, SkillConfig skill) {
 		buf.writeString(skill.getId());
 		buf.writeInt(skill.getX());
 		buf.writeInt(skill.getY());
 		buf.writeString(skill.getDefinitionId());
 		buf.writeBoolean(skill.isRoot());
-		buf.writeEnumConstant(categoryData.getSkillState(category, skill));
 	}
 
 	public static void write(PacketByteBuf buf, SkillConnection skill) {
