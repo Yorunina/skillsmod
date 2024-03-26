@@ -241,11 +241,7 @@ public class CategoryData {
 	}
 
 	public int getPointsLeft(CategoryConfig category) {
-		return Math.min(getEarnedPoints(category), getSpentPointsLimit(category)) - getSpentPoints(category);
-	}
-
-	public int getSpentPointsLimit(CategoryConfig category) {
-		return category.getGeneral().getSpentPointsLimit();
+		return Math.min(getEarnedPoints(category), category.getGeneral().getSpentPointsLimit()) - getSpentPoints(category);
 	}
 
 	public void addExtraPoints(int count) {

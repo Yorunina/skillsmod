@@ -6,7 +6,7 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.SkillsMod;
-import net.puffish.skillsmod.client.data.ClientSkillCategoryData;
+import net.puffish.skillsmod.client.data.ClientCategoryData;
 import net.puffish.skillsmod.client.event.ClientEventListener;
 import net.puffish.skillsmod.client.event.ClientEventReceiver;
 import net.puffish.skillsmod.client.gui.SimpleToast;
@@ -38,7 +38,7 @@ public class SkillsClientMod {
 
 	private static SkillsClientMod instance;
 
-	private final Map<Identifier, ClientSkillCategoryData> categories = new LinkedHashMap<>();
+	private final Map<Identifier, ClientCategoryData> categories = new LinkedHashMap<>();
 
 	private final ClientPacketSender packetSender;
 
@@ -113,7 +113,7 @@ public class SkillsClientMod {
 
 	private void onShowCategory(ShowCategoryInPacket packet) {
 		var category = packet.getCategory();
-		categories.put(category.getId(), category);
+		categories.put(category.getConfig().id(), category);
 	}
 
 	private void onHideCategory(HideCategoryInPacket packet) {
@@ -180,7 +180,7 @@ public class SkillsClientMod {
 		MinecraftClient.getInstance().setScreen(new SkillsScreen(categories, categoryId));
 	}
 
-	private Optional<ClientSkillCategoryData> getCategoryById(Identifier categoryId) {
+	private Optional<ClientCategoryData> getCategoryById(Identifier categoryId) {
 		return Optional.ofNullable(categories.get(categoryId));
 	}
 
