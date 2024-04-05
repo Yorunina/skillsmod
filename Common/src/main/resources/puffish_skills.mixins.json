@@ -20,11 +20,10 @@
 		"WorldChunkMixin"
 	],
 	"client": [
-		"BufferBuilderMixin",
 		"BufferRendererMixin",
 		"BuiltBufferMixin",
-		"ImmediateMixin",
-		"MinecraftClientMixin"
+		"MinecraftClientMixin",
+		"RenderLayerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
