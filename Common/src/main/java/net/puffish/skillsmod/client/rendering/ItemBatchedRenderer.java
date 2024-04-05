@@ -7,12 +7,13 @@ import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
-import net.puffish.skillsmod.access.ImmediateAccess;
 import net.puffish.skillsmod.access.MinecraftClientAccess;
+import net.puffish.skillsmod.access.RenderLayerAccess;
 import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -57,16 +58,20 @@ public class ItemBatchedRenderer {
 
 			var clientAccess = (MinecraftClientAccess) client;
 			var immediate = clientAccess.getBufferBuilders().getEntityVertexConsumers();
-			var immediateAccess = ((ImmediateAccess) immediate);
 
-			immediateAccess.setEmits(entry.getValue());
+			var layers = new HashSet<RenderLayerAccess>();
 
 			client.getItemRenderer().renderItem(
 					itemStack,
 					ModelTransformationMode.GUI,
 					false,
 					matrices,
-					immediate,
+					layer -> {
+						var layerAccess = (RenderLayerAccess) layer;
+						layerAccess.setEmits(entry.getValue());
+						layers.add(layerAccess);
+						return immediate.getBuffer(layer);
+					},
 					0xF000F0,
 					OverlayTexture.DEFAULT_UV,
 					bakedModel
@@ -74,7 +79,9 @@ public class ItemBatchedRenderer {
 
 			immediate.draw();
 
-			immediateAccess.setEmits(null);
+			for (var layer : layers) {
+				layer.setEmits(null);
+			}
 		}
 		batch.clear();
 	}

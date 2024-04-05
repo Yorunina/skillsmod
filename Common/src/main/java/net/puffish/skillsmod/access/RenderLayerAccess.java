@@ -4,6 +4,6 @@ import org.joml.Matrix4f;
 
 import java.util.List;
 
-public interface BufferBuilderAccess {
+public interface RenderLayerAccess {
 	void setEmits(List<Matrix4f> emits);
 }

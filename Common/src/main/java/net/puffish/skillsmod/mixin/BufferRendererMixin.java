@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 @Mixin(BufferRenderer.class)
-public class BufferRendererMixin {
+public final class BufferRendererMixin {
 	@Inject(
 			method = "drawWithGlobalProgramInternal",
 			at = @At(
