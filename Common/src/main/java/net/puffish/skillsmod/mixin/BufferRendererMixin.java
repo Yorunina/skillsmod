@@ -14,10 +14,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.nio.ByteBuffer;
 
 @Mixin(BufferRenderer.class)
-public class BufferRendererMixin {
+public final class BufferRendererMixin {
 	@Shadow
 	private static void draw(ByteBuffer buffer, VertexFormat.DrawMode drawMode, VertexFormat vertexFormat, int count, VertexFormat.IntType elementFormat, int vertexCount, boolean textured) { }
-
 	@Inject(
 			method = "Lnet/minecraft/client/render/BufferRenderer;draw(Ljava/nio/ByteBuffer;Lnet/minecraft/client/render/VertexFormat$DrawMode;Lnet/minecraft/client/render/VertexFormat;ILnet/minecraft/client/render/VertexFormat$IntType;IZ)V",
 			at = @At("HEAD"),

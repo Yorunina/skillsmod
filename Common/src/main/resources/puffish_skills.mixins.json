@@ -24,8 +24,8 @@
 		"BufferBuilderMixin",
 		"BufferRendererMixin",
 		"DrawArrayParametersMixin",
-		"ImmediateMixin",
 		"MinecraftClientMixin",
+		"RenderLayerMixin",
 		"VertexFormatMixin"
 	],
 	"injectors": {
