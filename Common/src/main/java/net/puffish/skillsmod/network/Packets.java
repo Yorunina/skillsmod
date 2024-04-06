@@ -10,5 +10,5 @@ public class Packets {
 	public static final Identifier POINTS_UPDATE = SkillsMod.createIdentifier("points_update");
 	public static final Identifier EXPERIENCE_UPDATE = SkillsMod.createIdentifier("experience_update");
 	public static final Identifier SKILL_CLICK = SkillsMod.createIdentifier("skill_click");
-	public static final Identifier INVALID_CONFIG = SkillsMod.createIdentifier("invalid_config");
+	public static final Identifier SHOW_TOAST = SkillsMod.createIdentifier("show_toast");
 }
