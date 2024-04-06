@@ -16,6 +16,7 @@ import net.puffish.skillsmod.api.utils.Failure;
 import net.puffish.skillsmod.api.utils.Result;
 import net.puffish.skillsmod.commands.CategoryCommand;
 import net.puffish.skillsmod.commands.ExperienceCommand;
+import net.puffish.skillsmod.commands.OpenCommand;
 import net.puffish.skillsmod.commands.PointsCommand;
 import net.puffish.skillsmod.commands.SkillsCommand;
 import net.puffish.skillsmod.config.CategoryConfig;
@@ -48,6 +49,7 @@ import net.puffish.skillsmod.server.network.ServerPacketSender;
 import net.puffish.skillsmod.server.network.packets.in.SkillClickInPacket;
 import net.puffish.skillsmod.server.network.packets.out.ExperienceUpdateOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.HideCategoryOutPacket;
+import net.puffish.skillsmod.server.network.packets.out.OpenScreenOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.ShowToastOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.PointsUpdateOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.ShowCategoryOutPacket;
@@ -126,6 +128,7 @@ public class SkillsMod {
 		registrar.registerOutPacket(Packets.POINTS_UPDATE);
 		registrar.registerOutPacket(Packets.EXPERIENCE_UPDATE);
 		registrar.registerOutPacket(Packets.SHOW_TOAST);
+		registrar.registerOutPacket(Packets.OPEN_SCREEN);
 
 		eventReceiver.registerListener(instance.new EventListener());
 
@@ -628,6 +631,10 @@ public class SkillsMod {
 		}
 	}
 
+	public void openScreen(ServerPlayerEntity player, Optional<Identifier> categoryId) {
+		packetSender.send(player, OpenScreenOutPacket.write(categoryId));
+	}
+
 	private boolean isConfigValid() {
 		return categories.get().isPresent();
 	}
@@ -680,6 +687,7 @@ public class SkillsMod {
 					.then(SkillsCommand.create())
 					.then(PointsCommand.create())
 					.then(ExperienceCommand.create())
+					.then(OpenCommand.create())
 			);
 		}
 	}

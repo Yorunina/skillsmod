@@ -62,6 +62,11 @@ public class CategoryImpl implements Category {
 	}
 
 	@Override
+	public void openScreen(ServerPlayerEntity player) {
+		SkillsMod.getInstance().openScreen(player, Optional.of(categoryId));
+	}
+
+	@Override
 	public void unlock(ServerPlayerEntity player) {
 		SkillsMod.getInstance().unlockCategory(player, categoryId);
 	}

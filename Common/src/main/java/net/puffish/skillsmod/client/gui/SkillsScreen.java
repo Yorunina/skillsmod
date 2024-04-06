@@ -92,9 +92,17 @@ public class SkillsScreen extends Screen {
 
 	private List<OrderedText> tooltip;
 
-	public SkillsScreen(Map<Identifier, ClientSkillCategoryData> categories) {
+	public SkillsScreen(Map<Identifier, ClientSkillCategoryData> categories, Optional<Identifier> optCategoryId) {
 		super(LiteralText.EMPTY);
 		this.categories = categories;
+		optCategoryId.ifPresent(categoryId -> {
+			for (var id : categories.keySet()) {
+				if (id.equals(categoryId)) {
+					break;
+				}
+				this.activeCategoryIndex++;
+			}
+		});
 	}
 
 	@Override
@@ -182,7 +190,10 @@ public class SkillsScreen extends Screen {
 	}
 
 	private void syncCategory() {
-		var opt = categories.values().stream().skip(activeCategoryIndex).findFirst();
+		var opt = categories.values()
+				.stream()
+				.skip(Math.max(0, Math.min(this.activeCategoryIndex, categories.size() - 1)))
+				.findFirst();
 		if (!Objects.equals(opt, optActiveCategory)) {
 			optActiveCategory = opt;
 			resize();

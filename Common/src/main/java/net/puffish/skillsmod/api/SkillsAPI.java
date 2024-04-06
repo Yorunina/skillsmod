@@ -43,6 +43,10 @@ public class SkillsAPI {
 		SkillsMod.getInstance().visitExperienceSources(player, function);
 	}
 
+	public static void openScreen(ServerPlayerEntity player) {
+		SkillsMod.getInstance().openScreen(player, Optional.empty());
+	}
+
 	public static Optional<Category> getCategory(Identifier categoryId) {
 		if (SkillsMod.getInstance().hasCategory(categoryId)) {
 			return Optional.of(new CategoryImpl(categoryId));
