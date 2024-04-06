@@ -18,6 +18,8 @@ public interface Category {
 
 	Collection<Skill> getUnlockedSkills(ServerPlayerEntity player);
 
+	void openScreen(ServerPlayerEntity player);
+
 	void resetSkills(ServerPlayerEntity player);
 
 	void unlock(ServerPlayerEntity player);

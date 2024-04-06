@@ -61,5 +61,11 @@
 	"command.puffish_skills.skills.lock.success.multiple": "Se bloqueó la habilidad %s en la categoría %s para %s jugadores",
 
 	"command.puffish_skills.skills.reset.success.single": "Se restablecieron todas las habilidades en la categoría %s para %s",
-	"command.puffish_skills.skills.reset.success.multiple": "Se restablecieron todas las habilidades en la categoría %s para %s jugadores"
+	"command.puffish_skills.skills.reset.success.multiple": "Se restablecieron todas las habilidades en la categoría %s para %s jugadores",
+
+	"command.puffish_skills.category.open.success.single": "Abrió la pantalla de la categoría %s para %s",
+	"command.puffish_skills.category.open.success.multiple": "Abrió la pantalla de la categoría %s para %s jugadores",
+
+	"command.puffish_skills.open.success.single": "Abrió la pantalla de habilidades para %s",
+	"command.puffish_skills.open.success.multiple": "Abrió la pantalla de habilidades para %s jugadores"
 }
