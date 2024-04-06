@@ -16,7 +16,7 @@ import net.puffish.skillsmod.client.keybinding.KeyBindingReceiver;
 import net.puffish.skillsmod.client.network.ClientPacketSender;
 import net.puffish.skillsmod.client.network.packets.in.ExperienceUpdateInPacket;
 import net.puffish.skillsmod.client.network.packets.in.HideCategoryInPacket;
-import net.puffish.skillsmod.client.network.packets.in.InvalidConfigInPacket;
+import net.puffish.skillsmod.client.network.packets.in.ShowToastInPacket;
 import net.puffish.skillsmod.client.network.packets.in.PointsUpdateInPacket;
 import net.puffish.skillsmod.client.network.packets.in.ShowCategoryInPacket;
 import net.puffish.skillsmod.client.network.packets.in.SkillUpdateInPacket;
@@ -91,9 +91,9 @@ public class SkillsClientMod {
 		);
 
 		registrar.registerInPacket(
-				Packets.INVALID_CONFIG,
-				InvalidConfigInPacket::read,
-				instance::onInvalidConfig
+				Packets.SHOW_TOAST,
+				ShowToastInPacket::read,
+				instance::onShowToast
 		);
 
 		registrar.registerOutPacket(Packets.SKILL_CLICK);
@@ -154,12 +154,15 @@ public class SkillsClientMod {
 		});
 	}
 
-	private void onInvalidConfig(InvalidConfigInPacket packet) {
+	private void onShowToast(ShowToastInPacket packet) {
 		var client = MinecraftClient.getInstance();
 		client.getToastManager().add(SimpleToast.create(
 				client,
 				new LiteralText("Pufferfish's Skills"),
-				new TranslatableText("toast.puffish_skills.invalid_config.description")
+				SkillsMod.createTranslatable("toast", switch (packet.getToastType()) {
+					case INVALID_CONFIG -> "invalid_config";
+					case MISSING_CONFIG -> "missing_config";
+				} + ".description")
 		));
 	}
 
