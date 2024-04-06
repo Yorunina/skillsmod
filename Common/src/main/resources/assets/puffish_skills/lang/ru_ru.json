@@ -25,6 +25,7 @@
 	"chat.puffish_skills.new_point": "Вы получили новое очко навыка. Нажмите %s чтобы открыть Дерево навыков.",
 
 	"toast.puffish_skills.invalid_config.description": "Недопустимая конфигурация, проверьте логи игры.",
+	"toast.puffish_skills.missing_config.description": "Вы не добавили ни одного дерева навыков, проверьте файлы конфигурации.",
 
 	"gamerule.puffish_skills:announceNewPoints": "Объявлять о новых очках навыков",
 

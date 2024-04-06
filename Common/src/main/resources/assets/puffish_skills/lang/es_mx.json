@@ -25,6 +25,7 @@
 	"chat.puffish_skills.new_point": "Tienes un nuevo punto de habilidad. Presiona %s para abrir tu árbol de habilidades.",
 
 	"toast.puffish_skills.invalid_config.description": "Configuración inválida, revisa los registros del juego.",
+	"toast.puffish_skills.missing_config.description": "No hay arboles de habilidades, asegurate de haber agregado uno.",
 
 	"gamerule.puffish_skills:announceNewPoints": "Anunciar nuevos puntos de habilidad",
 

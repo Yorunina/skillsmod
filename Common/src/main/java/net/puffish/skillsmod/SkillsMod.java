@@ -47,7 +47,7 @@ import net.puffish.skillsmod.server.network.ServerPacketSender;
 import net.puffish.skillsmod.server.network.packets.in.SkillClickInPacket;
 import net.puffish.skillsmod.server.network.packets.out.ExperienceUpdateOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.HideCategoryOutPacket;
-import net.puffish.skillsmod.server.network.packets.out.InvalidConfigOutPacket;
+import net.puffish.skillsmod.server.network.packets.out.ShowToastOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.PointsUpdateOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.ShowCategoryOutPacket;
 import net.puffish.skillsmod.server.network.packets.out.SkillUpdateOutPacket;
@@ -59,6 +59,7 @@ import net.puffish.skillsmod.skill.SkillState;
 import net.puffish.skillsmod.utils.ChangeListener;
 import net.puffish.skillsmod.utils.PathUtils;
 import net.puffish.skillsmod.utils.PrefixedLogger;
+import net.puffish.skillsmod.utils.ToastType;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -123,7 +124,7 @@ public class SkillsMod {
 		registrar.registerOutPacket(Packets.SKILL_UPDATE);
 		registrar.registerOutPacket(Packets.POINTS_UPDATE);
 		registrar.registerOutPacket(Packets.EXPERIENCE_UPDATE);
-		registrar.registerOutPacket(Packets.INVALID_CONFIG);
+		registrar.registerOutPacket(Packets.SHOW_TOAST);
 
 		eventReceiver.registerListener(instance.new EventListener());
 
@@ -603,11 +604,22 @@ public class SkillsMod {
 
 	private void syncAllCategories(ServerPlayerEntity player) {
 		if (isConfigValid()) {
-			for (var category : getAllCategories()) {
-				syncCategory(player, category);
+			var categories = getAllCategories();
+			if (categories.isEmpty()) {
+				showToast(player, ToastType.MISSING_CONFIG);
+			} else {
+				for (var category : categories) {
+					syncCategory(player, category);
+				}
 			}
-		} else if (isPlayerOperator(player)) {
-			packetSender.send(player, InvalidConfigOutPacket.write());
+		} else {
+			showToast(player, ToastType.INVALID_CONFIG);
+		}
+	}
+
+	private void showToast(ServerPlayerEntity player, ToastType type) {
+		if (isOperatorOrHost(player)) {
+			packetSender.send(player, ShowToastOutPacket.write(type));
 		}
 	}
 
@@ -623,8 +635,10 @@ public class SkillsMod {
 		return Objects.requireNonNull(player.getServer());
 	}
 
-	private boolean isPlayerOperator(ServerPlayerEntity player) {
-		return getPlayerServer(player).getPlayerManager().isOperator(player.getGameProfile());
+	private boolean isOperatorOrHost(ServerPlayerEntity player) {
+		var server = getPlayerServer(player);
+		return server.isHost(player.getGameProfile())
+				|| server.getPlayerManager().isOperator(player.getGameProfile());
 	}
 
 	private class EventListener implements ServerEventListener {
