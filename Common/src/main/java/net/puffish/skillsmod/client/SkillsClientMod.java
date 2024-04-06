@@ -15,6 +15,7 @@ import net.puffish.skillsmod.client.keybinding.KeyBindingReceiver;
 import net.puffish.skillsmod.client.network.ClientPacketSender;
 import net.puffish.skillsmod.client.network.packets.in.ExperienceUpdateInPacket;
 import net.puffish.skillsmod.client.network.packets.in.HideCategoryInPacket;
+import net.puffish.skillsmod.client.network.packets.in.OpenScreenInPacket;
 import net.puffish.skillsmod.client.network.packets.in.ShowToastInPacket;
 import net.puffish.skillsmod.client.network.packets.in.PointsUpdateInPacket;
 import net.puffish.skillsmod.client.network.packets.in.ShowCategoryInPacket;
@@ -95,13 +96,19 @@ public class SkillsClientMod {
 				instance::onShowToast
 		);
 
+		registrar.registerInPacket(
+				Packets.OPEN_SCREEN,
+				OpenScreenInPacket::read,
+				instance::onOpenScreenPacket
+		);
+
 		registrar.registerOutPacket(Packets.SKILL_CLICK);
 
 		eventReceiver.registerListener(instance.new EventListener());
 	}
 
 	private void onOpenKeyPress() {
-		MinecraftClient.getInstance().setScreen(new SkillsScreen(categories));
+		openScreen(Optional.empty());
 	}
 
 	private void onShowCategory(ShowCategoryInPacket packet) {
@@ -153,6 +160,10 @@ public class SkillsClientMod {
 		});
 	}
 
+	private void onOpenScreenPacket(OpenScreenInPacket packet) {
+		openScreen(packet.getCategoryId());
+	}
+
 	private void onShowToast(ShowToastInPacket packet) {
 		var client = MinecraftClient.getInstance();
 		client.getToastManager().add(SimpleToast.create(
@@ -163,6 +174,10 @@ public class SkillsClientMod {
 					case MISSING_CONFIG -> "missing_config";
 				} + ".description")
 		));
+	}
+
+	public void openScreen(Optional<Identifier> categoryId) {
+		MinecraftClient.getInstance().setScreen(new SkillsScreen(categories, categoryId));
 	}
 
 	private Optional<ClientSkillCategoryData> getCategoryById(Identifier categoryId) {

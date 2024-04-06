@@ -70,6 +70,26 @@ public class CategoryCommand {
 										})
 								)
 						)
+				)
+				.then(CommandManager.literal("open")
+						.then(CommandManager.argument("players", EntityArgumentType.players())
+								.then(CommandManager.argument("category", CategoryArgumentType.category())
+										.executes(context -> {
+											var players = EntityArgumentType.getPlayers(context, "players");
+											var category = CategoryArgumentType.getCategory(context, "category");
+
+											for (var player : players) {
+												category.openScreen(player);
+											}
+											return CommandUtils.sendSuccess(
+													context,
+													players,
+													"category.open",
+													category.getId()
+											);
+										})
+								)
+						)
 				);
 	}
 }
