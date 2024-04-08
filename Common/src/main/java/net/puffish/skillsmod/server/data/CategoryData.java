@@ -87,8 +87,8 @@ public class CategoryData {
 		if (category.getConnections()
 				.getNormal()
 				.getNeighborsFor(skill.getId())
-				.map(neighbors -> neighbors.stream().anyMatch(unlockedSkills::contains))
-				.orElse(true)
+				.map(neighbors -> neighbors.stream().filter(unlockedSkills::contains).count())
+				.orElse(0L) >= definition.getRequiredSkills()
 		) {
 			return canAfford(category, definition) ? Skill.State.AFFORDABLE : Skill.State.AVAILABLE;
 		}
@@ -96,7 +96,8 @@ public class CategoryData {
 		if (skill.isRoot()) {
 			if (category.getGeneral().isExclusiveRoot() && unlockedSkills.stream()
 					.flatMap(skillId -> category.getSkills().getById(skillId).stream())
-					.anyMatch(SkillConfig::isRoot)) {
+					.anyMatch(SkillConfig::isRoot)
+			) {
 				return Skill.State.LOCKED;
 			}
 
