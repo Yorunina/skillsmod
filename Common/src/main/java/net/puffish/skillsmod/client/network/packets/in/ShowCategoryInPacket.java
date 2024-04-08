@@ -103,6 +103,7 @@ public class ShowCategoryInPacket implements InPacket {
 		var icon = readSkillIcon(buf);
 		var size = buf.readFloat();
 		var cost = buf.readInt();
+		var requiredSkills = buf.readInt();
 		var requiredPoints = buf.readInt();
 		var requiredSpentPoints = buf.readInt();
 
@@ -115,6 +116,7 @@ public class ShowCategoryInPacket implements InPacket {
 				frame,
 				size,
 				cost,
+				requiredSkills,
 				requiredPoints,
 				requiredSpentPoints
 		);
