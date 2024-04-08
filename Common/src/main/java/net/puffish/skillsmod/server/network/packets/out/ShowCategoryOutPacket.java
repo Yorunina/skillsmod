@@ -35,7 +35,11 @@ public class ShowCategoryOutPacket extends OutPacket {
 				category.getSkills().getMap(),
 				PacketByteBuf::writeString,
 				(buf1, skill) -> buf1.writeEnumConstant(
-						categoryData.getSkillState(category, skill)
+						categoryData.getSkillState(
+								category,
+								skill,
+								category.getDefinitions().getById(skill.getDefinitionId()).orElseThrow()
+						)
 				)
 		);
 		buf.writeInt(categoryData.getSpentPoints(category));
@@ -71,6 +75,9 @@ public class ShowCategoryOutPacket extends OutPacket {
 		write(buf, definition.getFrame());
 		write(buf, definition.getIcon());
 		buf.writeFloat(definition.getSize());
+		buf.writeInt(definition.getCost());
+		buf.writeFloat(definition.getRequiredPoints());
+		buf.writeFloat(definition.getRequiredSpentPoints());
 	}
 
 	public static void write(PacketByteBuf buf, SkillsConfig skills) {
