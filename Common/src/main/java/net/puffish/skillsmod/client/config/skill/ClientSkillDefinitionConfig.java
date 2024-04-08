@@ -9,7 +9,10 @@ public record ClientSkillDefinitionConfig(
 		Text title,
 		Text description,
 		Text extraDescription,
-		ClientFrameConfig frame,
 		ClientIconConfig icon,
-		float size
+		ClientFrameConfig frame,
+		float size,
+		int cost,
+		int requiredPoints,
+		int requiredSpentPoints
 ) { }
