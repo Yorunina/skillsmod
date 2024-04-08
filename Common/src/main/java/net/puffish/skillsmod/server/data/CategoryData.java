@@ -5,12 +5,12 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtString;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.puffish.skillsmod.api.Skill;
 import net.puffish.skillsmod.config.CategoryConfig;
 import net.puffish.skillsmod.config.skill.SkillConfig;
 import net.puffish.skillsmod.config.skill.SkillDefinitionConfig;
 import net.puffish.skillsmod.config.skill.SkillRewardConfig;
 import net.puffish.skillsmod.impl.rewards.RewardUpdateContextImpl;
-import net.puffish.skillsmod.skill.SkillState;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -64,9 +64,9 @@ public class CategoryData {
 		return nbt;
 	}
 
-	public SkillState getSkillState(CategoryConfig category, SkillConfig skill) {
+	public Skill.State getSkillState(CategoryConfig category, SkillConfig skill, SkillDefinitionConfig definition) {
 		if (unlockedSkills.contains(skill.getId())) {
-			return SkillState.UNLOCKED;
+			return Skill.State.UNLOCKED;
 		}
 
 		if (category.getConnections()
@@ -75,7 +75,7 @@ public class CategoryData {
 				.map(neighbors -> neighbors.stream().anyMatch(unlockedSkills::contains))
 				.orElse(false)
 		) {
-			return SkillState.EXCLUDED;
+			return Skill.State.EXCLUDED;
 		}
 
 		if (category.getConnections()
@@ -84,21 +84,25 @@ public class CategoryData {
 				.map(neighbors -> neighbors.stream().anyMatch(unlockedSkills::contains))
 				.orElse(true)
 		) {
-			return SkillState.AVAILABLE;
+			return canAfford(category, definition) ? Skill.State.AFFORDABLE : Skill.State.AVAILABLE;
 		}
 
 		if (skill.isRoot()) {
-			if (!category.getGeneral().isExclusiveRoot()) {
-				return SkillState.AVAILABLE;
-			}
-			if (unlockedSkills.stream()
+			if (category.getGeneral().isExclusiveRoot() && unlockedSkills.stream()
 					.flatMap(skillId -> category.getSkills().getById(skillId).stream())
-					.noneMatch(SkillConfig::isRoot)) {
-				return SkillState.AVAILABLE;
+					.anyMatch(SkillConfig::isRoot)) {
+				return Skill.State.LOCKED;
 			}
+
+			return canAfford(category, definition) ? Skill.State.AFFORDABLE : Skill.State.AVAILABLE;
 		}
 
-		return SkillState.LOCKED;
+		return Skill.State.LOCKED;
+	}
+
+	private boolean canAfford(CategoryConfig category, SkillDefinitionConfig definition) {
+		return getPointsLeft(category) >= Math.max(definition.getRequiredPoints(), definition.getCost())
+				&& getSpentPoints(category) >= definition.getRequiredSpentPoints();
 	}
 
 	public boolean tryUnlockSkill(CategoryConfig category, ServerPlayerEntity player, String skillId, boolean force) {
@@ -106,42 +110,32 @@ public class CategoryData {
 			var definitionId = skill.getDefinitionId();
 
 			return category.getDefinitions().getById(definitionId).map(definition -> {
-				if (force) {
-					addExtraPoints(definition.getCost());
-				} else {
-					if (getSkillState(category, skill) != SkillState.AVAILABLE) {
-						return false;
+				if (force || getSkillState(category, skill, definition) == Skill.State.AFFORDABLE) {
+					unlockSkill(skillId);
+
+					int count = countUnlocked(category, definitionId);
+
+					for (var reward : definition.getRewards()) {
+						reward.getInstance().update(new RewardUpdateContextImpl(player, count, true));
 					}
 
-					if (getPointsLeft(category) < Math.max(definition.getRequiredPoints(), definition.getCost())) {
-						return false;
-					}
-
-					if (getSpentPoints(category) < definition.getRequiredSpentPoints()) {
-						return false;
-					}
+					return true;
 				}
 
-				unlockSkill(skillId);
-
-				int count = countUnlocked(category, definitionId);
-
-				for (var reward : definition.getRewards()) {
-					reward.getInstance().update(new RewardUpdateContextImpl(player, count, true));
-				}
-
-				return true;
+				return false;
 			});
 		}).orElse(false);
 	}
 
 	public int countUnlocked(CategoryConfig category, String definitionId) {
-		return (int) category.getSkills()
-				.getAll()
-				.stream()
-				.filter(skill -> skill.getDefinitionId().equals(definitionId))
-				.filter(skill -> getSkillState(category, skill) == SkillState.UNLOCKED)
-				.count();
+		return category.getDefinitions().getById(definitionId).map(
+				definition -> category.getSkills()
+						.getAll()
+						.stream()
+						.filter(skill -> skill.getDefinitionId().equals(definitionId))
+						.filter(skill -> getSkillState(category, skill, definition) == Skill.State.UNLOCKED)
+						.count()
+		).orElse(0L).intValue();
 	}
 
 	public void refreshReward(CategoryConfig category, ServerPlayerEntity player, Predicate<SkillRewardConfig> predicate) {

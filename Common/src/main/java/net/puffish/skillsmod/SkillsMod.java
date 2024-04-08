@@ -9,6 +9,7 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
+import net.puffish.skillsmod.api.Skill;
 import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.api.experience.source.ExperienceSource;
 import net.puffish.skillsmod.api.util.Problem;
@@ -72,7 +73,6 @@ import net.puffish.skillsmod.server.network.packets.out.SkillUpdateOutPacket;
 import net.puffish.skillsmod.server.setup.ServerRegistrar;
 import net.puffish.skillsmod.server.setup.SkillsArgumentTypes;
 import net.puffish.skillsmod.server.setup.SkillsGameRules;
-import net.puffish.skillsmod.skill.SkillState;
 import net.puffish.skillsmod.util.ChangeListener;
 import net.puffish.skillsmod.util.DisposeContext;
 import net.puffish.skillsmod.util.PathUtils;
@@ -463,11 +463,13 @@ public class SkillsMod {
 		});
 	}
 
-	public Optional<SkillState> getSkillState(ServerPlayerEntity player, Identifier categoryId, String skillId) {
-		return getCategory(categoryId).flatMap(category -> category.getSkills().getById(skillId).map(skill -> {
-			var categoryData = getPlayerData(player).getCategoryData(category);
-			return categoryData.getSkillState(category, skill);
-		}));
+	public Optional<Skill.State> getSkillState(ServerPlayerEntity player, Identifier categoryId, String skillId) {
+		return getCategory(categoryId).flatMap(category -> category.getSkills().getById(skillId)
+				.flatMap(skill -> category.getDefinitions().getById(skill.getDefinitionId()).map(definition -> {
+					var categoryData = getPlayerData(player).getCategoryData(category);
+					return categoryData.getSkillState(category, skill, definition);
+				}))
+		);
 	}
 
 	public Collection<Identifier> getUnlockedCategories(ServerPlayerEntity player) {
