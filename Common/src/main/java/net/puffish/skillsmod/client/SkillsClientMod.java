@@ -143,11 +143,12 @@ public class SkillsClientMod {
 			var oldPointsLeft = category.getPointsLeft();
 			category.setSpentPoints(packet.getSpentPoints());
 			category.setEarnedPoints(packet.getEarnedPoints());
+			category.updatePointsDependencies();
 			var newPointsLeft = category.getPointsLeft();
 
 			if (packet.announceNewPoints()
 					&& newPointsLeft > oldPointsLeft
-					&& category.hasAvailableSkill()
+					&& category.hasAnySkillLeft()
 			) {
 				MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(
 						SkillsMod.createTranslatable(
