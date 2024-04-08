@@ -17,6 +17,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.puffish.skillsmod.SkillsMod;
+import net.puffish.skillsmod.api.Skill;
 import net.puffish.skillsmod.client.SkillsClientMod;
 import net.puffish.skillsmod.client.config.ClientFrameConfig;
 import net.puffish.skillsmod.client.config.ClientIconConfig;
@@ -27,7 +28,6 @@ import net.puffish.skillsmod.client.network.packets.out.SkillClickOutPacket;
 import net.puffish.skillsmod.client.rendering.ConnectionBatchedRenderer;
 import net.puffish.skillsmod.client.rendering.ItemBatchedRenderer;
 import net.puffish.skillsmod.client.rendering.TextureBatchedRenderer;
-import net.puffish.skillsmod.skill.SkillState;
 import net.puffish.skillsmod.util.Bounds2i;
 import org.joml.Vector2i;
 import org.joml.Vector4f;
@@ -356,7 +356,7 @@ public class SkillsScreen extends Screen {
 		matrices.pop();
 	}
 
-	private void drawFrame(DrawContext context, TextureBatchedRenderer textureRenderer, ClientFrameConfig frame, float sizeScale, int x, int y, SkillState state) {
+	private void drawFrame(DrawContext context, TextureBatchedRenderer textureRenderer, ClientFrameConfig frame, float sizeScale, int x, int y, Skill.State state) {
 		if (client == null) {
 			return;
 		}
@@ -367,7 +367,7 @@ public class SkillsScreen extends Screen {
 		if (frame instanceof ClientFrameConfig.AdvancementFrameConfig advancementFrame) {
 			var guiAtlasManager = client.getGuiAtlasManager();
 			var status = switch (state) {
-				case LOCKED, EXCLUDED, AVAILABLE -> AdvancementObtainedStatus.UNOBTAINED;
+				case LOCKED, EXCLUDED, AVAILABLE, AFFORDABLE -> AdvancementObtainedStatus.UNOBTAINED;
 				case UNLOCKED -> AdvancementObtainedStatus.OBTAINED;
 			};
 			var texture = status.getFrameTexture(advancementFrame.frame());
@@ -375,7 +375,7 @@ public class SkillsScreen extends Screen {
 			var scaling = guiAtlasManager.getScaling(sprite);
 			var color = switch (state) {
 				case LOCKED, EXCLUDED -> COLOR_GRAY;
-				case AVAILABLE, UNLOCKED -> COLOR_WHITE;
+				case AVAILABLE, AFFORDABLE, UNLOCKED -> COLOR_WHITE;
 			};
 			textureRenderer.emitSprite(
 					context, sprite, scaling,
@@ -384,46 +384,51 @@ public class SkillsScreen extends Screen {
 			);
 		} else if (frame instanceof ClientFrameConfig.TextureFrameConfig textureFrame) {
 			switch (state) {
+				case LOCKED -> textureFrame.lockedTexture().ifPresentOrElse(
+						lockedTexture -> textureRenderer.emitTexture(
+								context, lockedTexture,
+								x - halfSize, y - halfSize, size, size,
+								COLOR_WHITE
+						),
+						() -> textureRenderer.emitTexture(
+								context, textureFrame.availableTexture(),
+								x - halfSize, y - halfSize, size, size,
+								COLOR_GRAY
+						)
+				);
 				case AVAILABLE -> textureRenderer.emitTexture(
 						context, textureFrame.availableTexture(),
 						x - halfSize, y - halfSize, size, size,
 						COLOR_WHITE
+				);
+				case AFFORDABLE -> textureFrame.affordableTexture().ifPresentOrElse(
+						affordableTexture -> textureRenderer.emitTexture(
+								context, affordableTexture,
+								x - halfSize, y - halfSize, size, size,
+								COLOR_WHITE
+						),
+						() -> textureRenderer.emitTexture(
+								context, textureFrame.availableTexture(),
+								x - halfSize, y - halfSize, size, size,
+								COLOR_WHITE
+						)
 				);
 				case UNLOCKED -> textureRenderer.emitTexture(
 						context, textureFrame.unlockedTexture(),
 						x - halfSize, y - halfSize, size, size,
 						COLOR_WHITE
 				);
-				case LOCKED -> {
-					if (textureFrame.lockedTexture() != null) {
-						textureRenderer.emitTexture(
-								context, textureFrame.lockedTexture(),
+				case EXCLUDED -> textureFrame.excludedTexture().ifPresentOrElse(
+						excludedTexture -> textureRenderer.emitTexture(
+								context, excludedTexture,
 								x - halfSize, y - halfSize, size, size,
 								COLOR_WHITE
-						);
-					} else {
-						textureRenderer.emitTexture(
+						), () -> textureRenderer.emitTexture(
 								context, textureFrame.availableTexture(),
 								x - halfSize, y - halfSize, size, size,
 								COLOR_GRAY
-						);
-					}
-				}
-				case EXCLUDED -> {
-					if (textureFrame.excludedTexture() != null) {
-						textureRenderer.emitTexture(
-								context, textureFrame.excludedTexture(),
-								x - halfSize, y - halfSize, size, size,
-								COLOR_WHITE
-						);
-					} else {
-						textureRenderer.emitTexture(
-								context, textureFrame.availableTexture(),
-								x - halfSize, y - halfSize, size, size,
-								COLOR_GRAY
-						);
-					}
-				}
+						)
+				);
 				default -> throw new UnsupportedOperationException();
 			}
 		}

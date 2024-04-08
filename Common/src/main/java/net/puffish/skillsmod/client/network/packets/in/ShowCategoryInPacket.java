@@ -1,6 +1,7 @@
 package net.puffish.skillsmod.client.network.packets.in;
 
 import net.minecraft.network.PacketByteBuf;
+import net.puffish.skillsmod.api.Skill;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonPath;
 import net.puffish.skillsmod.client.config.ClientCategoryConfig;
@@ -11,7 +12,6 @@ import net.puffish.skillsmod.client.config.skill.ClientSkillConnectionConfig;
 import net.puffish.skillsmod.client.config.skill.ClientSkillDefinitionConfig;
 import net.puffish.skillsmod.client.data.ClientCategoryData;
 import net.puffish.skillsmod.network.InPacket;
-import net.puffish.skillsmod.skill.SkillState;
 
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -51,7 +51,7 @@ public class ShowCategoryInPacket implements InPacket {
 
 		var skillsStates = buf.readMap(
 				PacketByteBuf::readString,
-				buf1 -> buf1.readEnumConstant(SkillState.class)
+				buf1 -> buf1.readEnumConstant(Skill.State.class)
 		);
 
 		var spentPoints = buf.readInt();
@@ -98,8 +98,22 @@ public class ShowCategoryInPacket implements InPacket {
 		var frame = readFrameIcon(buf);
 		var icon = readSkillIcon(buf);
 		var size = buf.readFloat();
+		var cost = buf.readInt();
+		var requiredPoints = buf.readInt();
+		var requiredSpentPoints = buf.readInt();
 
-		return new ClientSkillDefinitionConfig(id, title, description, extraDescription, frame, icon, size);
+		return new ClientSkillDefinitionConfig(
+				id,
+				title,
+				description,
+				extraDescription,
+				icon,
+				frame,
+				size,
+				cost,
+				requiredPoints,
+				requiredSpentPoints
+		);
 	}
 
 	public static ClientIconConfig readSkillIcon(PacketByteBuf buf) {

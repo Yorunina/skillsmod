@@ -1,15 +1,16 @@
 package net.puffish.skillsmod.client.data;
 
+import net.puffish.skillsmod.api.Skill;
 import net.puffish.skillsmod.client.config.ClientCategoryConfig;
 import net.puffish.skillsmod.client.config.skill.ClientSkillConfig;
-import net.puffish.skillsmod.skill.SkillState;
+import net.puffish.skillsmod.client.config.skill.ClientSkillDefinitionConfig;
 
 import java.util.Map;
 import java.util.Objects;
 
 public class ClientCategoryData {
 	private final ClientCategoryConfig config;
-	private final Map<String, SkillState> skillStates;
+	private final Map<String, Skill.State> skillStates;
 
 	private int spentPoints;
 	private int earnedPoints;
@@ -20,7 +21,7 @@ public class ClientCategoryData {
 
 	public ClientCategoryData(
 			ClientCategoryConfig config,
-			Map<String, SkillState> skillStates,
+			Map<String, Skill.State> skillStates,
 			int spentPoints,
 			int earnedPoints,
 			int currentLevel,
@@ -36,11 +37,11 @@ public class ClientCategoryData {
 		this.requiredExperience = requiredExperience;
 	}
 
-	private void setSkillState(ClientSkillConfig skill, SkillState state) {
+	private void setSkillState(ClientSkillConfig skill, Skill.State state) {
 		skillStates.put(skill.id(), state);
 	}
 
-	public SkillState getSkillState(ClientSkillConfig skill) {
+	public Skill.State getSkillState(ClientSkillConfig skill) {
 		return skillStates.get(skill.id());
 	}
 
@@ -49,30 +50,39 @@ public class ClientCategoryData {
 		if (skill == null) {
 			return;
 		}
-		setSkillState(skill, SkillState.UNLOCKED);
+		setSkillState(skill, Skill.State.UNLOCKED);
 		if (skill.isRoot() && config.exclusiveRoot()) {
 			config.skills()
 					.values()
 					.stream()
 					.filter(ClientSkillConfig::isRoot)
-					.filter(other -> getSkillState(other) == SkillState.AVAILABLE)
-					.forEach(other -> setSkillState(other, SkillState.LOCKED));
+					.filter(other -> switch (getSkillState(other)) {
+						case AVAILABLE, AFFORDABLE -> true;
+						default -> false;
+					})
+					.forEach(other -> setSkillState(other, Skill.State.LOCKED));
 		}
 		var normalNeighborsIds = config.normalNeighbors().get(skillId);
 		if (normalNeighborsIds != null) {
 			normalNeighborsIds.stream()
 					.map(id -> config.skills().get(id))
 					.filter(Objects::nonNull)
-					.filter(neighbor -> getSkillState(neighbor) == SkillState.LOCKED)
-					.forEach(neighbor -> setSkillState(neighbor, SkillState.AVAILABLE));
+					.filter(neighbor -> getSkillState(neighbor) == Skill.State.LOCKED)
+					.forEach(neighbor -> {
+						if (isAffordable(neighbor)) {
+							setSkillState(neighbor, Skill.State.AFFORDABLE);
+						} else {
+							setSkillState(neighbor, Skill.State.AVAILABLE);
+						}
+					});
 		}
 		var exclusiveNeighborsIds = config.exclusiveNeighbors().get(skillId);
 		if (exclusiveNeighborsIds != null) {
 			exclusiveNeighborsIds.stream()
 					.map(id -> config.skills().get(id))
 					.filter(Objects::nonNull)
-					.filter(neighbor -> getSkillState(neighbor) != SkillState.UNLOCKED)
-					.forEach(neighbor -> setSkillState(neighbor, SkillState.EXCLUDED));
+					.filter(neighbor -> getSkillState(neighbor) != Skill.State.UNLOCKED)
+					.forEach(neighbor -> setSkillState(neighbor, Skill.State.EXCLUDED));
 		}
 	}
 
@@ -82,11 +92,15 @@ public class ClientCategoryData {
 			return;
 		}
 		if (isExcluded(skill)) {
-			setSkillState(skill, SkillState.EXCLUDED);
+			setSkillState(skill, Skill.State.EXCLUDED);
 		} else if (isAvailable(skill)) {
-			setSkillState(skill, SkillState.AVAILABLE);
+			if (isAffordable(skill)) {
+				setSkillState(skill, Skill.State.AFFORDABLE);
+			} else {
+				setSkillState(skill, Skill.State.AVAILABLE);
+			}
 		} else {
-			setSkillState(skill, SkillState.LOCKED);
+			setSkillState(skill, Skill.State.LOCKED);
 		}
 		if (skill.isRoot()) {
 			if (config.exclusiveRoot()) {
@@ -94,13 +108,19 @@ public class ClientCategoryData {
 						.values()
 						.stream()
 						.filter(ClientSkillConfig::isRoot)
-						.allMatch(other -> getSkillState(other) != SkillState.UNLOCKED)) {
+						.allMatch(other -> getSkillState(other) != Skill.State.UNLOCKED)) {
 					config.skills()
 							.values()
 							.stream()
 							.filter(ClientSkillConfig::isRoot)
-							.filter(other -> getSkillState(other) == SkillState.LOCKED)
-							.forEach(other -> setSkillState(other, SkillState.AVAILABLE));
+							.filter(other -> getSkillState(other) == Skill.State.LOCKED)
+							.forEach(other -> {
+								if (isAffordable(other)) {
+									setSkillState(other, Skill.State.AFFORDABLE);
+								} else {
+									setSkillState(other, Skill.State.AVAILABLE);
+								}
+							});
 				}
 			}
 		}
@@ -109,10 +129,13 @@ public class ClientCategoryData {
 			normalNeighborsIds.stream()
 					.map(id -> config.skills().get(id))
 					.filter(Objects::nonNull)
-					.filter(neighbor -> getSkillState(neighbor) == SkillState.AVAILABLE)
+					.filter(neighbor -> switch (getSkillState(neighbor)) {
+						case AVAILABLE, AFFORDABLE -> true;
+						default -> false;
+					})
 					.forEach(neighbor -> {
 						if (!isAvailable(neighbor)) {
-							setSkillState(neighbor, SkillState.LOCKED);
+							setSkillState(neighbor, Skill.State.LOCKED);
 						}
 					});
 		}
@@ -121,13 +144,17 @@ public class ClientCategoryData {
 			exclusiveNeighborsIds.stream()
 					.map(id -> config.skills().get(id))
 					.filter(Objects::nonNull)
-					.filter(neighbor -> getSkillState(neighbor) == SkillState.EXCLUDED)
+					.filter(neighbor -> getSkillState(neighbor) == Skill.State.EXCLUDED)
 					.forEach(neighbor -> {
 						if (!isExcluded(neighbor)) {
 							if (isAvailable(neighbor)) {
-								setSkillState(neighbor, SkillState.AVAILABLE);
+								if (isAffordable(neighbor)) {
+									setSkillState(neighbor, Skill.State.AFFORDABLE);
+								} else {
+									setSkillState(neighbor, Skill.State.AVAILABLE);
+								}
 							} else {
-								setSkillState(neighbor, SkillState.LOCKED);
+								setSkillState(neighbor, Skill.State.LOCKED);
 							}
 						}
 					});
@@ -142,7 +169,7 @@ public class ClientCategoryData {
 		return exclusiveNeighborsReversedIds.stream()
 				.map(id -> config.skills().get(id))
 				.filter(Objects::nonNull)
-				.anyMatch(neighbor -> getSkillState(neighbor) == SkillState.UNLOCKED);
+				.anyMatch(neighbor -> getSkillState(neighbor) == Skill.State.UNLOCKED);
 	}
 
 	private boolean isAvailable(ClientSkillConfig skill) {
@@ -151,7 +178,7 @@ public class ClientCategoryData {
 					.values()
 					.stream()
 					.filter(ClientSkillConfig::isRoot)
-					.allMatch(other -> getSkillState(other) != SkillState.UNLOCKED);
+					.allMatch(other -> getSkillState(other) != Skill.State.UNLOCKED);
 		}
 		var normalNeighborsReversedIds = config.normalNeighborsReversed().get(skill.id());
 		if (normalNeighborsReversedIds == null) {
@@ -160,14 +187,41 @@ public class ClientCategoryData {
 		return normalNeighborsReversedIds.stream()
 				.map(id -> config.skills().get(id))
 				.filter(Objects::nonNull)
-				.anyMatch(neighbor -> getSkillState(neighbor) == SkillState.UNLOCKED);
+				.anyMatch(neighbor -> getSkillState(neighbor) == Skill.State.UNLOCKED);
 	}
 
-	public boolean hasAvailableSkill() {
+	private boolean isAffordable(ClientSkillConfig skill) {
+		return config.getDefinitionById(skill.definitionId()).map(this::isAffordable).orElse(false);
+	}
+
+	private boolean isAffordable(ClientSkillDefinitionConfig definition) {
+		return getPointsLeft() >= Math.max(definition.requiredPoints(), definition.cost())
+				&& spentPoints >= definition.requiredSpentPoints();
+	}
+
+	public boolean hasAnySkillLeft() {
 		return config.skills()
 				.values()
 				.stream()
-				.anyMatch(skill -> getSkillState(skill) == SkillState.AVAILABLE);
+				.map(this::getSkillState)
+				.anyMatch(state -> state == Skill.State.AVAILABLE || state == Skill.State.AFFORDABLE);
+	}
+
+	public void updatePointsDependencies() {
+		config.skills()
+				.values()
+				.stream()
+				.filter(skill -> switch (getSkillState(skill)) {
+					case AVAILABLE, AFFORDABLE -> true;
+					default -> false;
+				})
+				.forEach(skill -> {
+					if (isAffordable(skill)) {
+						setSkillState(skill, Skill.State.AFFORDABLE);
+					} else {
+						setSkillState(skill, Skill.State.AVAILABLE);
+					}
+				});
 	}
 
 	public ClientCategoryConfig getConfig() {
