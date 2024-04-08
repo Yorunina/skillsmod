@@ -76,8 +76,9 @@ public class ShowCategoryOutPacket extends OutPacket {
 		write(buf, definition.getIcon());
 		buf.writeFloat(definition.getSize());
 		buf.writeInt(definition.getCost());
-		buf.writeFloat(definition.getRequiredPoints());
-		buf.writeFloat(definition.getRequiredSpentPoints());
+		buf.writeInt(definition.getRequiredSkills());
+		buf.writeInt(definition.getRequiredPoints());
+		buf.writeInt(definition.getRequiredSpentPoints());
 	}
 
 	public static void write(PacketByteBuf buf, SkillsConfig skills) {

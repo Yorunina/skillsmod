@@ -55,7 +55,7 @@ public class ClientCategoryData {
 			connectionStates.put(connection, new ClientSkillConnectionData(
 					skillA,
 					skillB,
-					getConnectionColor(skillA, skillB)
+					getConnectionColor(skillA, skillB, connection.bidirectional())
 			));
 		}
 		for (var connection : config.exclusiveConnections()) {
@@ -115,10 +115,12 @@ public class ClientCategoryData {
 					.filter(Objects::nonNull)
 					.filter(neighbor -> getSkillState(neighbor) == Skill.State.LOCKED)
 					.forEach(neighbor -> {
-						if (isAffordable(neighbor)) {
-							updateSkillState(neighbor, Skill.State.AFFORDABLE);
-						} else {
-							updateSkillState(neighbor, Skill.State.AVAILABLE);
+						if (isAvailable(neighbor)) {
+							if (isAffordable(neighbor)) {
+								updateSkillState(neighbor, Skill.State.AFFORDABLE);
+							} else {
+								updateSkillState(neighbor, Skill.State.AVAILABLE);
+							}
 						}
 					});
 		}
@@ -230,10 +232,14 @@ public class ClientCategoryData {
 		if (normalNeighborsReversedIds == null) {
 			return false;
 		}
-		return normalNeighborsReversedIds.stream()
-				.map(id -> config.skills().get(id))
-				.filter(Objects::nonNull)
-				.anyMatch(neighbor -> getSkillState(neighbor) == Skill.State.UNLOCKED);
+		return config.getDefinitionById(skill.definitionId())
+				.map(definition -> normalNeighborsReversedIds.stream()
+						.map(id -> config.skills().get(id))
+						.filter(Objects::nonNull)
+						.filter(neighbor -> getSkillState(neighbor) == Skill.State.UNLOCKED)
+						.count() >= definition.requiredSkills()
+				)
+				.orElse(false);
 	}
 
 	private boolean isAffordable(ClientSkillConfig skill) {
@@ -279,15 +285,32 @@ public class ClientCategoryData {
 			return;
 		}
 
-		data.setColor(getConnectionColor(data.getSkillA(), data.getSkillB()));
+		data.setColor(getConnectionColor(data.getSkillA(), data.getSkillB(), connection.bidirectional()));
 	}
 
-	private ClientFillStrokeColorsConfig getConnectionColor(ClientSkillConfig skillA, ClientSkillConfig skillB) {
-		final int[] order = {0, 1, 2, 3, 0};
-		return switch (Math.min(
-				order[getSkillState(skillA).ordinal()],
-				order[getSkillState(skillB).ordinal()]
-		)) {
+	private static final int[][][] ORDER = {
+			{
+					{0, 0, 0, 0, 0},
+					{0, 0, 0, 0, 0},
+					{0, 0, 0, 0, 0},
+					{0, 1, 2, 3, 0},
+					{0, 0, 0, 0, 0}
+			},
+			{
+					{0, 0, 0, 0, 0},
+					{0, 0, 0, 1, 0},
+					{0, 0, 0, 2, 0},
+					{0, 1, 2, 3, 0},
+					{0, 0, 0, 0, 0}
+			}
+	};
+
+	private ClientFillStrokeColorsConfig getConnectionColor(ClientSkillConfig skillA, ClientSkillConfig skillB, boolean bidirectional) {
+		return switch (ORDER
+				[bidirectional ? 1 : 0]
+				[getSkillState(skillA).ordinal()]
+				[getSkillState(skillB).ordinal()]
+		) {
 			case 3 -> config.colors().connections().unlocked();
 			case 2 -> config.colors().connections().affordable();
 			case 1 -> config.colors().connections().available();
