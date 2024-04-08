@@ -18,6 +18,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vector4f;
 import net.puffish.skillsmod.SkillsMod;
+import net.puffish.skillsmod.api.Skill;
 import net.puffish.skillsmod.client.SkillsClientMod;
 import net.puffish.skillsmod.client.config.ClientFrameConfig;
 import net.puffish.skillsmod.client.config.ClientIconConfig;
@@ -28,7 +29,6 @@ import net.puffish.skillsmod.client.network.packets.out.SkillClickOutPacket;
 import net.puffish.skillsmod.client.rendering.ConnectionBatchedRenderer;
 import net.puffish.skillsmod.client.rendering.ItemBatchedRenderer;
 import net.puffish.skillsmod.client.rendering.TextureBatchedRenderer;
-import net.puffish.skillsmod.skill.SkillState;
 import net.puffish.skillsmod.util.Bounds2i;
 import net.puffish.skillsmod.util.Vec2i;
 import org.lwjgl.glfw.GLFW;
@@ -362,7 +362,7 @@ public class SkillsScreen extends Screen {
 		matrices.pop();
 	}
 
-	private void drawFrame(MatrixStack matrices, TextureBatchedRenderer textureRenderer, ClientFrameConfig frame, float sizeScale, int x, int y, SkillState state) {
+	private void drawFrame(MatrixStack matrices, TextureBatchedRenderer textureRenderer, ClientFrameConfig frame, float sizeScale, int x, int y, Skill.State state) {
 		if (client == null) {
 			return;
 		}
@@ -371,10 +371,10 @@ public class SkillsScreen extends Screen {
 		var size = halfSize * 2;
 
 		if (frame instanceof ClientFrameConfig.AdvancementFrameConfig advancementFrame) {
-			var status = state == SkillState.UNLOCKED ? AdvancementObtainedStatus.OBTAINED : AdvancementObtainedStatus.UNOBTAINED;
+			var status = state == Skill.State.UNLOCKED ? AdvancementObtainedStatus.OBTAINED : AdvancementObtainedStatus.UNOBTAINED;
 			var color = switch (state) {
 				case LOCKED, EXCLUDED -> COLOR_GRAY;
-				case AVAILABLE, UNLOCKED -> COLOR_WHITE;
+				case AVAILABLE, AFFORDABLE, UNLOCKED -> COLOR_WHITE;
 			};
 
 			textureRenderer.emitTexture(
@@ -388,46 +388,51 @@ public class SkillsScreen extends Screen {
 			);
 		} else if (frame instanceof ClientFrameConfig.TextureFrameConfig textureFrame) {
 			switch (state) {
+				case LOCKED -> textureFrame.lockedTexture().ifPresentOrElse(
+						lockedTexture -> textureRenderer.emitTexture(
+								matrices, lockedTexture,
+								x - halfSize, y - halfSize, size, size,
+								COLOR_WHITE
+						),
+						() -> textureRenderer.emitTexture(
+								matrices, textureFrame.availableTexture(),
+								x - halfSize, y - halfSize, size, size,
+								COLOR_GRAY
+						)
+				);
 				case AVAILABLE -> textureRenderer.emitTexture(
 						matrices, textureFrame.availableTexture(),
 						x - halfSize, y - halfSize, size, size,
 						COLOR_WHITE
+				);
+				case AFFORDABLE -> textureFrame.affordableTexture().ifPresentOrElse(
+						affordableTexture -> textureRenderer.emitTexture(
+								matrices, affordableTexture,
+								x - halfSize, y - halfSize, size, size,
+								COLOR_WHITE
+						),
+						() -> textureRenderer.emitTexture(
+								matrices, textureFrame.availableTexture(),
+								x - halfSize, y - halfSize, size, size,
+								COLOR_WHITE
+						)
 				);
 				case UNLOCKED -> textureRenderer.emitTexture(
 						matrices, textureFrame.unlockedTexture(),
 						x - halfSize, y - halfSize, size, size,
 						COLOR_WHITE
 				);
-				case LOCKED -> {
-					if (textureFrame.lockedTexture() != null) {
-						textureRenderer.emitTexture(
-								matrices, textureFrame.lockedTexture(),
+				case EXCLUDED -> textureFrame.excludedTexture().ifPresentOrElse(
+						excludedTexture -> textureRenderer.emitTexture(
+								matrices, excludedTexture,
 								x - halfSize, y - halfSize, size, size,
 								COLOR_WHITE
-						);
-					} else {
-						textureRenderer.emitTexture(
+						), () -> textureRenderer.emitTexture(
 								matrices, textureFrame.availableTexture(),
 								x - halfSize, y - halfSize, size, size,
 								COLOR_GRAY
-						);
-					}
-				}
-				case EXCLUDED -> {
-					if (textureFrame.excludedTexture() != null) {
-						textureRenderer.emitTexture(
-								matrices, textureFrame.excludedTexture(),
-								x - halfSize, y - halfSize, size, size,
-								COLOR_WHITE
-						);
-					} else {
-						textureRenderer.emitTexture(
-								matrices, textureFrame.availableTexture(),
-								x - halfSize, y - halfSize, size, size,
-								COLOR_GRAY
-						);
-					}
-				}
+						)
+				);
 				default -> throw new UnsupportedOperationException();
 			}
 		}

@@ -7,7 +7,17 @@ public interface Skill {
 
 	String getId();
 
+	State getState(ServerPlayerEntity player);
+
 	void unlock(ServerPlayerEntity player);
 
 	void lock(ServerPlayerEntity player);
+
+	enum State {
+		LOCKED,
+		AVAILABLE,
+		AFFORDABLE,
+		UNLOCKED,
+		EXCLUDED
+	}
 }

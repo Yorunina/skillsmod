@@ -4,7 +4,6 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.Category;
 import net.puffish.skillsmod.api.Skill;
-import net.puffish.skillsmod.skill.SkillState;
 
 public class SkillImpl implements Skill {
 	private final Category category;
@@ -23,6 +22,11 @@ public class SkillImpl implements Skill {
 	@Override
 	public String getId() {
 		return skillId;
+	}
+
+	@Override
+	public State getState(ServerPlayerEntity player) {
+		return SkillsMod.getInstance().getSkillState(player, category.getId(), skillId).orElseThrow();
 	}
 
 	@Override
