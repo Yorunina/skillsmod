@@ -25,10 +25,11 @@ public class SkillDefinitionConfig {
 	private final float size;
 	private final List<SkillRewardConfig> rewards;
 	private final int cost;
+	private final int requiredSkills;
 	private final int requiredPoints;
 	private final int requiredSpentPoints;
 
-	private SkillDefinitionConfig(String id, Text title, Text description, Text extraDescription, IconConfig icon, FrameConfig frame, float size, List<SkillRewardConfig> rewards, int cost, int requiredPoints, int requiredSpentPoints) {
+	private SkillDefinitionConfig(String id, Text title, Text description, Text extraDescription, IconConfig icon, FrameConfig frame, float size, List<SkillRewardConfig> rewards, int cost, int requiredSkills, int requiredPoints, int requiredSpentPoints) {
 		this.id = id;
 		this.title = title;
 		this.description = description;
@@ -38,6 +39,7 @@ public class SkillDefinitionConfig {
 		this.size = size;
 		this.rewards = rewards;
 		this.cost = cost;
+		this.requiredSkills = requiredSkills;
 		this.requiredPoints = requiredPoints;
 		this.requiredSpentPoints = requiredSpentPoints;
 	}
@@ -100,6 +102,10 @@ public class SkillDefinitionConfig {
 				.getSuccess() // ignore failure because this property is optional
 				.orElse(1);
 
+		var requiredSkills = rootObject.getInt("required_skills")
+				.getSuccess() // ignore failure because this property is optional
+				.orElse(1);
+
 		var requiredPoints = rootObject.getInt("required_points")
 				.getSuccess() // ignore failure because this property is optional
 				.orElse(0);
@@ -119,6 +125,7 @@ public class SkillDefinitionConfig {
 					size,
 					rewards,
 					cost,
+					requiredSkills,
 					requiredPoints,
 					requiredSpentPoints
 			));
@@ -167,6 +174,10 @@ public class SkillDefinitionConfig {
 
 	public int getCost() {
 		return cost;
+	}
+
+	public int getRequiredSkills() {
+		return requiredSkills;
 	}
 
 	public int getRequiredPoints() {

@@ -13,6 +13,7 @@ public record ClientSkillDefinitionConfig(
 		ClientFrameConfig frame,
 		float size,
 		int cost,
+		int requiredSkills,
 		int requiredPoints,
 		int requiredSpentPoints
 ) { }
