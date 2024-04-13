@@ -28,10 +28,10 @@ public class PackConfig {
 		var version = rootObject.getInt("version")
 				.getSuccessOrElse(e -> Integer.MIN_VALUE);
 
-		if (version < SkillsMod.CONFIG_VERSION) {
+		if (version < SkillsMod.MIN_CONFIG_VERSION) {
 			return Result.failure(Problem.message("Data pack `" + name + "` is outdated. Check out the mod's wiki to learn how to update the data pack."));
 		}
-		if (version > SkillsMod.CONFIG_VERSION) {
+		if (version > SkillsMod.MAX_CONFIG_VERSION) {
 			return Result.failure(Problem.message("Data pack `" + name + "` is for a newer version of the mod. Please update the mod."));
 		}
 

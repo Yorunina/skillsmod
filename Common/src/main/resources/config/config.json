@@ -1,7 +1,5 @@
 {
-	"version": 1,
+	"version": 2,
 
-	"show_warnings": true,
-
-	"categories": []
+	"show_warnings": true
 }
