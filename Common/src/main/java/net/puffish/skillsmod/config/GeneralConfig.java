@@ -15,6 +15,7 @@ public class GeneralConfig {
 	private final BackgroundConfig background;
 	private final com.google.gson.JsonElement colors;
 	private final boolean unlockedByDefault;
+	private final int startingPoints;
 	private final boolean exclusiveRoot;
 	private final int spentPointsLimit;
 
@@ -24,6 +25,7 @@ public class GeneralConfig {
 			BackgroundConfig background,
 			com.google.gson.JsonElement colors,
 			boolean unlockedByDefault,
+			int startingPoints,
 			boolean exclusiveRoot,
 			int spentPointsLimit
 	) {
@@ -32,6 +34,7 @@ public class GeneralConfig {
 		this.background = background;
 		this.colors = colors;
 		this.unlockedByDefault = unlockedByDefault;
+		this.startingPoints = startingPoints;
 		this.exclusiveRoot = exclusiveRoot;
 		this.spentPointsLimit = spentPointsLimit;
 	}
@@ -64,12 +67,28 @@ public class GeneralConfig {
 				.map(JsonElement::getJson)
 				.orElse(new com.google.gson.JsonObject());
 
-		var optUnlockedByDefault = rootObject.getBoolean("unlocked_by_default")
-				.ifFailure(problems::add)
-				.getSuccess();
-
-		var exclusiveRoot = rootObject.getBoolean("exclusive_root")
+		var unlockedByDefault = rootObject.get("unlocked_by_default")
 				.getSuccess() // ignore failure because this property is optional
+				.flatMap(element -> element.getAsBoolean()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
+				.orElse(true);
+
+		var startingPoints = rootObject.get("starting_points")
+				.getSuccess() // ignore failure because this property is optional
+				.flatMap(element -> element.getAsInt()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
+				.orElse(0);
+
+		var exclusiveRoot = rootObject.get("exclusive_root")
+				.getSuccess() // ignore failure because this property is optional
+				.flatMap(element -> element.getAsBoolean()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
 				.orElse(false);
 
 		var spentPointsLimit = rootObject.get("spent_points_limit")
@@ -86,7 +105,8 @@ public class GeneralConfig {
 					optIcon.orElseThrow(),
 					optBackground.orElseThrow(),
 					colors,
-					optUnlockedByDefault.orElseThrow(),
+					unlockedByDefault,
+					startingPoints,
 					exclusiveRoot,
 					spentPointsLimit
 			));
@@ -101,6 +121,10 @@ public class GeneralConfig {
 
 	public boolean isUnlockedByDefault() {
 		return unlockedByDefault;
+	}
+
+	public int getStartingPoints() {
+		return startingPoints;
 	}
 
 	public boolean isExclusiveRoot() {
