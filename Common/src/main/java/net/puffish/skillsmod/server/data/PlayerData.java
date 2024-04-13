@@ -65,7 +65,7 @@ public class PlayerData {
 	public CategoryData getCategoryData(CategoryConfig category) {
 		return categories.compute(category.getId(), (key, value) -> {
 			if (value == null) {
-				value = CategoryData.create(category.getGeneral().isUnlockedByDefault());
+				value = CategoryData.create(category.getGeneral());
 			}
 			return value;
 		});
