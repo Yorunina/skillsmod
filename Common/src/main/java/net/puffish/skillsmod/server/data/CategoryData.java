@@ -7,6 +7,7 @@ import net.minecraft.nbt.NbtString;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.puffish.skillsmod.api.Skill;
 import net.puffish.skillsmod.config.CategoryConfig;
+import net.puffish.skillsmod.config.GeneralConfig;
 import net.puffish.skillsmod.config.skill.SkillConfig;
 import net.puffish.skillsmod.config.skill.SkillDefinitionConfig;
 import net.puffish.skillsmod.config.skill.SkillRewardConfig;
@@ -30,8 +31,13 @@ public class CategoryData {
 		this.earnedExperience = earnedExperience;
 	}
 
-	public static CategoryData create(boolean unlocked) {
-		return new CategoryData(new HashSet<>(), unlocked, 0, 0);
+	public static CategoryData create(GeneralConfig general) {
+		return new CategoryData(
+				new HashSet<>(),
+				general.isUnlockedByDefault(),
+				general.getStartingPoints(),
+				0
+		);
 	}
 
 	public static CategoryData read(NbtCompound nbt) {
