@@ -93,7 +93,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class SkillsMod {
-	public static final int CONFIG_VERSION = 1;
+	public static final int MIN_CONFIG_VERSION = 1;
+	public static final int MAX_CONFIG_VERSION = 2;
 
 	private static SkillsMod instance;
 
