@@ -4,10 +4,18 @@ import net.minecraft.util.math.MathHelper;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class DefaultParser {
+	private static final Map<String, Double> CONSTANTS = Map.ofEntries(
+			Map.entry("e", Math.E),
+			Map.entry("pi", Math.PI),
+			Map.entry("tau", Math.PI * 2)
+	);
+
 	private static final List<BinaryOperator<Double>> BINARY_OPERATORS = List.of(
 			BinaryOperator.createLeft("|", 1, (l, r) -> v -> l.eval(v) == 0.0 && r.eval(v) == 0.0 ? 0.0 : 1.0),
 			BinaryOperator.createLeft("&", 2, (l, r) -> v -> l.eval(v) == 0.0 || r.eval(v) == 0.0 ? 0.0 : 1.0),
@@ -67,7 +75,7 @@ public class DefaultParser {
 
 	public static Result<Expression<Double>, Problem> parse(String expression, Set<String> variables) {
 		return Parser.parse(expression, UNARY_OPERATORS, BINARY_OPERATORS, GROUP_OPERATORS, FUNCTIONS, token -> {
-			if (variables.contains(token)) {
+			if (variables.contains(token) || CONSTANTS.containsKey(token)) {
 				return Result.success(v -> v.get(token));
 			} else {
 				try {
@@ -77,6 +85,10 @@ public class DefaultParser {
 					return Result.failure(Problem.message("Unknown variable `" + token + "`"));
 				}
 			}
+		}).mapSuccess(e -> v -> {
+			var vc = new HashMap<>(CONSTANTS);
+			vc.putAll(v);
+			return e.eval(vc);
 		});
 	}
 }

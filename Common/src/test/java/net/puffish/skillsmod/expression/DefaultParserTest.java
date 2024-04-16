@@ -110,6 +110,12 @@ class DefaultParserTest {
 		testValid(1, "a", Map.ofEntries(
 				Map.entry("a", 1.0)
 		));
+		testValid(Math.E, "e");
+		testValid(Math.PI, "pi");
+		testValid(Math.PI * 2, "tau");
+		testValid(8.0, "e", Map.ofEntries(
+				Map.entry("e", 8.0)
+		));
 	}
 
 	@Test
