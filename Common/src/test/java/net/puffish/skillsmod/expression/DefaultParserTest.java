@@ -1,6 +1,6 @@
 package net.puffish.skillsmod.expression;
 
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.util.Problem;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -114,41 +114,41 @@ class DefaultParserTest {
 
 	@Test
 	public void testInvalidExpressions() {
-		testInvalid(Failure.message("Invalid expression"), "");
-		testInvalid(Failure.message("Invalid expression"), "+");
-		testInvalid(Failure.message("Invalid expression"), "1 *");
-		testInvalid(Failure.message("Invalid expression"), "1 2");
-		testInvalid(Failure.message("Invalid expression"), "(1 / 2");
-		testInvalid(Failure.message("Invalid expression"), "1 - 2)");
-		testInvalid(Failure.message("Invalid expression"), "abs(");
-		testInvalid(Failure.message("Invalid expression"), "abs(5");
-		testInvalid(Failure.message("Invalid expression"), "abs(3,");
-		testInvalid(Failure.message("Invalid expression"), "abs(1, 2)");
-		testInvalid(Failure.message("Invalid expression"), "abs()");
-		testInvalid(Failure.message("Unknown variable `abs`"), "abs");
-		testInvalid(Failure.message("Unknown variable `a`"), "a");
-		testInvalid(Failure.message("Unknown variable `a`"), "3 * a + 2");
-		testInvalid(Failure.message("Unknown variable `2.3.4`"), "2.3.4");
+		testInvalid(Problem.message("Invalid expression"), "");
+		testInvalid(Problem.message("Invalid expression"), "+");
+		testInvalid(Problem.message("Invalid expression"), "1 *");
+		testInvalid(Problem.message("Invalid expression"), "1 2");
+		testInvalid(Problem.message("Invalid expression"), "(1 / 2");
+		testInvalid(Problem.message("Invalid expression"), "1 - 2)");
+		testInvalid(Problem.message("Invalid expression"), "abs(");
+		testInvalid(Problem.message("Invalid expression"), "abs(5");
+		testInvalid(Problem.message("Invalid expression"), "abs(3,");
+		testInvalid(Problem.message("Invalid expression"), "abs(1, 2)");
+		testInvalid(Problem.message("Invalid expression"), "abs()");
+		testInvalid(Problem.message("Unknown variable `abs`"), "abs");
+		testInvalid(Problem.message("Unknown variable `a`"), "a");
+		testInvalid(Problem.message("Unknown variable `a`"), "3 * a + 2");
+		testInvalid(Problem.message("Unknown variable `2.3.4`"), "2.3.4");
 
-		testInvalid(Failure.message("Invalid expression"), "");
-		testInvalid(Failure.message("Invalid expression"), "|");
-		testInvalid(Failure.message("Invalid expression"), "a &", Map.ofEntries(
+		testInvalid(Problem.message("Invalid expression"), "");
+		testInvalid(Problem.message("Invalid expression"), "|");
+		testInvalid(Problem.message("Invalid expression"), "a &", Map.ofEntries(
 				Map.entry("a", 0.0)
 		));
-		testInvalid(Failure.message("Invalid expression"), "a b", Map.ofEntries(
+		testInvalid(Problem.message("Invalid expression"), "a b", Map.ofEntries(
 				Map.entry("a", 0.0),
 				Map.entry("b", 1.0)
 		));
-		testInvalid(Failure.message("Invalid expression"), "(a | b", Map.ofEntries(
+		testInvalid(Problem.message("Invalid expression"), "(a | b", Map.ofEntries(
 				Map.entry("a", 1.0),
 				Map.entry("b", 0.0)
 		));
-		testInvalid(Failure.message("Invalid expression"), "a & b)", Map.ofEntries(
+		testInvalid(Problem.message("Invalid expression"), "a & b)", Map.ofEntries(
 				Map.entry("a", 1.0),
 				Map.entry("b", 1.0)
 		));
-		testInvalid(Failure.message("Unknown variable `a`"), "a");
-		testInvalid(Failure.message("Unknown variable `b`"), "a | b", Map.ofEntries(
+		testInvalid(Problem.message("Unknown variable `a`"), "a");
+		testInvalid(Problem.message("Unknown variable `b`"), "a | b", Map.ofEntries(
 				Map.entry("a", 0.0)
 		));
 	}
@@ -163,13 +163,13 @@ class DefaultParserTest {
 		Assertions.assertEquals(expected, success.orElseThrow().eval(variables), expression);
 	}
 
-	private void testInvalid(Failure expected, String expression) {
+	private void testInvalid(Problem expected, String expression) {
 		testInvalid(expected, expression, Map.of());
 	}
 
-	private void testInvalid(Failure expected, String expression, Map<String, Double> variables) {
+	private void testInvalid(Problem expected, String expression, Map<String, Double> variables) {
 		var failure = DefaultParser.parse(expression, variables.keySet()).getFailure();
 		Assertions.assertTrue(failure.isPresent(), "Unexpected success: " + expression);
-		Assertions.assertEquals(expected.getMessages(), failure.orElseThrow().getMessages(), expression);
+		Assertions.assertEquals(expected.toString(), failure.orElseThrow().toString(), expression);
 	}
 }

@@ -4,7 +4,7 @@ import net.minecraft.advancement.criterion.ConsumeItemCriterion;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.puffish.skillsmod.api.SkillsAPI;
-import net.puffish.skillsmod.experience.builtin.EatFoodExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.EatFoodExperienceSource;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -17,12 +17,11 @@ public class ConsumeItemCriterionMixin {
 	private void injectAtTrigger(ServerPlayerEntity serverPlayer, ItemStack stack, CallbackInfo ci) {
 		var food = stack.getItem().getFoodComponent();
 		if (food != null) {
-			SkillsAPI.visitExperienceSources(serverPlayer, experienceSource -> {
-				if (experienceSource instanceof EatFoodExperienceSource eatFoodExperienceSource) {
-					return eatFoodExperienceSource.getValue(serverPlayer, stack);
-				}
-				return 0;
-			});
+			SkillsAPI.updateExperienceSources(
+					serverPlayer,
+					EatFoodExperienceSource.class,
+					experienceSource -> experienceSource.getValue(serverPlayer, stack)
+			);
 		}
 	}
 }

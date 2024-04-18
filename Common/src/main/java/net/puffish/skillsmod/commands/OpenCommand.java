@@ -5,7 +5,7 @@ import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.puffish.skillsmod.api.SkillsAPI;
-import net.puffish.skillsmod.utils.CommandUtils;
+import net.puffish.skillsmod.util.CommandUtils;
 
 public class OpenCommand {
 	public static LiteralArgumentBuilder<ServerCommandSource> create() {

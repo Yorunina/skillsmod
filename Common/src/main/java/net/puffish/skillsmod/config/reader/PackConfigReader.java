@@ -4,11 +4,11 @@ import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.api.SkillsAPI;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
+import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonPath;
-import net.puffish.skillsmod.utils.PathUtils;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.util.PathUtils;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -26,24 +26,24 @@ public class PackConfigReader extends ConfigReader {
 		this.namespace = namespace;
 	}
 
-	public Result<JsonElementWrapper, Failure> readResource(Identifier id, Resource resource) {
+	public Result<JsonElement, Problem> readResource(Identifier id, Resource resource) {
 		try (var reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
-			return JsonElementWrapper.parseReader(reader, JsonPath.named(id.toString()));
+			return JsonElement.parseReader(reader, JsonPath.create(id.toString()));
 		} catch (Exception e) {
-			return Result.failure(Failure.message("Failed to read resource `" + id + "`"));
+			return Result.failure(Problem.message("Failed to read resource `" + id + "`"));
 		}
 	}
 
 	@Override
-	public Result<JsonElementWrapper, Failure> read(Path path) {
+	public Result<JsonElement, Problem> read(Path path) {
 		var id = new Identifier(namespace, PathUtils.pathToString(Path.of(SkillsAPI.MOD_ID).resolve(path)));
 
 		try {
 			return readResource(id, resourceManager.getResource(id));
 		} catch (FileNotFoundException e) {
-			return Result.failure(Failure.message("Resource `" + id + "` does not exist"));
+			return Result.failure(Problem.message("Resource `" + id + "` does not exist"));
 		} catch (IOException e) {
-			return Result.failure(Failure.message("Failed to read resource `" + id + "`"));
+			return Result.failure(Problem.message("Failed to read resource `" + id + "`"));
 		}
 	}
 

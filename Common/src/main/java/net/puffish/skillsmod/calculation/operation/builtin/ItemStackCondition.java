@@ -8,11 +8,11 @@ import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.calculation.operation.Operation;
 import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.calculation.operation.OperationConfigContext;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -34,36 +34,36 @@ public final class ItemStackCondition implements Operation<ItemStack, Boolean> {
 		);
 	}
 
-	public static Result<ItemStackCondition, Failure> parse(OperationConfigContext context) {
+	public static Result<ItemStackCondition, Problem> parse(OperationConfigContext context) {
 		return context.getData()
-				.andThen(JsonElementWrapper::getAsObject)
+				.andThen(JsonElement::getAsObject)
 				.andThen(ItemStackCondition::parse);
 	}
 
-	public static Result<ItemStackCondition, Failure> parse(JsonObjectWrapper rootObject) {
-		var failures = new ArrayList<Failure>();
+	public static Result<ItemStackCondition, Problem> parse(JsonObject rootObject) {
+		var problems = new ArrayList<Problem>();
 
 		var optItem = rootObject.get("item")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(itemElement -> JsonParseUtils.parseItemOrItemTag(itemElement)
-						.ifFailure(failures::add)
+				.flatMap(itemElement -> BuiltinJson.parseItemOrItemTag(itemElement)
+						.ifFailure(problems::add)
 						.getSuccess()
 				);
 
 		var optNbt = rootObject.get("nbt")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(stateElement -> JsonParseUtils.parseNbtPredicate(stateElement)
-						.ifFailure(failures::add)
+				.flatMap(stateElement -> BuiltinJson.parseNbtPredicate(stateElement)
+						.ifFailure(problems::add)
 						.getSuccess()
 				);
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new ItemStackCondition(
 					optItem,
 					optNbt
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 

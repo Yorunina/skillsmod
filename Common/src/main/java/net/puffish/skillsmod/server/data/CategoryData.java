@@ -5,15 +5,16 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtString;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.config.CategoryConfig;
 import net.puffish.skillsmod.config.skill.SkillConfig;
 import net.puffish.skillsmod.config.skill.SkillDefinitionConfig;
+import net.puffish.skillsmod.config.skill.SkillRewardConfig;
 import net.puffish.skillsmod.impl.rewards.RewardUpdateContextImpl;
 import net.puffish.skillsmod.skill.SkillState;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public class CategoryData {
 	private final Set<String> unlockedSkills;
@@ -126,7 +127,7 @@ public class CategoryData {
 				int count = countUnlocked(category, definitionId);
 
 				for (var reward : definition.getRewards()) {
-					reward.getInstance().update(player, new RewardUpdateContextImpl(count, true));
+					reward.getInstance().update(new RewardUpdateContextImpl(player, count, true));
 				}
 
 				return true;
@@ -143,13 +144,13 @@ public class CategoryData {
 				.count();
 	}
 
-	public void refreshReward(CategoryConfig category, ServerPlayerEntity player, Identifier type) {
+	public void refreshReward(CategoryConfig category, ServerPlayerEntity player, Predicate<SkillRewardConfig> predicate) {
 		for (var definition : category.getDefinitions().getAll()) {
 			int count = countUnlocked(category, definition.getId());
 
 			for (var reward : definition.getRewards()) {
-				if (reward.getType().equals(type)) {
-					reward.getInstance().update(player, new RewardUpdateContextImpl(count, false));
+				if (predicate.test(reward)) {
+					reward.getInstance().update(new RewardUpdateContextImpl(player, count, false));
 				}
 			}
 		}
@@ -160,7 +161,7 @@ public class CategoryData {
 			int count = countUnlocked(category, definition.getId());
 
 			for (var reward : definition.getRewards()) {
-				reward.getInstance().update(player, new RewardUpdateContextImpl(count, false));
+				reward.getInstance().update(new RewardUpdateContextImpl(player, count, false));
 			}
 		}
 	}

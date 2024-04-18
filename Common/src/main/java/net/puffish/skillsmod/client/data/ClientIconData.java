@@ -4,10 +4,10 @@ import net.minecraft.client.texture.TextureManager;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.api.util.Problem;
 
 public sealed interface ClientIconData permits ClientIconData.EffectIconData, ClientIconData.ItemIconData, ClientIconData.TextureIconData {
 
@@ -18,8 +18,8 @@ public sealed interface ClientIconData permits ClientIconData.EffectIconData, Cl
 			this.item = item;
 		}
 
-		public static Result<ItemIconData, Failure> parse(JsonElementWrapper rootElement) {
-			return JsonParseUtils.parseItemStack(rootElement).mapSuccess(ItemIconData::new);
+		public static Result<ItemIconData, Problem> parse(JsonElement rootElement) {
+			return BuiltinJson.parseItemStack(rootElement).mapSuccess(ItemIconData::new);
 		}
 
 		public ItemStack getItem() {
@@ -34,11 +34,11 @@ public sealed interface ClientIconData permits ClientIconData.EffectIconData, Cl
 			this.effect = effect;
 		}
 
-		public static Result<EffectIconData, Failure> parse(JsonElementWrapper rootElement) {
+		public static Result<EffectIconData, Problem> parse(JsonElement rootElement) {
 			return rootElement
 					.getAsObject()
 					.andThen(rootObject -> rootObject.get("effect"))
-					.andThen(JsonParseUtils::parseEffect)
+					.andThen(BuiltinJson::parseEffect)
 					.mapSuccess(EffectIconData::new);
 		}
 
@@ -54,11 +54,11 @@ public sealed interface ClientIconData permits ClientIconData.EffectIconData, Cl
 			this.texture = texture;
 		}
 
-		public static Result<TextureIconData, Failure> parse(JsonElementWrapper rootElement) {
+		public static Result<TextureIconData, Problem> parse(JsonElement rootElement) {
 			return rootElement
 					.getAsObject()
 					.andThen(rootObject -> rootObject.get("texture"))
-					.andThen(JsonParseUtils::parseIdentifier)
+					.andThen(BuiltinJson::parseIdentifier)
 					.mapSuccess(TextureIconData::new);
 		}
 

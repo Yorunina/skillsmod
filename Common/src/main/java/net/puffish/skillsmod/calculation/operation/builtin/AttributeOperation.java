@@ -7,11 +7,11 @@ import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.calculation.operation.Operation;
 import net.puffish.skillsmod.api.calculation.operation.OperationConfigContext;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -31,26 +31,26 @@ public class AttributeOperation implements Operation<LivingEntity, EntityAttribu
 		);
 	}
 
-	public static Result<AttributeOperation, Failure> parse(OperationConfigContext context) {
+	public static Result<AttributeOperation, Problem> parse(OperationConfigContext context) {
 		return context.getData()
-				.andThen(JsonElementWrapper::getAsObject)
+				.andThen(JsonElement::getAsObject)
 				.andThen(AttributeOperation::parse);
 	}
 
-	public static Result<AttributeOperation, Failure> parse(JsonObjectWrapper rootObject) {
-		var failures = new ArrayList<Failure>();
+	public static Result<AttributeOperation, Problem> parse(JsonObject rootObject) {
+		var problems = new ArrayList<Problem>();
 
 		var optAttribute = rootObject.get("attribute")
-				.andThen(JsonParseUtils::parseAttribute)
-				.ifFailure(failures::add)
+				.andThen(BuiltinJson::parseAttribute)
+				.ifFailure(problems::add)
 				.getSuccess();
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new AttributeOperation(
 					optAttribute.orElseThrow()
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 

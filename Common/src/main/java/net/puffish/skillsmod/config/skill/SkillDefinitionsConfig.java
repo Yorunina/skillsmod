@@ -1,11 +1,11 @@
 package net.puffish.skillsmod.config.skill;
 
-import net.minecraft.server.MinecraftServer;
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.DisposeContext;
 
 import java.util.Collection;
 import java.util.Map;
@@ -18,14 +18,14 @@ public class SkillDefinitionsConfig {
 		this.definitions = definitions;
 	}
 
-	public static Result<SkillDefinitionsConfig, Failure> parse(JsonElementWrapper rootElement, ConfigContext context) {
+	public static Result<SkillDefinitionsConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject()
 				.andThen(rootObject -> parse(rootObject, context));
 	}
 
-	public static Result<SkillDefinitionsConfig, Failure> parse(JsonObjectWrapper rootObject, ConfigContext context) {
+	public static Result<SkillDefinitionsConfig, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		return rootObject.getAsMap((id, element) -> SkillDefinitionConfig.parse(id, element, context))
-				.mapFailure(failureMap -> Failure.fromMany(failureMap.values()))
+				.mapFailure(problems -> Problem.combine(problems.values()))
 				.mapSuccess(SkillDefinitionsConfig::new);
 	}
 
@@ -37,9 +37,9 @@ public class SkillDefinitionsConfig {
 		return definitions.values();
 	}
 
-	public void dispose(MinecraftServer server) {
+	public void dispose(DisposeContext context) {
 		for (var definition : definitions.values()) {
-			definition.dispose(server);
+			definition.dispose(context);
 		}
 	}
 }
