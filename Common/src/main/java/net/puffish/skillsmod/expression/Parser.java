@@ -1,7 +1,7 @@
 package net.puffish.skillsmod.expression;
 
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,11 +14,11 @@ public class Parser<T> {
 	private final List<BinaryOperator<T>> binaryOperators;
 	private final List<GroupOperator> groupOperators;
 	private final List<FunctionOperator<T>> functionOperators;
-	private final Function<String, Result<Expression<T>, Failure>> otherHandler;
+	private final Function<String, Result<Expression<T>, Problem>> otherHandler;
 
-	private final List<Failure> failures = new ArrayList<>();
+	private final List<Problem> problems = new ArrayList<>();
 
-	private Parser(Lexer lexer, List<UnaryOperator<T>> unaryOperators, List<BinaryOperator<T>> binaryOperators, List<GroupOperator> groupOperators, List<FunctionOperator<T>> functionOperators, Function<String, Result<Expression<T>, Failure>> otherHandler) {
+	private Parser(Lexer lexer, List<UnaryOperator<T>> unaryOperators, List<BinaryOperator<T>> binaryOperators, List<GroupOperator> groupOperators, List<FunctionOperator<T>> functionOperators, Function<String, Result<Expression<T>, Problem>> otherHandler) {
 		this.lexer = lexer;
 		this.unaryOperators = unaryOperators;
 		this.binaryOperators = binaryOperators;
@@ -27,19 +27,19 @@ public class Parser<T> {
 		this.otherHandler = otherHandler;
 	}
 
-	public static <T> Result<Expression<T>, Failure> parse(String expression, List<UnaryOperator<T>> unaryOperators, List<BinaryOperator<T>> binaryOperators, List<GroupOperator> groupOperators, List<FunctionOperator<T>> functionOperators, Function<String, Result<Expression<T>, Failure>> otherHandler) {
+	public static <T> Result<Expression<T>, Problem> parse(String expression, List<UnaryOperator<T>> unaryOperators, List<BinaryOperator<T>> binaryOperators, List<GroupOperator> groupOperators, List<FunctionOperator<T>> functionOperators, Function<String, Result<Expression<T>, Problem>> otherHandler) {
 		return new Parser<>(Lexer.create(expression), unaryOperators, binaryOperators, groupOperators, functionOperators, otherHandler).parse();
 	}
 
-	private Result<Expression<T>, Failure> parse() {
+	private Result<Expression<T>, Problem> parse() {
 		var expression = tryParse();
-		if (failures.isEmpty() && !lexer.isEnd()) {
-			failures.add(Failure.message("Invalid expression"));
+		if (problems.isEmpty() && !lexer.isEnd()) {
+			problems.add(Problem.message("Invalid expression"));
 		}
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(expression.orElseThrow());
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
@@ -147,7 +147,7 @@ public class Parser<T> {
 
 			return Optional.of(
 					otherHandler.apply(token)
-							.ifFailure(failures::add)
+							.ifFailure(problems::add)
 							.getSuccessOrElse(e -> v -> null)
 			);
 		}
@@ -156,7 +156,7 @@ public class Parser<T> {
 	}
 
 	private <R> Optional<R> invalid() {
-		failures.add(Failure.message("Invalid expression"));
+		problems.add(Problem.message("Invalid expression"));
 		return Optional.empty();
 	}
 }

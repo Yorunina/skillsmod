@@ -28,7 +28,7 @@ import net.puffish.skillsmod.client.rendering.ConnectionBatchedRenderer;
 import net.puffish.skillsmod.client.rendering.ItemBatchedRenderer;
 import net.puffish.skillsmod.client.rendering.TextureBatchedRenderer;
 import net.puffish.skillsmod.skill.SkillState;
-import net.puffish.skillsmod.utils.Bounds2i;
+import net.puffish.skillsmod.util.Bounds2i;
 import org.joml.Vector2i;
 import org.joml.Vector4f;
 import org.joml.Vector4fc;

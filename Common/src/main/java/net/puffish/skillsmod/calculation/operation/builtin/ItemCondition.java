@@ -7,11 +7,11 @@ import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.calculation.operation.Operation;
 import net.puffish.skillsmod.api.calculation.operation.OperationConfigContext;
 import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -31,26 +31,26 @@ public final class ItemCondition implements Operation<Item, Boolean> {
 		);
 	}
 
-	public static Result<ItemCondition, Failure> parse(OperationConfigContext context) {
+	public static Result<ItemCondition, Problem> parse(OperationConfigContext context) {
 		return context.getData()
-				.andThen(JsonElementWrapper::getAsObject)
+				.andThen(JsonElement::getAsObject)
 				.andThen(ItemCondition::parse);
 	}
 
-	public static Result<ItemCondition, Failure> parse(JsonObjectWrapper rootObject) {
-		var failures = new ArrayList<Failure>();
+	public static Result<ItemCondition, Problem> parse(JsonObject rootObject) {
+		var problems = new ArrayList<Problem>();
 
 		var optItem = rootObject.get("item")
-				.andThen(JsonParseUtils::parseItemOrItemTag)
-				.ifFailure(failures::add)
+				.andThen(BuiltinJson::parseItemOrItemTag)
+				.ifFailure(problems::add)
 				.getSuccess();
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new ItemCondition(
 					optItem.orElseThrow()
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 

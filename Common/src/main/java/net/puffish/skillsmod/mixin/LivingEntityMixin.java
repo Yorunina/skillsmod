@@ -7,8 +7,8 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.puffish.skillsmod.access.DamageSourceAccess;
 import net.puffish.skillsmod.access.WorldChunkAccess;
 import net.puffish.skillsmod.api.SkillsAPI;
-import net.puffish.skillsmod.experience.builtin.KillEntityExperienceSource;
-import net.puffish.skillsmod.experience.builtin.TakeDamageExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.KillEntityExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.TakeDamageExperienceSource;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -26,12 +26,11 @@ public abstract class LivingEntityMixin {
 	@Inject(method = "damage", at = @At("TAIL"))
 	private void injectAtDamage(DamageSource source, float damage, CallbackInfoReturnable<Boolean> cir) {
 		if (((LivingEntity) (Object) this) instanceof ServerPlayerEntity serverPlayer) {
-			SkillsAPI.visitExperienceSources(serverPlayer, experienceSource -> {
-				if (experienceSource instanceof TakeDamageExperienceSource takeDamageExperienceSource) {
-					return takeDamageExperienceSource.getValue(serverPlayer, damage, source);
-				}
-				return 0;
-			});
+			SkillsAPI.updateExperienceSources(
+					serverPlayer,
+					TakeDamageExperienceSource.class,
+					experienceSource -> experienceSource.getValue(serverPlayer, damage, source)
+			);
 		}
 	}
 
@@ -43,7 +42,7 @@ public abstract class LivingEntityMixin {
 
 			WorldChunkAccess worldChunk = ((WorldChunkAccess) entity.getWorld().getWorldChunk(entity.getBlockPos()));
 			worldChunk.antiFarmingCleanupOutdated();
-			SkillsAPI.visitExperienceSources(player, experienceSource -> {
+			SkillsAPI.updateExperienceSources(player, experienceSource -> {
 				if (experienceSource instanceof KillEntityExperienceSource entityExperienceSource) {
 					if (entityExperienceSource
 							.getAntiFarming()

@@ -3,18 +3,22 @@ package net.puffish.skillsmod.api;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.SkillsMod;
-import net.puffish.skillsmod.api.experience.ExperienceSource;
-import net.puffish.skillsmod.api.experience.ExperienceSourceFactory;
-import net.puffish.skillsmod.api.rewards.RewardFactory;
-import net.puffish.skillsmod.experience.ExperienceSourceRegistry;
+import net.puffish.skillsmod.api.experience.source.ExperienceSource;
+import net.puffish.skillsmod.api.experience.source.ExperienceSourceFactory;
+import net.puffish.skillsmod.api.reward.Reward;
+import net.puffish.skillsmod.api.reward.RewardFactory;
+import net.puffish.skillsmod.experience.source.ExperienceSourceRegistry;
 import net.puffish.skillsmod.impl.CategoryImpl;
 import net.puffish.skillsmod.reward.RewardRegistry;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 public final class SkillsAPI {
+	private SkillsAPI() { }
+	
 	public static final String MOD_ID = "puffish_skills";
 
 	public static void registerReward(Identifier key, RewardFactory factory) {
@@ -25,12 +29,38 @@ public final class SkillsAPI {
 		ExperienceSourceRegistry.register(key, factory);
 	}
 
-	public static void visitExperienceSources(ServerPlayerEntity player, Function<ExperienceSource, Integer> function) {
+	public static void updateExperienceSources(ServerPlayerEntity player, Function<ExperienceSource, Integer> function) {
 		SkillsMod.getInstance().visitExperienceSources(player, function);
 	}
 
-	public static void refreshReward(ServerPlayerEntity player, Identifier key) {
-		SkillsMod.getInstance().refreshReward(player, key);
+	public static <T extends ExperienceSource> void updateExperienceSources(ServerPlayerEntity player, Class<T> clazz, Function<T, Integer> function) {
+		SkillsMod.getInstance().visitExperienceSources(player, experienceSource -> {
+			if (clazz.isInstance(experienceSource)) {
+				return function.apply(clazz.cast(experienceSource));
+			}
+			return 0;
+		});
+	}
+
+	public static void updateRewards(ServerPlayerEntity player, Identifier id) {
+		SkillsMod.getInstance().refreshReward(player, reward -> reward.getType().equals(id));
+	}
+
+	public static void updateRewards(ServerPlayerEntity player, Predicate<Reward> predicate) {
+		SkillsMod.getInstance().refreshReward(player, reward -> predicate.test(reward.getInstance()));
+	}
+
+	public static <T extends Reward> void updateRewards(ServerPlayerEntity player, Class<T> clazz) {
+		SkillsMod.getInstance().refreshReward(player, clazz::isInstance);
+	}
+
+	public static <T extends Reward> void updateRewards(ServerPlayerEntity player, Class<T> clazz, Predicate<T> predicate) {
+		SkillsMod.getInstance().refreshReward(player, reward -> {
+			if (clazz.isInstance(reward)) {
+				return predicate.test(clazz.cast(reward));
+			}
+			return false;
+		});
 	}
 
 	public static void openScreen(ServerPlayerEntity player) {
@@ -45,19 +75,17 @@ public final class SkillsAPI {
 		}
 	}
 
-	public static List<Category> getCategories() {
+	public static Stream<Category> streamCategories() {
 		return SkillsMod.getInstance()
 				.getCategories(false)
 				.stream()
-				.map(id -> (Category) new CategoryImpl(id))
-				.toList();
+				.map(CategoryImpl::new);
 	}
 
-	public static List<Category> getUnlockedCategories(ServerPlayerEntity player) {
+	public static Stream<Category> streamUnlockedCategories(ServerPlayerEntity player) {
 		return SkillsMod.getInstance()
 				.getUnlockedCategories(player)
 				.stream()
-				.map(id -> (Category) new CategoryImpl(id))
-				.toList();
+				.map(CategoryImpl::new);
 	}
 }

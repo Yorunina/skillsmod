@@ -3,7 +3,7 @@ package net.puffish.skillsmod.server.network.packets.out;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.network.OutPacket;
 import net.puffish.skillsmod.network.Packets;
-import net.puffish.skillsmod.utils.ToastType;
+import net.puffish.skillsmod.util.ToastType;
 
 public class ShowToastOutPacket extends OutPacket {
 	public static ShowToastOutPacket write(ToastType type) {

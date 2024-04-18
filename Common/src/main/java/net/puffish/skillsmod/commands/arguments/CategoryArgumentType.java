@@ -17,7 +17,7 @@ import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.Category;
 import net.puffish.skillsmod.api.SkillsAPI;
-import net.puffish.skillsmod.utils.CommandUtils;
+import net.puffish.skillsmod.util.CommandUtils;
 
 import java.util.concurrent.CompletableFuture;
 

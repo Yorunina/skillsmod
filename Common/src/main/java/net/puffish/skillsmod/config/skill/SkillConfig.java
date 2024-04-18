@@ -1,9 +1,9 @@
 package net.puffish.skillsmod.config.skill;
 
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 
@@ -22,21 +22,21 @@ public class SkillConfig {
 		this.isRoot = isRoot;
 	}
 
-	public static Result<SkillConfig, Failure> parse(String id, JsonElementWrapper rootElement, SkillDefinitionsConfig definitions) {
+	public static Result<SkillConfig, Problem> parse(String id, JsonElement rootElement, SkillDefinitionsConfig definitions) {
 		return rootElement.getAsObject().andThen(
 				rootObject -> SkillConfig.parse(id, rootObject, definitions)
 		);
 	}
 
-	public static Result<SkillConfig, Failure> parse(String id, JsonObjectWrapper rootObject, SkillDefinitionsConfig definitions) {
-		var failures = new ArrayList<Failure>();
+	public static Result<SkillConfig, Problem> parse(String id, JsonObject rootObject, SkillDefinitionsConfig definitions) {
+		var problems = new ArrayList<Problem>();
 
 		var optX = rootObject.getInt("x")
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optY = rootObject.getInt("y")
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optDefinitionId = rootObject.get("definition")
@@ -45,18 +45,18 @@ public class SkillConfig {
 							if (definitions.getById(definitionId).isPresent()) {
 								return Result.success(definitionId);
 							} else {
-								return Result.failure(definitionElement.getPath().createFailure("Expected a valid definition"));
+								return Result.failure(definitionElement.getPath().createProblem("Expected a valid definition"));
 							}
 						})
 				)
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var isRoot = rootObject.getBoolean("root")
 				.getSuccess() // ignore failure because this property is optional
 				.orElse(false);
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new SkillConfig(
 					id,
 					optX.orElseThrow(),
@@ -65,7 +65,7 @@ public class SkillConfig {
 					isRoot
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 

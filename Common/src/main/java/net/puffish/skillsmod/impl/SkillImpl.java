@@ -26,11 +26,6 @@ public class SkillImpl implements Skill {
 	}
 
 	@Override
-	public boolean isUnlocked(ServerPlayerEntity player) {
-		return SkillsMod.getInstance().getSkillState(player, category.getId(), skillId).orElseThrow() == SkillState.UNLOCKED;
-	}
-
-	@Override
 	public void unlock(ServerPlayerEntity player) {
 		SkillsMod.getInstance().unlockSkill(player, category.getId(), skillId);
 	}

@@ -1,17 +1,18 @@
 package net.puffish.skillsmod.config.experience;
 
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.api.experience.ExperienceSource;
-import net.puffish.skillsmod.experience.ExperienceSourceRegistry;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
+import net.puffish.skillsmod.api.experience.source.ExperienceSource;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.json.JsonPath;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.impl.experience.ExperienceSourceConfigContextImpl;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.experience.source.ExperienceSourceRegistry;
+import net.puffish.skillsmod.impl.experience.source.ExperienceSourceConfigContextImpl;
+import net.puffish.skillsmod.impl.experience.source.ExperienceSourceDisposeContextImpl;
+import net.puffish.skillsmod.util.DisposeContext;
 
 import java.util.ArrayList;
 
@@ -24,26 +25,26 @@ public class ExperienceSourceConfig {
 		this.instance = instance;
 	}
 
-	public static Result<ExperienceSourceConfig, Failure> parse(JsonElementWrapper rootElement, ConfigContext context) {
+	public static Result<ExperienceSourceConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject().andThen(rootObject -> parse(rootObject, context));
 	}
 
-	public static Result<ExperienceSourceConfig, Failure> parse(JsonObjectWrapper rootObject, ConfigContext context) {
-		var failures = new ArrayList<Failure>();
+	public static Result<ExperienceSourceConfig, Problem> parse(JsonObject rootObject, ConfigContext context) {
+		var problems = new ArrayList<Problem>();
 
 		var optTypeElement = rootObject.get("type")
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optType = optTypeElement.flatMap(
-				typeElement -> JsonParseUtils.parseIdentifier(typeElement)
-						.ifFailure(failures::add)
+				typeElement -> BuiltinJson.parseIdentifier(typeElement)
+						.ifFailure(problems::add)
 						.getSuccess()
 		);
 
 		var maybeDataElement = rootObject.get("data");
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return build(
 					optType.orElseThrow(),
 					maybeDataElement,
@@ -51,20 +52,20 @@ public class ExperienceSourceConfig {
 					context
 			);
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
-	private static Result<ExperienceSourceConfig, Failure> build(Identifier type, Result<JsonElementWrapper, Failure> maybeDataElement, JsonPath typeElementPath, ConfigContext context) {
+	private static Result<ExperienceSourceConfig, Problem> build(Identifier type, Result<JsonElement, Problem> maybeDataElement, JsonPath typeElementPath, ConfigContext context) {
 		return ExperienceSourceRegistry.getFactory(type)
 				.map(factory -> factory.create(new ExperienceSourceConfigContextImpl(context, maybeDataElement))
 						.mapSuccess(instance -> new ExperienceSourceConfig(type, instance))
 				)
-				.orElseGet(() -> Result.failure(typeElementPath.createFailure("Expected a valid source type")));
+				.orElseGet(() -> Result.failure(typeElementPath.createProblem("Expected a valid source type")));
 	}
 
-	public void dispose(MinecraftServer server) {
-		this.instance.dispose(server);
+	public void dispose(DisposeContext context) {
+		this.instance.dispose(new ExperienceSourceDisposeContextImpl(context));
 	}
 
 	public Identifier getType() {

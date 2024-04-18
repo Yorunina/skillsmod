@@ -5,7 +5,7 @@ import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.puffish.skillsmod.commands.arguments.CategoryArgumentType;
-import net.puffish.skillsmod.utils.CommandUtils;
+import net.puffish.skillsmod.util.CommandUtils;
 
 public class CategoryCommand {
 	public static LiteralArgumentBuilder<ServerCommandSource> create() {

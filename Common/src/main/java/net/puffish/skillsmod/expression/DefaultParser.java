@@ -1,8 +1,8 @@
 package net.puffish.skillsmod.expression;
 
 import net.minecraft.util.math.MathHelper;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.List;
 import java.util.Set;
@@ -65,7 +65,7 @@ public class DefaultParser {
 			FunctionOperator.createVariadic("max", "(", ",", ")", l -> v -> l.stream().mapToDouble(e -> e.eval(v)).max().orElse(-Double.MAX_VALUE))
 	);
 
-	public static Result<Expression<Double>, Failure> parse(String expression, Set<String> variables) {
+	public static Result<Expression<Double>, Problem> parse(String expression, Set<String> variables) {
 		return Parser.parse(expression, UNARY_OPERATORS, BINARY_OPERATORS, GROUP_OPERATORS, FUNCTIONS, token -> {
 			if (variables.contains(token)) {
 				return Result.success(v -> v.get(token));
@@ -74,7 +74,7 @@ public class DefaultParser {
 					var value = Double.parseDouble(token);
 					return Result.success(v -> value);
 				} catch (Exception e) {
-					return Result.failure(Failure.message("Unknown variable `" + token + "`"));
+					return Result.failure(Problem.message("Unknown variable `" + token + "`"));
 				}
 			}
 		});

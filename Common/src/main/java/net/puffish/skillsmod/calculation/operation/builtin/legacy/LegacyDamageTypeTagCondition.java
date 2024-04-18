@@ -7,11 +7,11 @@ import net.puffish.skillsmod.api.calculation.operation.Operation;
 import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.calculation.operation.OperationConfigContext;
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -31,26 +31,26 @@ public final class LegacyDamageTypeTagCondition implements Operation<DamageType,
 		);
 	}
 
-	public static Result<LegacyDamageTypeTagCondition, Failure> parse(OperationConfigContext context) {
+	public static Result<LegacyDamageTypeTagCondition, Problem> parse(OperationConfigContext context) {
 		return context.getData()
-				.andThen(JsonElementWrapper::getAsObject)
+				.andThen(JsonElement::getAsObject)
 				.andThen(rootObject -> parse(rootObject, context));
 	}
 
-	public static Result<LegacyDamageTypeTagCondition, Failure> parse(JsonObjectWrapper rootObject, ConfigContext context) {
-		var failures = new ArrayList<Failure>();
+	public static Result<LegacyDamageTypeTagCondition, Problem> parse(JsonObject rootObject, ConfigContext context) {
+		var problems = new ArrayList<Problem>();
 
 		var optTag = rootObject.get("tag")
-				.andThen(element -> JsonParseUtils.parseDamageTypeTag(element, context.getDynamicRegistryManager()))
-				.ifFailure(failures::add)
+				.andThen(element -> BuiltinJson.parseDamageTypeTag(element, context.getServer().getRegistryManager()))
+				.ifFailure(problems::add)
 				.getSuccess();
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new LegacyDamageTypeTagCondition(
 					optTag.orElseThrow()
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
