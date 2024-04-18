@@ -29,8 +29,8 @@ import net.puffish.skillsmod.client.rendering.ConnectionBatchedRenderer;
 import net.puffish.skillsmod.client.rendering.ItemBatchedRenderer;
 import net.puffish.skillsmod.client.rendering.TextureBatchedRenderer;
 import net.puffish.skillsmod.skill.SkillState;
-import net.puffish.skillsmod.utils.Bounds2i;
-import net.puffish.skillsmod.utils.Vec2i;
+import net.puffish.skillsmod.util.Bounds2i;
+import net.puffish.skillsmod.util.Vec2i;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;

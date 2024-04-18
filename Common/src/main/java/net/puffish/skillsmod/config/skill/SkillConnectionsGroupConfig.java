@@ -1,12 +1,12 @@
 package net.puffish.skillsmod.config.skill;
 
-import net.puffish.skillsmod.api.json.JsonArrayWrapper;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
+import net.puffish.skillsmod.api.json.JsonArray;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.skill.SkillConnection;
 import net.puffish.skillsmod.skill.SkillPair;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,20 +29,20 @@ public class SkillConnectionsGroupConfig {
 		return new SkillConnectionsGroupConfig(List.of(), Map.of());
 	}
 
-	public static Result<SkillConnectionsGroupConfig, Failure> parse(JsonElementWrapper rootElement, SkillsConfig skills) {
+	public static Result<SkillConnectionsGroupConfig, Problem> parse(JsonElement rootElement, SkillsConfig skills) {
 		return rootElement.getAsObject()
 				.andThen(rootObject -> SkillConnectionsGroupConfig.parse(rootObject, skills));
 	}
 
-	private static Result<SkillConnectionsGroupConfig, Failure> parse(JsonObjectWrapper rootObject, SkillsConfig skills) {
-		var failures = new ArrayList<Failure>();
+	private static Result<SkillConnectionsGroupConfig, Problem> parse(JsonObject rootObject, SkillsConfig skills) {
+		var problems = new ArrayList<Problem>();
 
 		var bidirectional = rootObject
 				.getArray("bidirectional")
 				.getSuccess()
 				.flatMap(array -> array.getAsList((i, element) -> SkillConnectionConfig.parse(element, skills))
-						.mapFailure(Failure::fromMany)
-						.ifFailure(failures::add)
+						.mapFailure(Problem::combine)
+						.ifFailure(problems::add)
 						.getSuccess()
 				)
 				.orElseGet(List::of);
@@ -51,25 +51,25 @@ public class SkillConnectionsGroupConfig {
 				.getArray("unidirectional")
 				.getSuccess()
 				.flatMap(array -> array.getAsList((i, element) -> SkillConnectionConfig.parse(element, skills))
-						.mapFailure(Failure::fromMany)
-						.ifFailure(failures::add)
+						.mapFailure(Problem::combine)
+						.ifFailure(problems::add)
 						.getSuccess()
 				)
 				.orElseGet(List::of);
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(build(
 					bidirectional,
 					unidirectional
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
-	public static Result<SkillConnectionsGroupConfig, Failure> parseLegacy(JsonArrayWrapper rootArray, SkillsConfig skills) {
+	public static Result<SkillConnectionsGroupConfig, Problem> parseLegacy(JsonArray rootArray, SkillsConfig skills) {
 		return rootArray.getAsList((i, element) -> SkillConnectionConfig.parse(element, skills))
-				.mapFailure(Failure::fromMany)
+				.mapFailure(Problem::combine)
 				.mapSuccess(bidirectional -> SkillConnectionsGroupConfig.build(bidirectional, List.of()));
 	}
 

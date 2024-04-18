@@ -3,11 +3,11 @@ package net.puffish.skillsmod.client.data;
 import net.minecraft.advancement.AdvancementFrame;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.util.Identifier;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.api.util.Problem;
 
 import java.util.ArrayList;
 
@@ -20,11 +20,11 @@ public sealed interface ClientFrameData permits ClientFrameData.AdvancementFrame
 			this.frame = frame;
 		}
 
-		public static Result<AdvancementFrameData, Failure> parse(JsonElementWrapper rootElement) {
+		public static Result<AdvancementFrameData, Problem> parse(JsonElement rootElement) {
 			return rootElement
 					.getAsObject()
 					.andThen(rootObject -> rootObject.get("frame"))
-					.andThen(JsonParseUtils::parseFrame)
+					.andThen(BuiltinJson::parseFrame)
 					.mapSuccess(AdvancementFrameData::new);
 		}
 
@@ -46,34 +46,34 @@ public sealed interface ClientFrameData permits ClientFrameData.AdvancementFrame
 			this.excludedTexture = excludedTexture;
 		}
 
-		public static Result<TextureFrameData, Failure> parse(JsonElementWrapper rootElement) {
+		public static Result<TextureFrameData, Problem> parse(JsonElement rootElement) {
 			return rootElement.getAsObject().andThen(TextureFrameData::parse);
 		}
 
-		private static Result<TextureFrameData, Failure> parse(JsonObjectWrapper rootObject) {
-			var failures = new ArrayList<Failure>();
+		private static Result<TextureFrameData, Problem> parse(JsonObject rootObject) {
+			var problems = new ArrayList<Problem>();
 
 			var optAvailableTexture = rootObject.get("available")
-					.andThen(JsonParseUtils::parseIdentifier)
-					.ifFailure(failures::add)
+					.andThen(BuiltinJson::parseIdentifier)
+					.ifFailure(problems::add)
 					.getSuccess();
 
 			var optUnlockedTexture = rootObject.get("unlocked")
-					.andThen(JsonParseUtils::parseIdentifier)
-					.ifFailure(failures::add)
+					.andThen(BuiltinJson::parseIdentifier)
+					.ifFailure(problems::add)
 					.getSuccess();
 
 			var lockedTexture = rootObject.get("locked")
-					.andThen(JsonParseUtils::parseIdentifier)
+					.andThen(BuiltinJson::parseIdentifier)
 					.getSuccess()
 					.orElse(null);
 
 			var excludedTexture = rootObject.get("excluded")
-					.andThen(JsonParseUtils::parseIdentifier)
+					.andThen(BuiltinJson::parseIdentifier)
 					.getSuccess()
 					.orElse(null);
 
-			if (failures.isEmpty()) {
+			if (problems.isEmpty()) {
 				return Result.success(new TextureFrameData(
 						optAvailableTexture.orElseThrow(),
 						optUnlockedTexture.orElseThrow(),
@@ -81,7 +81,7 @@ public sealed interface ClientFrameData permits ClientFrameData.AdvancementFrame
 						excludedTexture
 				));
 			} else {
-				return Result.failure(Failure.fromMany(failures));
+				return Result.failure(Problem.combine(problems));
 			}
 		}
 

@@ -1,8 +1,14 @@
 package net.puffish.skillsmod.impl.rewards;
 
-import net.puffish.skillsmod.api.rewards.RewardUpdateContext;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.puffish.skillsmod.api.reward.RewardUpdateContext;
 
-public record RewardUpdateContextImpl(int count, boolean recent) implements RewardUpdateContext {
+public record RewardUpdateContextImpl(ServerPlayerEntity player, int count, boolean action) implements RewardUpdateContext {
+
+	@Override
+	public ServerPlayerEntity getPlayer() {
+		return player;
+	}
 
 	@Override
 	public int getCount() {
@@ -10,7 +16,7 @@ public record RewardUpdateContextImpl(int count, boolean recent) implements Rewa
 	}
 
 	@Override
-	public boolean isRecent() {
-		return recent;
+	public boolean isAction() {
+		return action;
 	}
 }

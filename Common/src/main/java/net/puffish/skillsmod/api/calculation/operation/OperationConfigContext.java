@@ -1,10 +1,10 @@
 package net.puffish.skillsmod.api.calculation.operation;
 
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 public interface OperationConfigContext extends ConfigContext {
-	Result<JsonElementWrapper, Failure> getData();
+	Result<JsonElement, Problem> getData();
 }

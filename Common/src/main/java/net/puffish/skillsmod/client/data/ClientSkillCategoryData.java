@@ -3,8 +3,8 @@ package net.puffish.skillsmod.client.data;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.skill.SkillState;
-import net.puffish.skillsmod.utils.Bounds2i;
-import net.puffish.skillsmod.utils.Vec2i;
+import net.puffish.skillsmod.util.Bounds2i;
+import net.puffish.skillsmod.util.Vec2i;
 
 import java.util.Collection;
 import java.util.HashMap;

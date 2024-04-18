@@ -4,7 +4,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import net.minecraft.world.chunk.WorldChunk;
 import net.puffish.skillsmod.access.WorldChunkAccess;
-import net.puffish.skillsmod.experience.builtin.KillEntityExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.KillEntityExperienceSource;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
