@@ -1,11 +1,11 @@
 package net.puffish.skillsmod.config.experience;
 
-import net.minecraft.server.MinecraftServer;
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.DisposeContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,13 +20,13 @@ public class ExperienceConfig {
 		this.experienceSources = experienceSources;
 	}
 
-	public static Result<Optional<ExperienceConfig>, Failure> parse(JsonElementWrapper rootElement, ConfigContext context) {
+	public static Result<Optional<ExperienceConfig>, Problem> parse(JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject()
 				.andThen(rootObject -> parse(rootObject, context));
 	}
 
-	public static Result<Optional<ExperienceConfig>, Failure> parse(JsonObjectWrapper rootObject, ConfigContext context) {
-		var failures = new ArrayList<Failure>();
+	public static Result<Optional<ExperienceConfig>, Problem> parse(JsonObject rootObject, ConfigContext context) {
+		var problems = new ArrayList<Problem>();
 
 		// Deprecated
 		var enabled = rootObject.getBoolean("enabled")
@@ -35,16 +35,16 @@ public class ExperienceConfig {
 
 		var optExperiencePerLevel = rootObject.get("experience_per_level")
 				.andThen(ExperiencePerLevelConfig::parse)
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var experienceSources = rootObject.getArray("sources")
-				.andThen(array -> array.getAsList((i, element) -> ExperienceSourceConfig.parse(element, context)).mapFailure(Failure::fromMany))
-				.ifFailure(failures::add)
+				.andThen(array -> array.getAsList((i, element) -> ExperienceSourceConfig.parse(element, context)).mapFailure(Problem::combine))
+				.ifFailure(problems::add)
 				.getSuccess()
 				.orElseGet(List::of);
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			if (enabled) {
 				return Result.success(Optional.of(new ExperienceConfig(
 						optExperiencePerLevel.orElseThrow(),
@@ -54,7 +54,7 @@ public class ExperienceConfig {
 				return Result.success(Optional.empty());
 			}
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
@@ -100,9 +100,9 @@ public class ExperienceConfig {
 		}
 	}
 
-	public void dispose(MinecraftServer server) {
+	public void dispose(DisposeContext context) {
 		for (var experienceSource : experienceSources) {
-			experienceSource.dispose(server);
+			experienceSource.dispose(context);
 		}
 	}
 

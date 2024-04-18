@@ -1,16 +1,16 @@
 package net.puffish.skillsmod.config.skill;
 
 import net.minecraft.advancement.AdvancementFrame;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.text.Text;
 import net.puffish.skillsmod.api.config.ConfigContext;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.util.DisposeContext;
 import net.puffish.skillsmod.config.FrameConfig;
 import net.puffish.skillsmod.config.IconConfig;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,46 +42,46 @@ public class SkillDefinitionConfig {
 		this.requiredSpentPoints = requiredSpentPoints;
 	}
 
-	public static Result<SkillDefinitionConfig, Failure> parse(String id, JsonElementWrapper rootElement, ConfigContext context) {
+	public static Result<SkillDefinitionConfig, Problem> parse(String id, JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject()
 				.andThen(rootObject -> SkillDefinitionConfig.parse(id, rootObject, context));
 	}
 
-	public static Result<SkillDefinitionConfig, Failure> parse(String id, JsonObjectWrapper rootObject, ConfigContext context) {
-		var failures = new ArrayList<Failure>();
+	public static Result<SkillDefinitionConfig, Problem> parse(String id, JsonObject rootObject, ConfigContext context) {
+		var problems = new ArrayList<Problem>();
 
 		var optTitle = rootObject.get("title")
-				.andThen(JsonParseUtils::parseText)
-				.ifFailure(failures::add)
+				.andThen(BuiltinJson::parseText)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var description = rootObject.get("description")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(descriptionElement -> JsonParseUtils.parseText(descriptionElement)
-						.ifFailure(failures::add)
+				.flatMap(descriptionElement -> BuiltinJson.parseText(descriptionElement)
+						.ifFailure(problems::add)
 						.getSuccess()
 				)
 				.orElseGet(Text::empty);
 
 		var extraDescription = rootObject.get("extra_description")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(descriptionElement -> JsonParseUtils.parseText(descriptionElement)
-						.ifFailure(failures::add)
+				.flatMap(descriptionElement -> BuiltinJson.parseText(descriptionElement)
+						.ifFailure(problems::add)
 						.getSuccess()
 				)
 				.orElseGet(Text::empty);
 
 		var optIcon = rootObject.get("icon")
 				.andThen(IconConfig::parse)
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var frame = rootObject.get("frame")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(frameElement -> JsonParseUtils.parseFrame(frameElement)
+				.flatMap(frameElement -> BuiltinJson.parseFrame(frameElement)
 						.mapSuccess(FrameConfig::fromAdvancementFrame)
-						.orElse(failure -> FrameConfig.parse(frameElement))
-						.ifFailure(failures::add)
+						.orElse(problem -> FrameConfig.parse(frameElement))
+						.ifFailure(problems::add)
 						.getSuccess()
 				)
 				.orElseGet(() -> FrameConfig.fromAdvancementFrame(AdvancementFrame.TASK));
@@ -91,8 +91,8 @@ public class SkillDefinitionConfig {
 				.orElse(1f);
 
 		var rewards = rootObject.getArray("rewards")
-				.andThen(array -> array.getAsList((i, element) -> SkillRewardConfig.parse(element, context)).mapFailure(Failure::fromMany))
-				.ifFailure(failures::add)
+				.andThen(array -> array.getAsList((i, element) -> SkillRewardConfig.parse(element, context)).mapFailure(Problem::combine))
+				.ifFailure(problems::add)
 				.getSuccess()
 				.orElseGet(List::of);
 
@@ -108,7 +108,7 @@ public class SkillDefinitionConfig {
 				.getSuccess() // ignore failure because this property is optional
 				.orElse(0);
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new SkillDefinitionConfig(
 					id,
 					optTitle.orElseThrow(),
@@ -123,13 +123,13 @@ public class SkillDefinitionConfig {
 					requiredSpentPoints
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
-	public void dispose(MinecraftServer server) {
+	public void dispose(DisposeContext context) {
 		for (var reward : rewards) {
-			reward.dispose(server);
+			reward.dispose(context);
 		}
 	}
 

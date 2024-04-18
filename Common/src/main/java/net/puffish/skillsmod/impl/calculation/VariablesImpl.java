@@ -6,12 +6,12 @@ import net.puffish.skillsmod.api.calculation.Variables;
 import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.calculation.prototype.PrototypeView;
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.json.JsonPath;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.impl.calculation.operation.OperationConfigContextImpl;
 
 import java.util.ArrayList;
@@ -62,49 +62,49 @@ public class VariablesImpl<T, R> implements Variables<T, R> {
 		return new CombineVariables<>(Arrays.asList(variables));
 	}
 
-	public static <T> Result<VariablesImpl<T, Double>, Failure> parse(
-			JsonElementWrapper rootElement,
+	public static <T> Result<VariablesImpl<T, Double>, Problem> parse(
+			JsonElement rootElement,
 			PrototypeView<T> prototypeView,
 			ConfigContext context
 	) {
 		return rootElement.getAsObject().andThen(rootObject -> parse(rootObject, prototypeView, context));
 	}
 
-	public static <T> Result<VariablesImpl<T, Double>, Failure> parse(
-			JsonObjectWrapper rootObject,
+	public static <T> Result<VariablesImpl<T, Double>, Problem> parse(
+			JsonObject rootObject,
 			PrototypeView<T> prototypeView,
 			ConfigContext context
 	) {
 		return rootObject.getAsMap((key, value) -> parseVariable(value, prototypeView, context))
-				.mapFailure(failures -> Failure.fromMany(failures.values()))
+				.mapFailure(problems -> Problem.combine(problems.values()))
 				.mapSuccess(VariablesImpl::new);
 	}
 
-	public static <T> Result<Function<T, Double>, Failure> parseVariable(
-			JsonElementWrapper rootElement,
+	public static <T> Result<Function<T, Double>, Problem> parseVariable(
+			JsonElement rootElement,
 			PrototypeView<T> prototypeView,
 			ConfigContext context) {
 		return rootElement.getAsObject().andThen(rootObject -> parseVariable(rootObject, prototypeView, context));
 	}
 
-	public static <T> Result<Function<T, Double>, Failure> parseVariable(
-			JsonObjectWrapper rootObject,
+	public static <T> Result<Function<T, Double>, Problem> parseVariable(
+			JsonObject rootObject,
 			PrototypeView<T> prototypeView,
 			ConfigContext context
 	) {
-		var failures = new ArrayList<Failure>();
+		var problems = new ArrayList<Problem>();
 
 		var optPrototypeView = parseOperation(rootObject, prototypeView, context, "legacy_")
 				.getSuccess() // Backwards compatibility.
 				.or(() -> rootObject.getArray("operations")
-						.ifFailure(failures::add)
+						.ifFailure(problems::add)
 						.getSuccess()
 						.flatMap(array -> {
 							var view = Optional.of(prototypeView);
-							for (var element : (Iterable<JsonElementWrapper>) array.stream()::iterator) {
+							for (var element : (Iterable<JsonElement>) array.stream()::iterator) {
 								view = view.flatMap(
 										v -> parseOperation(element, v, context)
-												.ifFailure(failures::add)
+												.ifFailure(problems::add)
 												.getSuccess()
 								);
 							}
@@ -115,73 +115,73 @@ public class VariablesImpl<T, R> implements Variables<T, R> {
 		var optFallback = rootObject.get("fallback")
 				.getSuccess()
 				.flatMap(fallbackElement -> fallbackElement.getAsDouble()
-						.ifFailure(failures::add)
+						.ifFailure(problems::add)
 						.getSuccess()
 				);
 
 		var required = rootObject.getBoolean("required")
 				.getSuccessOrElse(e -> true);
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return buildVariable(
 					optPrototypeView.orElseThrow(),
 					optFallback,
-					rootObject.getPath().thenObject("operations")
-			).orElse(failure -> {
+					rootObject.getPath().getObject("operations")
+			).orElse(problem -> {
 				if (required || optFallback.isEmpty()) {
-					return Result.failure(failure);
+					return Result.failure(problem);
 				} else {
-					failure.getMessages().forEach(context::addWarning);
+					context.emitWarning(problem.toString());
 					var fallback = optFallback.orElseThrow();
 					return Result.success(t -> fallback);
 				}
 			});
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
-	public static <T> Result<PrototypeView<T>, Failure> parseOperation(
-			JsonElementWrapper rootElement,
+	public static <T> Result<PrototypeView<T>, Problem> parseOperation(
+			JsonElement rootElement,
 			PrototypeView<T> prototypeView,
 			ConfigContext context
 	) {
 		return rootElement.getAsObject().andThen(rootObject -> parseOperation(rootObject, prototypeView, context, ""));
 	}
 
-	public static <T> Result<PrototypeView<T>, Failure> parseOperation(
-			JsonObjectWrapper rootObject,
+	public static <T> Result<PrototypeView<T>, Problem> parseOperation(
+			JsonObject rootObject,
 			PrototypeView<T> prototypeView,
 			ConfigContext context,
 			String prefix
 	) {
-		var failures = new ArrayList<Failure>();
+		var problems = new ArrayList<Problem>();
 
 		var optType = rootObject.get("type")
-				.andThen(JsonParseUtils::parseIdentifier)
-				.ifFailure(failures::add)
+				.andThen(BuiltinJson::parseIdentifier)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var maybeDataElement = rootObject.get("data");
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return buildOperation(
 					prototypeView,
 					optType.orElseThrow().withPrefixedPath(prefix),
-					rootObject.getPath().thenObject("type"),
+					rootObject.getPath().getObject("type"),
 					maybeDataElement,
 					context
 			);
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
-	private static <T> Result<PrototypeView<T>, Failure> buildOperation(
+	private static <T> Result<PrototypeView<T>, Problem> buildOperation(
 			PrototypeView<T> prototypeView,
 			Identifier type,
 			JsonPath typePath,
-			Result<JsonElementWrapper, Failure> maybeDataElement,
+			Result<JsonElement, Problem> maybeDataElement,
 			ConfigContext context
 	) {
 		if (type.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
@@ -189,12 +189,12 @@ public class VariablesImpl<T, R> implements Variables<T, R> {
 		}
 		var factory = prototypeView.getView(type, new OperationConfigContextImpl(context, maybeDataElement));
 		if (factory.isEmpty()) {
-			return Result.failure(typePath.createFailure("Expected a valid operation type"));
+			return Result.failure(typePath.createProblem("Expected a valid operation type"));
 		}
 		return factory.orElseThrow();
 	}
 
-	private static <T> Result<Function<T, Double>, Failure> buildVariable(
+	private static <T> Result<Function<T, Double>, Problem> buildVariable(
 			PrototypeView<T> prototypeView,
 			Optional<Double> fallback,
 			JsonPath operationsPath
@@ -206,14 +206,14 @@ public class VariablesImpl<T, R> implements Variables<T, R> {
 		if (optOperation.isPresent()) {
 			return Result.success(t -> optOperation.orElseThrow().apply(t).orElseGet(() -> {
 				if (fallback.isEmpty()) {
-					for (var message : operationsPath.createFailure("Fallback is not specified but operations returned no value").getMessages()) {
-						SkillsMod.getInstance().getLogger().warn(message);
-					}
+					SkillsMod.getInstance().getLogger().warn(
+							operationsPath.createProblem("Fallback is not specified but operations returned no value").toString()
+					);
 				}
 				return fallback.orElse(Double.NaN);
 			}));
 		} else {
-			return Result.failure(operationsPath.createFailure("Expected operations to provide a number"));
+			return Result.failure(operationsPath.createProblem("Expected operations to provide a number"));
 		}
 	}
 

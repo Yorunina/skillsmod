@@ -1,7 +1,7 @@
 package net.puffish.skillsmod.impl.json;
 
 import net.puffish.skillsmod.api.json.JsonPath;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.util.Problem;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,16 +15,16 @@ public class JsonPathImpl implements JsonPath {
 	}
 
 	@Override
-	public JsonPath thenArray(long index) {
-		return this.then("index " + index);
+	public JsonPath getArray(long index) {
+		return this.get("index " + index);
 	}
 
 	@Override
-	public JsonPath thenObject(String key) {
-		return this.then("`" + key + "`");
+	public JsonPath getObject(String key) {
+		return this.get("`" + key + "`");
 	}
 
-	private JsonPath then(String str) {
+	private JsonPath get(String str) {
 		var path = new ArrayList<String>();
 		path.add(str);
 		path.addAll(this.path);
@@ -41,36 +41,33 @@ public class JsonPathImpl implements JsonPath {
 		));
 	}
 
-	private String getHead() {
+	public String getHead() {
 		return this.path.get(0);
 	}
 
-	@Override
-	public Failure expectedToExist() {
+	public Problem expectedToExist() {
 		return expectedTo("exist");
 	}
 
-	@Override
-	public Failure expectedToExistAndBe(String str) {
+	public Problem expectedToExistAndBe(String str) {
 		return expectedTo("exist and be " + str);
 	}
 
-	@Override
-	public Failure expectedToBe(String str) {
+	public Problem expectedToBe(String str) {
 		return expectedTo("be " + str);
 	}
 
 	@Override
-	public Failure createFailure(String str) {
-		return Failure.message(str + " at " + this);
+	public Problem createProblem(String message) {
+		return Problem.message(message + " at " + this);
 	}
 
-	private Failure expectedTo(String str) {
+	public Problem expectedTo(String str) {
 		var parent = getParent();
 		if (parent.isPresent()) {
-			return Failure.message("Expected " + getHead() + " to " + str + " at " + parent.orElseThrow() + ".");
+			return Problem.message("Expected " + getHead() + " to " + str + " at " + parent.orElseThrow() + ".");
 		} else {
-			return Failure.message("Expected " + getHead() + " to " + str + ".");
+			return Problem.message("Expected " + getHead() + " to " + str + ".");
 		}
 	}
 

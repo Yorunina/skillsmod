@@ -1,7 +1,7 @@
 package net.puffish.skillsmod.reward;
 
 import net.minecraft.util.Identifier;
-import net.puffish.skillsmod.api.rewards.RewardFactory;
+import net.puffish.skillsmod.api.reward.RewardFactory;
 
 import java.util.HashMap;
 import java.util.Optional;

@@ -9,7 +9,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.puffish.skillsmod.api.SkillsAPI;
-import net.puffish.skillsmod.experience.builtin.MineBlockExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.MineBlockExperienceSource;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -21,7 +21,7 @@ public abstract class BlockMixin {
 	@Inject(method = "afterBreak", at = @At("HEAD"))
 	private void injectAtAfterBreak(World world, PlayerEntity player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack stack, CallbackInfo ci) {
 		if (player instanceof ServerPlayerEntity serverPlayer) {
-			SkillsAPI.visitExperienceSources(serverPlayer, experienceSource -> {
+			SkillsAPI.updateExperienceSources(serverPlayer, experienceSource -> {
 				if (experienceSource instanceof MineBlockExperienceSource mineBlockExperienceSource) {
 					return mineBlockExperienceSource.getValue(serverPlayer, state, stack);
 				}

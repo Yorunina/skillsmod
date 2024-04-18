@@ -1,17 +1,15 @@
 package net.puffish.skillsmod.impl.rewards;
 
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.resource.ResourceManager;
 import net.minecraft.server.MinecraftServer;
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.rewards.RewardConfigContext;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.reward.RewardConfigContext;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 public record RewardConfigContextImpl(
 		ConfigContext context,
-		Result<JsonElementWrapper, Failure> maybeDataElement
+		Result<JsonElement, Problem> maybeDataElement
 ) implements RewardConfigContext {
 
 	@Override
@@ -20,22 +18,12 @@ public record RewardConfigContextImpl(
 	}
 
 	@Override
-	public DynamicRegistryManager getDynamicRegistryManager() {
-		return context.getDynamicRegistryManager();
+	public void emitWarning(String message) {
+		context.emitWarning(message);
 	}
 
 	@Override
-	public ResourceManager getResourceManager() {
-		return context.getResourceManager();
-	}
-
-	@Override
-	public void addWarning(String message) {
-		context.addWarning(message);
-	}
-
-	@Override
-	public Result<JsonElementWrapper, Failure> getData() {
+	public Result<JsonElement, Problem> getData() {
 		return maybeDataElement;
 	}
 }

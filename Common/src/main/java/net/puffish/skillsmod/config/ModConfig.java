@@ -1,11 +1,11 @@
 package net.puffish.skillsmod.config;
 
 import net.puffish.skillsmod.SkillsMod;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,13 +19,13 @@ public class ModConfig {
 		this.categories = categories;
 	}
 
-	public static Result<ModConfig, Failure> parse(JsonElementWrapper rootElement) {
+	public static Result<ModConfig, Problem> parse(JsonElement rootElement) {
 		return rootElement.getAsObject()
 				.andThen(ModConfig::parse);
 	}
 
-	public static Result<ModConfig, Failure> parse(JsonObjectWrapper rootObject) {
-		var failures = new ArrayList<Failure>();
+	public static Result<ModConfig, Problem> parse(JsonObject rootObject) {
+		var problems = new ArrayList<Problem>();
 
 		var version = rootObject.getInt("version")
 				.getSuccessOrElse(e -> Integer.MIN_VALUE);
@@ -34,26 +34,26 @@ public class ModConfig {
 				.getSuccessOrElse(e -> false);
 
 		if (version < SkillsMod.CONFIG_VERSION) {
-			return Result.failure(Failure.message("Configuration is outdated. Check out the mod's wiki to learn how to update the configuration."));
+			return Result.failure(Problem.message("Configuration is outdated. Check out the mod's wiki to learn how to update the configuration."));
 		}
 		if (version > SkillsMod.CONFIG_VERSION) {
-			return Result.failure(Failure.message("Configuration is for a newer version of the mod. Please update the mod."));
+			return Result.failure(Problem.message("Configuration is for a newer version of the mod. Please update the mod."));
 		}
 
 		var optCategories = rootObject.getArray("categories")
-				.andThen(array -> array.getAsList((i, element) -> JsonParseUtils.parseIdentifierPath(element))
-						.mapFailure(Failure::fromMany)
+				.andThen(array -> array.getAsList((i, element) -> BuiltinJson.parseIdentifierPath(element))
+						.mapFailure(Problem::combine)
 				)
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new ModConfig(
 					showWarnings,
 					optCategories.orElseThrow()
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 

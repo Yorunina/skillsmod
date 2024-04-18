@@ -10,9 +10,9 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.puffish.skillsmod.api.SkillsAPI;
-import net.puffish.skillsmod.api.experience.ExperienceSource;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.experience.source.ExperienceSource;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
 import net.puffish.skillsmod.calculation.operation.builtin.BlockCondition;
 import net.puffish.skillsmod.calculation.operation.builtin.BlockStateCondition;
@@ -41,14 +41,15 @@ import net.puffish.skillsmod.config.reader.ConfigReader;
 import net.puffish.skillsmod.config.reader.FileConfigReader;
 import net.puffish.skillsmod.config.reader.PackConfigReader;
 import net.puffish.skillsmod.config.skill.SkillConfig;
-import net.puffish.skillsmod.experience.builtin.CraftItemExperienceSource;
-import net.puffish.skillsmod.experience.builtin.EatFoodExperienceSource;
-import net.puffish.skillsmod.experience.builtin.IncreaseStatExperienceSource;
-import net.puffish.skillsmod.experience.builtin.KillEntityExperienceSource;
-import net.puffish.skillsmod.experience.builtin.MineBlockExperienceSource;
-import net.puffish.skillsmod.experience.builtin.TakeDamageExperienceSource;
-import net.puffish.skillsmod.impl.config.ConfigContextImpl;
+import net.puffish.skillsmod.config.skill.SkillRewardConfig;
+import net.puffish.skillsmod.experience.source.builtin.CraftItemExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.EatFoodExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.IncreaseStatExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.KillEntityExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.MineBlockExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.TakeDamageExperienceSource;
 import net.puffish.skillsmod.impl.rewards.RewardUpdateContextImpl;
+import net.puffish.skillsmod.impl.config.ConfigContextImpl;
 import net.puffish.skillsmod.network.Packets;
 import net.puffish.skillsmod.reward.builtin.AttributeReward;
 import net.puffish.skillsmod.reward.builtin.CommandReward;
@@ -72,10 +73,11 @@ import net.puffish.skillsmod.server.setup.ServerRegistrar;
 import net.puffish.skillsmod.server.setup.SkillsArgumentTypes;
 import net.puffish.skillsmod.server.setup.SkillsGameRules;
 import net.puffish.skillsmod.skill.SkillState;
-import net.puffish.skillsmod.utils.ChangeListener;
-import net.puffish.skillsmod.utils.PathUtils;
-import net.puffish.skillsmod.utils.PrefixedLogger;
-import net.puffish.skillsmod.utils.ToastType;
+import net.puffish.skillsmod.util.ChangeListener;
+import net.puffish.skillsmod.util.DisposeContext;
+import net.puffish.skillsmod.util.PathUtils;
+import net.puffish.skillsmod.util.PrefixedLogger;
+import net.puffish.skillsmod.util.ToastType;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -87,6 +89,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class SkillsMod {
@@ -220,25 +223,26 @@ public class SkillsMod {
 									return modConfig;
 								})
 				)
-				.peek(modConfig -> {
+				.ifSuccess(modConfig -> {
 					cumulatedMap.putAll(loadPackConfig(modConfig, server));
 
 					categories.set(Optional.of(cumulatedMap), () -> {
 						for (var category : cumulatedMap.values()) {
-							category.dispose(server);
+							category.dispose(new DisposeContext(server));
 						}
 					});
-				}, failure -> {
+				})
+				.ifFailure(problem -> {
 					logger.error("Configuration could not be loaded:"
 							+ System.lineSeparator()
-							+ failure.getMessages().stream().collect(Collectors.joining(System.lineSeparator()))
+							+ problem
 					);
 
 					categories.set(Optional.empty(), () -> { });
 				});
 	}
 
-	private Result<Map<Identifier, CategoryConfig>, Failure> loadConfig(ConfigReader reader, ModConfig modConfig, MinecraftServer server) {
+	private Result<Map<Identifier, CategoryConfig>, Problem> loadConfig(ConfigReader reader, ModConfig modConfig, MinecraftServer server) {
 		var context = new ConfigContextImpl(server);
 
 		return reader.readCategories(SkillsAPI.MOD_ID, modConfig.getCategories(), context)
@@ -257,8 +261,9 @@ public class SkillsMod {
 	private Map<Identifier, CategoryConfig> loadPackConfig(ModConfig modConfig, MinecraftServer server) {
 		var context = new ConfigContextImpl(server);
 		var cumulatedMap = new LinkedHashMap<Identifier, CategoryConfig>();
+		var resourceManager = server.getResourceManager();
 
-		var resources = context.getResourceManager().findResources(
+		var resources = resourceManager.findResources(
 				SkillsAPI.MOD_ID,
 				id -> id.getPath().endsWith("config.json")
 		);
@@ -267,12 +272,12 @@ public class SkillsMod {
 			var resource = entry.getValue();
 			var id = entry.getKey();
 			var name = id.getNamespace();
-			var reader = new PackConfigReader(context.getResourceManager(), name);
+			var reader = new PackConfigReader(resourceManager, name);
 
 			reader.readResource(id, resource)
 					.andThen(rootElement -> PackConfig.parse(name, rootElement))
 					.andThen(packConfig -> reader.readCategories(name, packConfig.getCategories(), context))
-					.peek(map -> {
+					.ifSuccess(map -> {
 						if (modConfig.getShowWarnings() && !context.warnings().isEmpty()) {
 							logger.warn("Data pack `" + name + "` loaded successfully with warning(s):"
 									+ System.lineSeparator()
@@ -282,10 +287,11 @@ public class SkillsMod {
 							logger.info("Data pack `" + name + "` loaded successfully!");
 						}
 						cumulatedMap.putAll(map);
-					}, failure ->
+					})
+					.ifFailure(problem ->
 							logger.error("Data pack `" + name + "` could not be loaded:"
 									+ System.lineSeparator()
-									+ failure.getMessages().stream().collect(Collectors.joining(System.lineSeparator()))
+									+ problem
 					));
 		}
 
@@ -536,10 +542,10 @@ public class SkillsMod {
 		));
 	}
 
-	public void refreshReward(ServerPlayerEntity player, Identifier type) {
+	public void refreshReward(ServerPlayerEntity player, Predicate<SkillRewardConfig> reward) {
 		for (CategoryConfig category : getAllCategories()) {
 			var categoryData = getPlayerData(player).getCategoryData(category);
-			categoryData.refreshReward(category, player, type);
+			categoryData.refreshReward(category, player, reward);
 		}
 	}
 
@@ -569,7 +575,7 @@ public class SkillsMod {
 	private void resetRewards(ServerPlayerEntity player, CategoryConfig category) {
 		for (var definition : category.getDefinitions().getAll()) {
 			for (var reward : definition.getRewards()) {
-				reward.getInstance().update(player, new RewardUpdateContextImpl(0, false));
+				reward.getInstance().update(new RewardUpdateContextImpl(player, 0, false));
 			}
 		}
 	}
@@ -583,6 +589,10 @@ public class SkillsMod {
 			return Optional.of(playerData.getCategoryData(category));
 		}
 		return Optional.empty();
+	}
+
+	public Optional<Boolean> isCategoryUnlocked(ServerPlayerEntity player, Identifier categoryId) {
+		return getCategory(categoryId).map(category -> getPlayerData(player).isCategoryUnlocked(category));
 	}
 
 	private Optional<CategoryConfig> getCategory(Identifier categoryId) {

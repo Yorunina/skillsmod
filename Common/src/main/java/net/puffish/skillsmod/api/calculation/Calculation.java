@@ -1,15 +1,15 @@
 package net.puffish.skillsmod.api.calculation;
 
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.impl.calculation.CalculationImpl;
 
 public interface Calculation<T> {
 
-	static <T> Result<Calculation<T>, Failure> parse(
-			JsonElementWrapper rootElement,
+	static <T> Result<Calculation<T>, Problem> parse(
+			JsonElement rootElement,
 			Variables<T, Double> variables,
 			ConfigContext context
 	) {

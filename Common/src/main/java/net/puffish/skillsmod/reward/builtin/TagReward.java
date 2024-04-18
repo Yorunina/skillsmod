@@ -1,17 +1,16 @@
 package net.puffish.skillsmod.reward.builtin;
 
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.SkillsAPI;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.rewards.Reward;
-import net.puffish.skillsmod.api.rewards.RewardConfigContext;
-import net.puffish.skillsmod.api.rewards.RewardUpdateContext;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.reward.Reward;
+import net.puffish.skillsmod.api.reward.RewardConfigContext;
+import net.puffish.skillsmod.api.reward.RewardDisposeContext;
+import net.puffish.skillsmod.api.reward.RewardUpdateContext;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 
@@ -31,30 +30,31 @@ public class TagReward implements Reward {
 		);
 	}
 
-	private static Result<TagReward, Failure> parse(RewardConfigContext context) {
+	private static Result<TagReward, Problem> parse(RewardConfigContext context) {
 		return context.getData()
-				.andThen(JsonElementWrapper::getAsObject)
+				.andThen(JsonElement::getAsObject)
 				.andThen(TagReward::parse);
 	}
 
-	private static Result<TagReward, Failure> parse(JsonObjectWrapper rootObject) {
-		var failures = new ArrayList<Failure>();
+	private static Result<TagReward, Problem> parse(JsonObject rootObject) {
+		var problems = new ArrayList<Problem>();
 
 		var optTag = rootObject.getString("tag")
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new TagReward(
 					optTag.orElseThrow()
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
 	@Override
-	public void update(ServerPlayerEntity player, RewardUpdateContext context) {
+	public void update(RewardUpdateContext context) {
+		var player = context.getPlayer();
 		if (context.getCount() > 0) {
 			player.addCommandTag(tag);
 		} else {
@@ -63,7 +63,7 @@ public class TagReward implements Reward {
 	}
 
 	@Override
-	public void dispose(MinecraftServer server) {
-
+	public void dispose(RewardDisposeContext context) {
+		// Nothing to do.
 	}
 }

@@ -3,10 +3,10 @@ package net.puffish.skillsmod.impl.calculation;
 import net.puffish.skillsmod.api.calculation.Calculation;
 import net.puffish.skillsmod.api.calculation.Variables;
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.api.json.JsonArrayWrapper;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.json.JsonArray;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.calculation.CalculationCase;
 
 import java.util.ArrayList;
@@ -31,8 +31,8 @@ public class CalculationImpl<T> implements Calculation<T> {
 				.orElse(0.0);
 	}
 
-	public static <T> Result<CalculationImpl<T>, Failure> create(
-			JsonElementWrapper rootElement,
+	public static <T> Result<CalculationImpl<T>, Problem> create(
+			JsonElement rootElement,
 			Variables<T, Double> variables,
 			ConfigContext context
 	) {
@@ -45,26 +45,26 @@ public class CalculationImpl<T> implements Calculation<T> {
 				);
 	}
 
-	private static <T> Result<CalculationImpl<T>, Failure> create(
-			JsonArrayWrapper rootArray,
+	private static <T> Result<CalculationImpl<T>, Problem> create(
+			JsonArray rootArray,
 			Variables<T, Double> variables,
 			Set<String> variableNames,
 			ConfigContext context
 	) {
-		var failures = new ArrayList<Failure>();
+		var problems = new ArrayList<Problem>();
 
 		var optCalculations = rootArray.getAsList((i, element) -> CalculationCase.parse(element, variableNames))
-						.mapFailure(Failure::fromMany)
-						.ifFailure(failures::add)
+						.mapFailure(Problem::combine)
+						.ifFailure(problems::add)
 						.getSuccess();
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new CalculationImpl<>(
 					variables,
 					optCalculations.orElseThrow()
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 

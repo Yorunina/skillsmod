@@ -2,7 +2,7 @@ package net.puffish.skillsmod.client.network.packets.in;
 
 import net.minecraft.network.PacketByteBuf;
 import net.puffish.skillsmod.network.InPacket;
-import net.puffish.skillsmod.utils.ToastType;
+import net.puffish.skillsmod.util.ToastType;
 
 public class ShowToastInPacket implements InPacket {
 

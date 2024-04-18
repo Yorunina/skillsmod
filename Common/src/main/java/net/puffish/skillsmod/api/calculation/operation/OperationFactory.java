@@ -1,7 +1,7 @@
 package net.puffish.skillsmod.api.calculation.operation;
 
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.Optional;
 import java.util.function.Function;
@@ -27,5 +27,5 @@ public interface OperationFactory<T, R> {
 		return context -> Result.success(operation);
 	}
 
-	Result<? extends Operation<T, R>, Failure> apply(OperationConfigContext context);
+	Result<? extends Operation<T, R>, Problem> apply(OperationConfigContext context);
 }

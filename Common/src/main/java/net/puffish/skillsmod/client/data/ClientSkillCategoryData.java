@@ -3,7 +3,7 @@ package net.puffish.skillsmod.client.data;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.skill.SkillState;
-import net.puffish.skillsmod.utils.Bounds2i;
+import net.puffish.skillsmod.util.Bounds2i;
 import org.joml.Vector2i;
 
 import java.util.Collection;
