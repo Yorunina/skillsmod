@@ -7,8 +7,6 @@ public interface Skill {
 
 	String getId();
 
-	boolean isUnlocked(ServerPlayerEntity player);
-
 	void unlock(ServerPlayerEntity player);
 
 	void lock(ServerPlayerEntity player);

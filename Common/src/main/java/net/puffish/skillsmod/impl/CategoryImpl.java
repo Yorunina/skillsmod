@@ -7,9 +7,8 @@ import net.puffish.skillsmod.api.Category;
 import net.puffish.skillsmod.api.Experience;
 import net.puffish.skillsmod.api.Skill;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public class CategoryImpl implements Category {
 	private final Identifier categoryId;
@@ -42,23 +41,21 @@ public class CategoryImpl implements Category {
 	}
 
 	@Override
-	public List<Skill> getSkills() {
+	public Stream<Skill> streamSkills() {
 		return SkillsMod.getInstance()
 				.getSkills(categoryId)
 				.orElseThrow()
 				.stream()
-				.map(skillId -> (Skill) new SkillImpl(this, skillId))
-				.toList();
+				.map(skillId -> new SkillImpl(this, skillId));
 	}
 
 	@Override
-	public Collection<Skill> getUnlockedSkills(ServerPlayerEntity player) {
+	public Stream<Skill> streamUnlockedSkills(ServerPlayerEntity player) {
 		return SkillsMod.getInstance()
 				.getUnlockedSkills(player, categoryId)
 				.orElseThrow()
 				.stream()
-				.map(skillId -> (Skill) new SkillImpl(this, skillId))
-				.toList();
+				.map(skillId -> new SkillImpl(this, skillId));
 	}
 
 	@Override
@@ -74,6 +71,11 @@ public class CategoryImpl implements Category {
 	@Override
 	public void lock(ServerPlayerEntity player) {
 		SkillsMod.getInstance().lockCategory(player, categoryId);
+	}
+
+	@Override
+	public boolean isUnlocked(ServerPlayerEntity player) {
+		return SkillsMod.getInstance().isCategoryUnlocked(player, categoryId).orElseThrow();
 	}
 
 	@Override

@@ -1,10 +1,10 @@
 package net.puffish.skillsmod.config.skill;
 
-import net.puffish.skillsmod.api.json.JsonArrayWrapper;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonArray;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 
@@ -17,21 +17,21 @@ public class SkillConnectionsConfig {
 		this.exclusive = exclusive;
 	}
 
-	public static Result<SkillConnectionsConfig, Failure> parse(JsonElementWrapper rootElement, SkillsConfig skills) {
+	public static Result<SkillConnectionsConfig, Problem> parse(JsonElement rootElement, SkillsConfig skills) {
 		return rootElement.getAsObject()
 				.andThen(rootObject -> parse(rootObject, skills))
-				.orElse(failure -> rootElement.getAsArray()
+				.orElse(problem -> rootElement.getAsArray()
 						.andThen(rootArray -> parseLegacy(rootArray, skills))
 				);
 	}
 
-	private static Result<SkillConnectionsConfig, Failure> parse(JsonObjectWrapper rootObject, SkillsConfig skills) {
-		var failures = new ArrayList<Failure>();
+	private static Result<SkillConnectionsConfig, Problem> parse(JsonObject rootObject, SkillsConfig skills) {
+		var problems = new ArrayList<Problem>();
 
 		var normal = rootObject.get("normal")
 				.getSuccess()
 				.flatMap(element -> SkillConnectionsGroupConfig.parse(element, skills)
-						.ifFailure(failures::add)
+						.ifFailure(problems::add)
 						.getSuccess()
 				)
 				.orElseGet(SkillConnectionsGroupConfig::empty);
@@ -39,22 +39,22 @@ public class SkillConnectionsConfig {
 		var exclusive = rootObject.get("exclusive")
 				.getSuccess()
 				.flatMap(element -> SkillConnectionsGroupConfig.parse(element, skills)
-						.ifFailure(failures::add)
+						.ifFailure(problems::add)
 						.getSuccess()
 				)
 				.orElseGet(SkillConnectionsGroupConfig::empty);
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new SkillConnectionsConfig(
 					normal,
 					exclusive
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
-	private static Result<SkillConnectionsConfig, Failure> parseLegacy(JsonArrayWrapper rootArray, SkillsConfig skills) {
+	private static Result<SkillConnectionsConfig, Problem> parseLegacy(JsonArray rootArray, SkillsConfig skills) {
 		return SkillConnectionsGroupConfig.parseLegacy(rootArray, skills)
 				.mapSuccess(normal -> new SkillConnectionsConfig(
 						normal,

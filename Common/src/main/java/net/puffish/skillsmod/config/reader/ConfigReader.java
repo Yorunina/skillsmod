@@ -1,11 +1,11 @@
 package net.puffish.skillsmod.config.reader;
 
 import net.minecraft.util.Identifier;
+import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.config.CategoryConfig;
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -15,56 +15,55 @@ import java.util.Map;
 import java.util.Optional;
 
 public abstract class ConfigReader {
-	public abstract Result<JsonElementWrapper, Failure> read(Path path);
+	public abstract Result<JsonElement, Problem> read(Path path);
 	public abstract boolean exists(Path path);
 
-	public Result<Map<Identifier, CategoryConfig>, Failure> readCategories(String namespace, List<String> ids, ConfigContext context) {
-		var failures = new ArrayList<Failure>();
+	public Result<Map<Identifier, CategoryConfig>, Problem> readCategories(String namespace, List<String> ids, ConfigContext context) {
+		var problems = new ArrayList<Problem>();
 
 		var map = new LinkedHashMap<Identifier, CategoryConfig>();
 
 		for (var id : ids) {
-			readCategory(namespace, id, context).peek(
-					category -> map.put(Identifier.of(namespace, id), category),
-					failures::add
-			);
+			readCategory(namespace, id, context)
+					.ifSuccess(category -> map.put(Identifier.of(namespace, id), category))
+					.ifFailure(problems::add);
 		}
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(map);
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
-	public Result<CategoryConfig, Failure> readCategory(String namespace, String id, ConfigContext context) {
-		var failures = new ArrayList<Failure>();
+	public Result<CategoryConfig, Problem> readCategory(String namespace, String id, ConfigContext context) {
+		var problems = new ArrayList<Problem>();
 
 		var optGeneralElement = read(Path.of("categories", id, "category.json"))
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optDefinitionsElement = read(Path.of("categories", id, "definitions.json"))
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optSkillsElement = read(Path.of("categories", id, "skills.json"))
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optConnectionsElement = read(Path.of("categories", id, "connections.json"))
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
-		var optExperienceElement = Optional.<JsonElementWrapper>empty();
+		var optExperienceElement = Optional.<JsonElement>empty();
 		var experiencePath = Path.of("categories", id, "experience.json");
 		if (exists(experiencePath)) {
 			optExperienceElement = read(experiencePath)
-					.ifFailure(failures::add)
+					.ifFailure(problems::add)
 					.getSuccess();
 		}
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return CategoryConfig.parse(
 					Identifier.of(namespace, id),
 					optGeneralElement.orElseThrow(),
@@ -75,7 +74,7 @@ public abstract class ConfigReader {
 					context
 			);
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 }

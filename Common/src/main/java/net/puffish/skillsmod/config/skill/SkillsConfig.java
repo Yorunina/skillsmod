@@ -1,9 +1,9 @@
 package net.puffish.skillsmod.config.skill;
 
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.Collection;
 import java.util.Map;
@@ -16,13 +16,13 @@ public class SkillsConfig {
 		this.skills = skills;
 	}
 
-	public static Result<SkillsConfig, Failure> parse(JsonElementWrapper rootElement, SkillDefinitionsConfig definitions) {
+	public static Result<SkillsConfig, Problem> parse(JsonElement rootElement, SkillDefinitionsConfig definitions) {
 		return rootElement.getAsObject().andThen(rootObject -> SkillsConfig.parse(rootObject, definitions));
 	}
 
-	public static Result<SkillsConfig, Failure> parse(JsonObjectWrapper rootObject, SkillDefinitionsConfig definitions) {
+	public static Result<SkillsConfig, Problem> parse(JsonObject rootObject, SkillDefinitionsConfig definitions) {
 		return rootObject.getAsMap((key, value) -> SkillConfig.parse(key, value, definitions))
-				.mapFailure(failures -> Failure.fromMany(failures.values()))
+				.mapFailure(problems -> Problem.combine(problems.values()))
 				.mapSuccess(SkillsConfig::new);
 	}
 

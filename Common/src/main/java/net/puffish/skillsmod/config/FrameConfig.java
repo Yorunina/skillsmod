@@ -1,26 +1,24 @@
 package net.puffish.skillsmod.config;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import net.minecraft.advancement.AdvancementFrame;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 
 public class FrameConfig {
 	private final String type;
-	private final JsonElement data;
+	private final com.google.gson.JsonElement data;
 
-	private FrameConfig(String type, JsonElement data) {
+	private FrameConfig(String type, com.google.gson.JsonElement data) {
 		this.type = type;
 		this.data = data;
 	}
 
 	public static FrameConfig fromAdvancementFrame(AdvancementFrame frame) {
-		var data = new JsonObject();
+		var data = new com.google.gson.JsonObject();
 		data.addProperty("frame", frame.getId());
 		return new FrameConfig(
 				"advancement",
@@ -28,29 +26,29 @@ public class FrameConfig {
 		);
 	}
 
-	public static Result<FrameConfig, Failure> parse(JsonElementWrapper rootElement) {
+	public static Result<FrameConfig, Problem> parse(JsonElement rootElement) {
 		return rootElement.getAsObject()
 				.andThen(FrameConfig::parse);
 	}
 
-	public static Result<FrameConfig, Failure> parse(JsonObjectWrapper rootObject) {
-		var failures = new ArrayList<Failure>();
+	public static Result<FrameConfig, Problem> parse(JsonObject rootObject) {
+		var problems = new ArrayList<Problem>();
 
 		var type = rootObject.getString("type")
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var data = rootObject.get("data")
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new FrameConfig(
 					type.orElseThrow(),
 					data.orElseThrow().getJson()
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
@@ -58,7 +56,7 @@ public class FrameConfig {
 		return type;
 	}
 
-	public JsonElement getData() {
+	public com.google.gson.JsonElement getData() {
 		return data;
 	}
 }

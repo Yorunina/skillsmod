@@ -4,7 +4,7 @@ import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.api.calculation.operation.OperationFactory;
 import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.calculation.prototype.Prototype;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.Optional;
 import java.util.function.Function;
