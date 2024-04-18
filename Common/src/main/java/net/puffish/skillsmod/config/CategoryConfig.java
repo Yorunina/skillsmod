@@ -1,15 +1,15 @@
 package net.puffish.skillsmod.config;
 
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.api.config.ConfigContext;
+import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.config.experience.ExperienceConfig;
 import net.puffish.skillsmod.config.skill.SkillConnectionsConfig;
 import net.puffish.skillsmod.config.skill.SkillDefinitionsConfig;
 import net.puffish.skillsmod.config.skill.SkillsConfig;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.DisposeContext;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -39,45 +39,45 @@ public class CategoryConfig {
 		this.optExperience = optExperience;
 	}
 
-	public static Result<CategoryConfig, Failure> parse(
+	public static Result<CategoryConfig, Problem> parse(
 			Identifier id,
-			JsonElementWrapper generalElement,
-			JsonElementWrapper definitionsElement,
-			JsonElementWrapper skillsElement,
-			JsonElementWrapper connectionsElement,
-			Optional<JsonElementWrapper> optExperienceElement,
+			JsonElement generalElement,
+			JsonElement definitionsElement,
+			JsonElement skillsElement,
+			JsonElement connectionsElement,
+			Optional<JsonElement> optExperienceElement,
 			ConfigContext context
 	) {
-		var failures = new ArrayList<Failure>();
+		var problems = new ArrayList<Problem>();
 
 		var optGeneral = GeneralConfig.parse(generalElement)
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optExperience = optExperienceElement
 				.flatMap(experience -> ExperienceConfig.parse(experience, context)
-						.ifFailure(failures::add)
+						.ifFailure(problems::add)
 						.getSuccess()
 						.flatMap(Function.identity())
 				);
 
 		var optDefinitions = SkillDefinitionsConfig.parse(definitionsElement, context)
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optSkills = optDefinitions.flatMap(
 				definitions -> SkillsConfig.parse(skillsElement, definitions)
-						.ifFailure(failures::add)
+						.ifFailure(problems::add)
 						.getSuccess()
 		);
 
 		var optConnections = optSkills.flatMap(
 				skills -> SkillConnectionsConfig.parse(connectionsElement, skills)
-						.ifFailure(failures::add)
+						.ifFailure(problems::add)
 						.getSuccess()
 		);
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new CategoryConfig(
 					id,
 					optGeneral.orElseThrow(),
@@ -87,13 +87,13 @@ public class CategoryConfig {
 					optExperience
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
-	public void dispose(MinecraftServer server) {
-		definitions.dispose(server);
-		optExperience.ifPresent(experience -> experience.dispose(server));
+	public void dispose(DisposeContext context) {
+		definitions.dispose(context);
+		optExperience.ifPresent(experience -> experience.dispose(context));
 	}
 
 	public Identifier getId() {

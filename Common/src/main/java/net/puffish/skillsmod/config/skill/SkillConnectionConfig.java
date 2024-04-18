@@ -1,9 +1,9 @@
 package net.puffish.skillsmod.config.skill;
 
-import net.puffish.skillsmod.api.json.JsonArrayWrapper;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonArray;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.api.util.Problem;
 
 import java.util.ArrayList;
 
@@ -16,38 +16,38 @@ public class SkillConnectionConfig {
 		this.skillBId = skillBId;
 	}
 
-	public static Result<SkillConnectionConfig, Failure> parse(JsonElementWrapper rootElement, SkillsConfig skills) {
+	public static Result<SkillConnectionConfig, Problem> parse(JsonElement rootElement, SkillsConfig skills) {
 		return rootElement.getAsArray()
 				.andThen(rootArray -> SkillConnectionConfig.parse(rootArray, skills));
 	}
 
-	private static Result<SkillConnectionConfig, Failure> parse(JsonArrayWrapper rootArray, SkillsConfig skills) {
+	private static Result<SkillConnectionConfig, Problem> parse(JsonArray rootArray, SkillsConfig skills) {
 		if (rootArray.getSize() != 2) {
-			return Result.failure(rootArray.getPath().createFailure("Expected an array of 2 elements"));
+			return Result.failure(rootArray.getPath().createProblem("Expected an array of 2 elements"));
 		}
 
-		var failures = new ArrayList<Failure>();
+		var problems = new ArrayList<Problem>();
 
 		var optIds = rootArray.getAsList((i, element) -> element.getAsString().andThen(id -> {
 					if (skills.getById(id).isEmpty()) {
 						return Result.failure(
-								element.getPath().createFailure("Expected a valid skill")
+								element.getPath().createProblem("Expected a valid skill")
 						);
 					} else {
 						return Result.success(id);
 					}
 				}))
-				.ifFailure(failures::addAll)
+				.ifFailure(problems::addAll)
 				.getSuccess();
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			var ids = optIds.orElseThrow();
 			return Result.success(new SkillConnectionConfig(
 					ids.get(0),
 					ids.get(1)
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 

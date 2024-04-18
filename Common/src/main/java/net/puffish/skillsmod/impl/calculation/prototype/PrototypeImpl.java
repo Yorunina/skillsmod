@@ -6,8 +6,8 @@ import net.puffish.skillsmod.api.calculation.operation.OperationConfigContext;
 import net.puffish.skillsmod.api.calculation.operation.OperationFactory;
 import net.puffish.skillsmod.api.calculation.prototype.Prototype;
 import net.puffish.skillsmod.api.calculation.prototype.PrototypeView;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,7 +16,7 @@ import java.util.function.Function;
 
 public class PrototypeImpl<T> implements Prototype<T> {
 
-	private final Map<Identifier, Function<OperationConfigContext, Result<PrototypeView<T>, Failure>>> factories = new HashMap<>();
+	private final Map<Identifier, Function<OperationConfigContext, Result<PrototypeView<T>, Problem>>> factories = new HashMap<>();
 
 	private final Identifier id;
 
@@ -29,7 +29,7 @@ public class PrototypeImpl<T> implements Prototype<T> {
 		register(id, context -> factory.apply(context).mapSuccess(o -> new PrototypeViewImpl<>(view, o)));
 	}
 
-	private void register(Identifier id, Function<OperationConfigContext, Result<PrototypeView<T>, Failure>> factory) {
+	private void register(Identifier id, Function<OperationConfigContext, Result<PrototypeView<T>, Problem>> factory) {
 		factories.compute(id, (key, old) -> {
 			if (old == null) {
 				return factory;
@@ -44,7 +44,7 @@ public class PrototypeImpl<T> implements Prototype<T> {
 	}
 
 	@Override
-	public Optional<Result<PrototypeView<T>, Failure>> getView(Identifier id, OperationConfigContext context) {
+	public Optional<Result<PrototypeView<T>, Problem>> getView(Identifier id, OperationConfigContext context) {
 		return Optional.ofNullable(factories.get(id)).map(f -> f.apply(context));
 	}
 

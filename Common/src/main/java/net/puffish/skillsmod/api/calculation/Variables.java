@@ -2,9 +2,9 @@ package net.puffish.skillsmod.api.calculation;
 
 import net.puffish.skillsmod.api.calculation.prototype.PrototypeView;
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.impl.calculation.VariablesImpl;
 
 import java.util.Collection;
@@ -14,8 +14,8 @@ import java.util.stream.Stream;
 
 public interface Variables<T, R> {
 
-	static <T> Result<Variables<T, Double>, Failure> parse(
-			JsonElementWrapper rootElement,
+	static <T> Result<Variables<T, Double>, Problem> parse(
+			JsonElement rootElement,
 			PrototypeView<T> prototypeView,
 			ConfigContext context
 	) {

@@ -4,19 +4,19 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.attribute.DefaultAttributeRegistry;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.SkillsAPI;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.rewards.Reward;
-import net.puffish.skillsmod.api.rewards.RewardConfigContext;
-import net.puffish.skillsmod.api.rewards.RewardUpdateContext;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.reward.Reward;
+import net.puffish.skillsmod.api.reward.RewardConfigContext;
+import net.puffish.skillsmod.api.reward.RewardDisposeContext;
+import net.puffish.skillsmod.api.reward.RewardUpdateContext;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,45 +45,45 @@ public class AttributeReward implements Reward {
 		);
 	}
 
-	private static Result<AttributeReward, Failure> parse(RewardConfigContext context) {
+	private static Result<AttributeReward, Problem> parse(RewardConfigContext context) {
 		return context.getData()
-				.andThen(JsonElementWrapper::getAsObject)
+				.andThen(JsonElement::getAsObject)
 				.andThen(AttributeReward::parse);
 	}
 
-	private static Result<AttributeReward, Failure> parse(JsonObjectWrapper rootObject) {
-		var failures = new ArrayList<Failure>();
+	private static Result<AttributeReward, Problem> parse(JsonObject rootObject) {
+		var problems = new ArrayList<Problem>();
 
 		var optAttribute = rootObject.get("attribute")
-				.andThen(attributeElement -> JsonParseUtils.parseAttribute(attributeElement)
+				.andThen(attributeElement -> BuiltinJson.parseAttribute(attributeElement)
 						.andThen(attribute -> {
 							if (DefaultAttributeRegistry.get(EntityType.PLAYER).has(attribute)) {
 								return Result.success(attribute);
 							} else {
-								return Result.failure(attributeElement.getPath().createFailure("Expected a valid player attribute"));
+								return Result.failure(attributeElement.getPath().createProblem("Expected a valid player attribute"));
 							}
 						})
 				)
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optValue = rootObject.getFloat("value")
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optOperation = rootObject.get("operation")
-				.andThen(JsonParseUtils::parseAttributeOperation)
-				.ifFailure(failures::add)
+				.andThen(BuiltinJson::parseAttributeOperation)
+				.ifFailure(problems::add)
 				.getSuccess();
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new AttributeReward(
 					optAttribute.orElseThrow(),
 					optValue.orElseThrow(),
 					optOperation.orElseThrow()
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
@@ -94,9 +94,9 @@ public class AttributeReward implements Reward {
 	}
 
 	@Override
-	public void update(ServerPlayerEntity player, RewardUpdateContext context) {
+	public void update(RewardUpdateContext context) {
 		var count = context.getCount();
-		var instance = Objects.requireNonNull(player.getAttributeInstance(attribute));
+		var instance = Objects.requireNonNull(context.getPlayer().getAttributeInstance(attribute));
 
 		createMissingUUIDs(count);
 
@@ -120,8 +120,8 @@ public class AttributeReward implements Reward {
 	}
 
 	@Override
-	public void dispose(MinecraftServer server) {
-		for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+	public void dispose(RewardDisposeContext context) {
+		for (ServerPlayerEntity player : context.getServer().getPlayerManager().getPlayerList()) {
 			var instance = Objects.requireNonNull(player.getAttributeInstance(attribute));
 			for (UUID uuid : uuids) {
 				instance.removeModifier(uuid);

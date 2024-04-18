@@ -7,11 +7,11 @@ import net.puffish.skillsmod.api.calculation.operation.Operation;
 import net.puffish.skillsmod.api.calculation.operation.OperationConfigContext;
 import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.Failure;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.utils.Result;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -31,27 +31,27 @@ public final class DamageTypeCondition implements Operation<DamageType, Boolean>
 		);
 	}
 
-	public static Result<DamageTypeCondition, Failure> parse(OperationConfigContext context) {
+	public static Result<DamageTypeCondition, Problem> parse(OperationConfigContext context) {
 		return context.getData()
-				.andThen(JsonElementWrapper::getAsObject)
+				.andThen(JsonElement::getAsObject)
 				.andThen(rootObject -> parse(rootObject, context));
 	}
 
-	public static Result<DamageTypeCondition, Failure> parse(JsonObjectWrapper rootObject, ConfigContext context) {
-		var failures = new ArrayList<Failure>();
+	public static Result<DamageTypeCondition, Problem> parse(JsonObject rootObject, ConfigContext context) {
+		var problems = new ArrayList<Problem>();
 
 		var optDamageType = rootObject.get("damage") // Backwards compatibility.
-				.orElse(failure -> rootObject.get("damage_type"))
-				.andThen(damageElement -> JsonParseUtils.parseDamageTypeOrDamageTypeTag(damageElement, context.getDynamicRegistryManager()))
-				.ifFailure(failures::add)
+				.orElse(problem -> rootObject.get("damage_type"))
+				.andThen(damageElement -> BuiltinJson.parseDamageTypeOrDamageTypeTag(damageElement, context.getServer().getRegistryManager()))
+				.ifFailure(problems::add)
 				.getSuccess();
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new DamageTypeCondition(
 					optDamageType.orElseThrow()
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 

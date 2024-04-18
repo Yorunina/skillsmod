@@ -3,9 +3,8 @@ package net.puffish.skillsmod.api;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public interface Category {
 	Identifier getId();
@@ -14,9 +13,9 @@ public interface Category {
 
 	Optional<Skill> getSkill(String skillId);
 
-	List<Skill> getSkills();
+	Stream<Skill> streamSkills();
 
-	Collection<Skill> getUnlockedSkills(ServerPlayerEntity player);
+	Stream<Skill> streamUnlockedSkills(ServerPlayerEntity player);
 
 	void openScreen(ServerPlayerEntity player);
 
@@ -25,6 +24,8 @@ public interface Category {
 	void unlock(ServerPlayerEntity player);
 
 	void lock(ServerPlayerEntity player);
+
+	boolean isUnlocked(ServerPlayerEntity player);
 
 	void erase(ServerPlayerEntity player);
 

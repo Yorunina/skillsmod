@@ -1,7 +1,5 @@
 package net.puffish.skillsmod.impl.config;
 
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.resource.ResourceManager;
 import net.minecraft.server.MinecraftServer;
 import net.puffish.skillsmod.api.config.ConfigContext;
 
@@ -14,22 +12,12 @@ public record ConfigContextImpl(MinecraftServer server, List<String> warnings) i
 	}
 
 	@Override
-	public DynamicRegistryManager getDynamicRegistryManager() {
-		return server.getRegistryManager();
-	}
-
-	@Override
-	public ResourceManager getResourceManager() {
-		return server.getResourceManager();
-	}
-
-	@Override
 	public MinecraftServer getServer() {
 		return server;
 	}
 
 	@Override
-	public void addWarning(String failure) {
-		warnings.add(failure);
+	public void emitWarning(String message) {
+		warnings.add(message);
 	}
 }

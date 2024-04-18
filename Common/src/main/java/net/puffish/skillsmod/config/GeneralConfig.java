@@ -2,11 +2,11 @@ package net.puffish.skillsmod.config;
 
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.puffish.skillsmod.api.json.JsonElementWrapper;
-import net.puffish.skillsmod.api.json.JsonObjectWrapper;
-import net.puffish.skillsmod.api.utils.JsonParseUtils;
-import net.puffish.skillsmod.api.utils.Result;
-import net.puffish.skillsmod.api.utils.Failure;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 
@@ -27,31 +27,31 @@ public class GeneralConfig {
 		this.spentPointsLimit = spentPointsLimit;
 	}
 
-	public static Result<GeneralConfig, Failure> parse(JsonElementWrapper rootElement) {
+	public static Result<GeneralConfig, Problem> parse(JsonElement rootElement) {
 		return rootElement.getAsObject()
 				.andThen(GeneralConfig::parse);
 	}
 
-	public static Result<GeneralConfig, Failure> parse(JsonObjectWrapper rootObject) {
-		var failures = new ArrayList<Failure>();
+	public static Result<GeneralConfig, Problem> parse(JsonObject rootObject) {
+		var problems = new ArrayList<Problem>();
 
 		var optTitle = rootObject.get("title")
-				.andThen(JsonParseUtils::parseText)
-				.ifFailure(failures::add)
+				.andThen(BuiltinJson::parseText)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optIcon = rootObject.get("icon")
 				.andThen(IconConfig::parse)
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optBackground = rootObject.get("background")
-				.andThen(JsonParseUtils::parseIdentifier)
-				.ifFailure(failures::add)
+				.andThen(BuiltinJson::parseIdentifier)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optUnlockedByDefault = rootObject.getBoolean("unlocked_by_default")
-				.ifFailure(failures::add)
+				.ifFailure(problems::add)
 				.getSuccess();
 
 		var exclusiveRoot = rootObject.getBoolean("exclusive_root")
@@ -61,12 +61,12 @@ public class GeneralConfig {
 		var spentPointsLimit = rootObject.get("spent_points_limit")
 				.getSuccess() // ignore failure because this property is optional
 				.flatMap(element -> element.getAsInt()
-						.ifFailure(failures::add)
+						.ifFailure(problems::add)
 						.getSuccess()
 				)
 				.orElse(Integer.MAX_VALUE);
 
-		if (failures.isEmpty()) {
+		if (problems.isEmpty()) {
 			return Result.success(new GeneralConfig(
 					optTitle.orElseThrow(),
 					optIcon.orElseThrow(),
@@ -76,7 +76,7 @@ public class GeneralConfig {
 					spentPointsLimit
 			));
 		} else {
-			return Result.failure(Failure.fromMany(failures));
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 
