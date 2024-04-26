@@ -51,11 +51,11 @@ public final class SkillsAPI {
 	}
 
 	public static <T extends Reward> void updateRewards(ServerPlayerEntity player, Class<T> clazz) {
-		SkillsMod.getInstance().refreshReward(player, clazz::isInstance);
+		updateRewards(player, clazz::isInstance);
 	}
 
 	public static <T extends Reward> void updateRewards(ServerPlayerEntity player, Class<T> clazz, Predicate<T> predicate) {
-		SkillsMod.getInstance().refreshReward(player, reward -> {
+		updateRewards(player, reward -> {
 			if (clazz.isInstance(reward)) {
 				return predicate.test(clazz.cast(reward));
 			}
