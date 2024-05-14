@@ -42,7 +42,7 @@ public final class SwitchOperation implements Operation<Boolean, Double> {
 				.ifFailure(problems::add)
 				.getSuccess();
 
-		var optFalse = rootObject.getDouble("true")
+		var optFalse = rootObject.getDouble("false")
 				.ifFailure(problems::add)
 				.getSuccess();
 
