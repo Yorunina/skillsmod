@@ -224,23 +224,22 @@ public class SkillsMod {
 									return modConfig;
 								})
 				)
-				.ifSuccess(modConfig -> {
-					cumulatedMap.putAll(loadPackConfig(modConfig, server));
+				.ifFailure(problem -> logger.error(
+						"Configuration could not be loaded:"
+								+ System.lineSeparator()
+								+ problem
+				))
+				.getSuccess()
+				.flatMap(modConfig -> loadPackConfig(modConfig, server))
+				.ifPresentOrElse(map -> {
+					cumulatedMap.putAll(map);
 
 					categories.set(Optional.of(cumulatedMap), () -> {
 						for (var category : cumulatedMap.values()) {
 							category.dispose(new DisposeContext(server));
 						}
 					});
-				})
-				.ifFailure(problem -> {
-					logger.error("Configuration could not be loaded:"
-							+ System.lineSeparator()
-							+ problem
-					);
-
-					categories.set(Optional.empty(), () -> { });
-				});
+				}, () -> categories.set(Optional.empty(), () -> { }));
 	}
 
 	private Result<Map<Identifier, CategoryConfig>, Problem> loadConfig(ConfigReader reader, ModConfig modConfig, MinecraftServer server) {
@@ -259,10 +258,11 @@ public class SkillsMod {
 				});
 	}
 
-	private Map<Identifier, CategoryConfig> loadPackConfig(ModConfig modConfig, MinecraftServer server) {
+	private Optional<Map<Identifier, CategoryConfig>> loadPackConfig(ModConfig modConfig, MinecraftServer server) {
 		var context = new ConfigContextImpl(server);
 		var cumulatedMap = new LinkedHashMap<Identifier, CategoryConfig>();
 		var resourceManager = server.getResourceManager();
+		var anyProblems = false;
 
 		var resources = resourceManager.findResources(
 				SkillsAPI.MOD_ID,
@@ -275,7 +275,7 @@ public class SkillsMod {
 			var name = id.getNamespace();
 			var reader = new PackConfigReader(resourceManager, name);
 
-			reader.readResource(id, resource)
+			anyProblems |= reader.readResource(id, resource)
 					.andThen(rootElement -> PackConfig.parse(name, rootElement))
 					.andThen(packConfig -> reader.readCategories(name, packConfig.getCategories(), context))
 					.ifSuccess(map -> {
@@ -293,10 +293,16 @@ public class SkillsMod {
 							logger.error("Data pack `" + name + "` could not be loaded:"
 									+ System.lineSeparator()
 									+ problem
-					));
+					))
+					.getFailure()
+					.isPresent();
 		}
 
-		return cumulatedMap;
+		if (anyProblems) {
+			return Optional.empty();
+		} else {
+			return Optional.of(cumulatedMap);
+		}
 	}
 
 	private void onSkillClickPacket(ServerPlayerEntity player, SkillClickInPacket packet) {
