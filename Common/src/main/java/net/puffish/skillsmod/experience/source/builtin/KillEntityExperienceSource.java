@@ -56,6 +56,11 @@ public class KillEntityExperienceSource implements ExperienceSource {
 				OperationFactory.create(Data::entity)
 		);
 		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("damage_source"),
+				BuiltinPrototypes.DAMAGE_SOURCE,
+				OperationFactory.create(Data::damageSource)
+		);
+		PROTOTYPE.registerOperation(
 				SkillsMod.createIdentifier("dropped_experience"),
 				BuiltinPrototypes.NUMBER,
 				OperationFactory.create(Data::entityDroppedXp)
