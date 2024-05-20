@@ -39,13 +39,14 @@ public class ScoreboardReward implements Reward {
 	private static Result<ScoreboardReward, Problem> parse(JsonObject rootObject) {
 		var problems = new ArrayList<Problem>();
 
-		var optScoreboard = rootObject.getString("scoreboard")
+		var optObjective = rootObject.getString("scoreboard") // Backwards compatibility.
+				.orElse(problem -> rootObject.getString("objective"))
 				.ifFailure(problems::add)
 				.getSuccess();
 
 		if (problems.isEmpty()) {
 			return Result.success(new ScoreboardReward(
-					optScoreboard.orElseThrow()
+					optObjective.orElseThrow()
 			));
 		} else {
 			return Result.failure(Problem.combine(problems));
