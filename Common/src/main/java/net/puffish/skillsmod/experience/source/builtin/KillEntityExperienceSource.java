@@ -13,7 +13,6 @@ import net.puffish.skillsmod.api.calculation.operation.OperationFactory;
 import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.calculation.prototype.Prototype;
 import net.puffish.skillsmod.api.config.ConfigContext;
-import net.puffish.skillsmod.mixin.LivingEntityInvoker;
 import net.puffish.skillsmod.api.experience.source.ExperienceSource;
 import net.puffish.skillsmod.api.experience.source.ExperienceSourceConfigContext;
 import net.puffish.skillsmod.api.experience.source.ExperienceSourceDisposeContext;
@@ -54,6 +53,11 @@ public class KillEntityExperienceSource implements ExperienceSource {
 				SkillsMod.createIdentifier("killed_living_entity"),
 				BuiltinPrototypes.LIVING_ENTITY,
 				OperationFactory.create(Data::entity)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("damage_source"),
+				BuiltinPrototypes.DAMAGE_SOURCE,
+				OperationFactory.create(Data::damageSource)
 		);
 		PROTOTYPE.registerOperation(
 				SkillsMod.createIdentifier("dropped_experience"),
