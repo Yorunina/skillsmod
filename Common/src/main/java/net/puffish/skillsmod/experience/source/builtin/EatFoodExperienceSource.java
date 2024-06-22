@@ -1,5 +1,6 @@
 package net.puffish.skillsmod.experience.source.builtin;
 
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -108,15 +109,15 @@ public class EatFoodExperienceSource implements ExperienceSource {
 		legacy.registerNumberFunction(
 				"food_hunger",
 				data -> {
-					var fc = data.itemStack().getItem().getFoodComponent();
-					return fc == null ? 0.0 : fc.getHunger();
+					var fc = data.itemStack().getComponents().get(DataComponentTypes.FOOD);
+					return fc == null ? 0.0 : fc.nutrition();
 				}
 		);
 		legacy.registerNumberFunction(
 				"food_saturation",
 				data -> {
-					var fc = data.itemStack().getItem().getFoodComponent();
-					return fc == null ? 0.0 : fc.getSaturationModifier();
+					var fc = data.itemStack().get(DataComponentTypes.FOOD);
+					return fc == null ? 0.0 : fc.saturation();
 				}
 		);
 

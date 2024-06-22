@@ -56,6 +56,6 @@ public final class LegacyItemTagCondition implements Operation<ItemStack, Boolea
 
 	@Override
 	public Optional<Boolean> apply(ItemStack itemStack) {
-		return Optional.of(itemStack.itemMatches(entries));
+		return Optional.of(itemStack.isIn(entries));
 	}
 }

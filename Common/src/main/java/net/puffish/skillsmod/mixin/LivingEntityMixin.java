@@ -5,6 +5,7 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.server.world.ServerWorld;
 import net.puffish.skillsmod.access.DamageSourceAccess;
 import net.puffish.skillsmod.access.WorldChunkAccess;
 import net.puffish.skillsmod.api.SkillsAPI;
@@ -74,7 +75,7 @@ public abstract class LivingEntityMixin {
 	}
 
 	@Inject(method = "drop", at = @At("TAIL"))
-	private void injectAtDrop(DamageSource source, CallbackInfo ci) {
+	private void injectAtDrop(ServerWorld world, DamageSource source, CallbackInfo ci) {
 		if (source.getAttacker() instanceof ServerPlayerEntity player) {
 			var entity = ((LivingEntity) (Object) this);
 			var weapon = ((DamageSourceAccess) source).getWeapon().orElse(ItemStack.EMPTY);

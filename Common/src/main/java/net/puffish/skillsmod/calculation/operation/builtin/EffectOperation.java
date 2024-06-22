@@ -3,6 +3,8 @@ package net.puffish.skillsmod.calculation.operation.builtin;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.calculation.operation.Operation;
 import net.puffish.skillsmod.api.calculation.operation.OperationConfigContext;
@@ -18,9 +20,9 @@ import java.util.ArrayList;
 import java.util.Optional;
 
 public class EffectOperation implements Operation<LivingEntity, StatusEffectInstance> {
-	private final StatusEffect effect;
+	private final RegistryEntry<StatusEffect> effect;
 
-	private EffectOperation(StatusEffect effect) {
+	private EffectOperation(RegistryEntry<StatusEffect> effect) {
 		this.effect = effect;
 	}
 
@@ -50,7 +52,8 @@ public class EffectOperation implements Operation<LivingEntity, StatusEffectInst
 		var optEffect = rootObject.get("effect")
 				.andThen(BuiltinJson::parseEffect)
 				.ifFailure(problems::add)
-				.getSuccess();
+				.getSuccess()
+				.map(Registries.STATUS_EFFECT::getEntry);;
 
 		if (problems.isEmpty()) {
 			return Result.success(new EffectOperation(

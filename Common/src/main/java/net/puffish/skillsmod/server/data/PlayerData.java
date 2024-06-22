@@ -26,7 +26,7 @@ public class PlayerData {
 		for (var id : categoriesNbt.getKeys()) {
 			var elementNbt = categoriesNbt.get(id);
 			if (elementNbt instanceof NbtCompound categoryNbt) {
-				categories.put(SkillsMod.convertIdentifier(new Identifier(id)), CategoryData.read(categoryNbt));
+				categories.put(SkillsMod.convertIdentifier(Identifier.of(id)), CategoryData.read(categoryNbt));
 			}
 		}
 

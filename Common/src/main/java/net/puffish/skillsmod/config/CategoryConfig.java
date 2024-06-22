@@ -1,5 +1,6 @@
 package net.puffish.skillsmod.config;
 
+import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.util.Problem;
@@ -50,7 +51,7 @@ public class CategoryConfig {
 	) {
 		var problems = new ArrayList<Problem>();
 
-		var optGeneral = GeneralConfig.parse(generalElement)
+		var optGeneral = GeneralConfig.parse(generalElement, context)
 				.ifFailure(problems::add)
 				.getSuccess();
 

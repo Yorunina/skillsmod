@@ -1,6 +1,8 @@
 package net.puffish.skillsmod.server.network.packets.out;
 
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.text.TextCodecs;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.config.BackgroundConfig;
 import net.puffish.skillsmod.config.CategoryConfig;
@@ -20,7 +22,7 @@ import net.puffish.skillsmod.skill.SkillConnection;
 public record ShowCategoryOutPacket(CategoryConfig category, CategoryData categoryData) implements OutPacket {
 
 	@Override
-	public void write(PacketByteBuf buf) {
+	public void write(RegistryByteBuf buf) {
 		buf.writeIdentifier(category.getId());
 		write(buf, category.getGeneral());
 		write(buf, category.getDefinitions());
@@ -50,12 +52,12 @@ public record ShowCategoryOutPacket(CategoryConfig category, CategoryData catego
 		}
 	}
 
-	public void write(PacketByteBuf buf, SkillDefinitionsConfig definitions) {
+	public void write(RegistryByteBuf buf, SkillDefinitionsConfig definitions) {
 		buf.writeCollection(definitions.getAll(), (buf1, definition) -> write(buf, definition));
 	}
 
-	public void write(PacketByteBuf buf, GeneralConfig general) {
-		buf.writeText(general.getTitle());
+	public void write(RegistryByteBuf buf, GeneralConfig general) {
+		TextCodecs.UNLIMITED_REGISTRY_PACKET_CODEC.encode(buf, general.getTitle());
 		write(buf, general.getIcon());
 		write(buf, general.getBackground());
 		buf.writeNullable(general.getColors(), (buf1, element) -> buf1.writeString(element.toString()));
@@ -63,11 +65,11 @@ public record ShowCategoryOutPacket(CategoryConfig category, CategoryData catego
 		buf.writeInt(general.getSpentPointsLimit());
 	}
 
-	public void write(PacketByteBuf buf, SkillDefinitionConfig definition) {
+	public void write(RegistryByteBuf buf, SkillDefinitionConfig definition) {
 		buf.writeString(definition.getId());
-		buf.writeText(definition.getTitle());
-		buf.writeText(definition.getDescription());
-		buf.writeText(definition.getExtraDescription());
+		TextCodecs.UNLIMITED_REGISTRY_PACKET_CODEC.encode(buf, definition.getTitle());
+		TextCodecs.UNLIMITED_REGISTRY_PACKET_CODEC.encode(buf, definition.getDescription());
+		TextCodecs.UNLIMITED_REGISTRY_PACKET_CODEC.encode(buf, definition.getExtraDescription());
 		write(buf, definition.getFrame());
 		write(buf, definition.getIcon());
 		buf.writeFloat(definition.getSize());

@@ -153,12 +153,11 @@ public class ConnectionBatchedRenderer {
 			var b = (float) (color & 0xff) / 255f;
 			RenderSystem.setShaderColor(r, g, b, a);
 
-			var bufferBuilder = Tessellator.getInstance().getBuffer();
-			bufferBuilder.begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION);
+			var bufferBuilder = Tessellator.getInstance().begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION);
 			for (var emit : entry.getValue()) {
-				bufferBuilder.vertex(emit.x1, emit.y1, emit.z1).next();
-				bufferBuilder.vertex(emit.x2, emit.y2, emit.z2).next();
-				bufferBuilder.vertex(emit.x3, emit.y3, emit.z3).next();
+				bufferBuilder.vertex(emit.x1, emit.y1, emit.z1);
+				bufferBuilder.vertex(emit.x2, emit.y2, emit.z2);
+				bufferBuilder.vertex(emit.x3, emit.y3, emit.z3);
 			}
 			BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
 		}

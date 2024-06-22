@@ -2,8 +2,8 @@ package net.puffish.skillsmod.mixin;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gl.VertexBuffer;
-import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
+import net.minecraft.client.render.BuiltBuffer;
 import net.puffish.skillsmod.access.BuiltBufferAccess;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,7 +23,7 @@ public final class BufferRendererMixin {
 			locals = LocalCapture.CAPTURE_FAILHARD,
 			cancellable = true
 	)
-	private static void injectBeforeDraw(BufferBuilder.BuiltBuffer builtBuffer, CallbackInfo ci, VertexBuffer vertexBuffer) {
+	private static void injectBeforeDraw(BuiltBuffer builtBuffer, CallbackInfo ci, VertexBuffer vertexBuffer) {
 		var emits = ((BuiltBufferAccess) builtBuffer).getEmits();
 		if (emits != null) {
 			for (var emit : emits) {

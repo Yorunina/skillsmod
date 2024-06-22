@@ -192,7 +192,7 @@ public class SkillsMod {
 	}
 
 	public static Identifier createIdentifier(String path) {
-		return new Identifier(SkillsAPI.MOD_ID, path);
+		return Identifier.of(SkillsAPI.MOD_ID, path);
 	}
 
 	public static Identifier convertIdentifier(Identifier id) {

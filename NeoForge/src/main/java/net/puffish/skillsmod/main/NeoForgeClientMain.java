@@ -1,14 +1,18 @@
 package net.puffish.skillsmod.main;
 
-import io.netty.buffer.Unpooled;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.network.packet.c2s.common.CustomPayloadC2SPacket;
 import net.minecraft.util.Identifier;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.client.SkillsClientMod;
 import net.puffish.skillsmod.client.event.ClientEventListener;
 import net.puffish.skillsmod.client.event.ClientEventReceiver;
@@ -22,22 +26,28 @@ import net.puffish.skillsmod.network.OutPacket;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class NeoForgeClientMain {
 	private final List<ClientEventListener> clientListeners = new ArrayList<>();
 	private final List<KeyBindingWithHandler> keyBindings = new ArrayList<>();
+	private final Map<Identifier, CustomPayload.Id<NeoForgeMain.InOutPayload<?>>> outPackets = new HashMap<>();
+	private final List<Consumer<PayloadRegistrar>> payloadRegistrations = new ArrayList<>();
 
-	public NeoForgeClientMain(Map<Identifier, NeoForgeMain.PacketBuilder> packetBuilders) {
+	public NeoForgeClientMain(IEventBus modEventBus) {
 		SkillsClientMod.setup(
-				new ClientRegistrarImpl(packetBuilders),
+				new ClientRegistrarImpl(),
 				new ClientEventReceiverImpl(),
 				new KeyBindingReceiverImpl(),
 				new ClientPacketSenderImpl()
 		);
+
+		modEventBus.addListener(this::onRegisterPayloadHandler);
 
 		var neoForgeEventBus = NeoForge.EVENT_BUS;
 		neoForgeEventBus.addListener(this::onPlayerLoggedIn);
@@ -58,29 +68,27 @@ public class NeoForgeClientMain {
 		}
 	}
 
+	public void onRegisterPayloadHandler(RegisterPayloadHandlersEvent event) {
+		var registrar = event.registrar(SkillsAPI.MOD_ID);
+		for (var payloadRegistration : payloadRegistrations) {
+			payloadRegistration.accept(registrar);
+		}
+	}
+
 	private record KeyBindingWithHandler(KeyBinding keyBinding, KeyBindingHandler handler) { }
 
-	private static class ClientRegistrarImpl implements ClientRegistrar {
-
-		private final Map<Identifier, NeoForgeMain.PacketBuilder> packetBuilders;
-
-		private ClientRegistrarImpl(Map<Identifier, NeoForgeMain.PacketBuilder> packetBuilders) {
-			this.packetBuilders = packetBuilders;
-		}
-
+	private class ClientRegistrarImpl implements ClientRegistrar {
 		@Override
-		public <T extends InPacket> void registerInPacket(Identifier id, Function<PacketByteBuf, T> reader, ClientPacketHandler<T> handler) {
-			packetBuilders.computeIfAbsent(id, key -> new NeoForgeMain.PacketBuilder())
-					.setClientHandler((payload, context) -> {
-						var packet = reader.apply(payload.data());
-						context.workHandler().execute(() -> handler.handle(packet));
-					});
+		public <T extends InPacket> void registerInPacket(Identifier id, Function<RegistryByteBuf, T> reader, ClientPacketHandler<T> handler) {
+			var pId = new CustomPayload.Id<NeoForgeMain.InOutPayload<T>>(id);
+			payloadRegistrations.add(registrar -> registrar.playToClient(pId, CustomPayload.codecOf(
+					(value, buf) -> value.outPacket().write(buf),
+					buf -> new NeoForgeMain.InOutPayload<>(pId, reader.apply(buf), null)
+			), (payload, context) -> handler.handle(payload.inValue())));
 		}
-
 		@Override
 		public void registerOutPacket(Identifier id) {
-			packetBuilders.computeIfAbsent(id, key -> new NeoForgeMain.PacketBuilder())
-					.fallbackServerHandler();
+			outPackets.put(id, new CustomPayload.Id<>(id));
 		}
 	}
 
@@ -100,15 +108,13 @@ public class NeoForgeClientMain {
 		}
 	}
 
-	private static class ClientPacketSenderImpl implements ClientPacketSender {
+	private class ClientPacketSenderImpl implements ClientPacketSender {
 		@Override
 		public void send(OutPacket packet) {
-			var buf = new PacketByteBuf(Unpooled.buffer());
-			packet.write(buf);
 			Objects.requireNonNull(MinecraftClient.getInstance().getNetworkHandler())
-					.sendPacket(new CustomPayloadC2SPacket(new NeoForgeMain.SharedCustomPayload(
-							packet.getId(), buf
-					)));
+					.send(new CustomPayloadC2SPacket(
+							new NeoForgeMain.InOutPayload<>(outPackets.get(packet.getId()), null, packet)
+					));
 		}
 	}
 }

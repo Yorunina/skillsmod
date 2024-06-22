@@ -1,6 +1,8 @@
 package net.puffish.skillsmod.client.network.packets.in;
 
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.text.TextCodecs;
 import net.puffish.skillsmod.api.Skill;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonPath;
@@ -25,23 +27,23 @@ public class ShowCategoryInPacket implements InPacket {
 		this.category = category;
 	}
 
-	public static ShowCategoryInPacket read(PacketByteBuf buf) {
+	public static ShowCategoryInPacket read(RegistryByteBuf buf) {
 		var category = readCategory(buf);
 
 		return new ShowCategoryInPacket(category);
 	}
 
-	public static ClientCategoryData readCategory(PacketByteBuf buf) {
+	public static ClientCategoryData readCategory(RegistryByteBuf buf) {
 		var id = buf.readIdentifier();
 
-		var title = buf.readText();
+		var title = TextCodecs.UNLIMITED_REGISTRY_PACKET_CODEC.decode(buf);
 		var icon = readSkillIcon(buf);
 		var background = readBackground(buf);
 		var colors = readColors(buf);
 		var exclusiveRoot = buf.readBoolean();
 		var spentPointsLimit = buf.readInt();
 
-		var definitions = buf.readList(ShowCategoryInPacket::readDefinition)
+		var definitions = buf.readList(buf1 -> ShowCategoryInPacket.readDefinition(buf))
 				.stream()
 				.collect(Collectors.toMap(ClientSkillDefinitionConfig::id, definition -> definition));
 
@@ -94,11 +96,11 @@ public class ShowCategoryInPacket implements InPacket {
 		);
 	}
 
-	public static ClientSkillDefinitionConfig readDefinition(PacketByteBuf buf) {
+	public static ClientSkillDefinitionConfig readDefinition(RegistryByteBuf buf) {
 		var id = buf.readString();
-		var title = buf.readText();
-		var description = buf.readText();
-		var extraDescription = buf.readText();
+		var title = TextCodecs.UNLIMITED_REGISTRY_PACKET_CODEC.decode(buf);
+		var description = TextCodecs.UNLIMITED_REGISTRY_PACKET_CODEC.decode(buf);
+		var extraDescription = TextCodecs.UNLIMITED_REGISTRY_PACKET_CODEC.decode(buf);
 		var frame = readFrameIcon(buf);
 		var icon = readSkillIcon(buf);
 		var size = buf.readFloat();

@@ -1,6 +1,7 @@
 package net.puffish.skillsmod.server.data;
 
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.world.PersistentState;
@@ -17,7 +18,7 @@ public class ServerData extends PersistentState {
 
 	}
 
-	private static ServerData read(NbtCompound tag) {
+	private static ServerData read(NbtCompound tag, RegistryWrapper.WrapperLookup lookup) {
 		var playersData = new ServerData();
 
 		var playersNbt = tag.getCompound("players");
@@ -30,7 +31,7 @@ public class ServerData extends PersistentState {
 	}
 
 	@Override
-	public NbtCompound writeNbt(NbtCompound nbt) {
+	public NbtCompound writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup lookup) {
 		var playersNbt = new NbtCompound();
 		for (var entry : players.entrySet()) {
 			playersNbt.put(

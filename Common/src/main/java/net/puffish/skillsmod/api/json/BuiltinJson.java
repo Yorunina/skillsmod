@@ -3,6 +3,7 @@ package net.puffish.skillsmod.api.json;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.advancement.AdvancementFrame;
 import net.minecraft.block.Block;
+import net.minecraft.component.ComponentChanges;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
@@ -39,7 +40,7 @@ public final class BuiltinJson {
 	public static Result<Identifier, Problem> parseIdentifier(JsonElement element) {
 		return parseFromString(
 				element,
-				Identifier::new,
+				Identifier::of,
 				() -> "Expected identifier",
 				s -> "Invalid identifier `" + s + "`"
 		);
@@ -48,7 +49,7 @@ public final class BuiltinJson {
 	public static Result<String, Problem> parseIdentifierPath(JsonElement element) {
 		return parseFromString(
 				element,
-				s -> new Identifier(Identifier.DEFAULT_NAMESPACE, s).getPath(),
+				s -> Identifier.ofVanilla(s).getPath(),
 				() -> "Expected identifier path",
 				s -> "Invalid identifier path `" + s + "`"
 		);
@@ -56,7 +57,7 @@ public final class BuiltinJson {
 
 	public static Result<StatusEffect, Problem> parseEffect(JsonElement element) {
 		return parseSomething(
-				element, 
+				element,
 				Registries.STATUS_EFFECT,
 				() -> "Expected effect",
 				id -> "Unknown effect `" + id + "`"
@@ -65,7 +66,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<StatusEffect>, Problem> parseEffectTag(JsonElement element) {
 		return parseSomethingTag(
-				element, 
+				element,
 				Registries.STATUS_EFFECT,
 				() -> "Expected effect tag",
 				id -> "Unknown effect tag `" + id + "`"
@@ -74,7 +75,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<StatusEffect>, Problem> parseEffectOrEffectTag(JsonElement element) {
 		return parseSomethingOrSomethingTag(
-				element, 
+				element,
 				Registries.STATUS_EFFECT,
 				() -> "Expected effect or effect tag",
 				id -> "Unknown effect or effect tag `" + id + "`"
@@ -83,7 +84,7 @@ public final class BuiltinJson {
 
 	public static Result<Block, Problem> parseBlock(JsonElement element) {
 		return parseSomething(
-				element, 
+				element,
 				Registries.BLOCK,
 				() -> "Expected block",
 				id -> "Unknown block `" + id + "`"
@@ -101,7 +102,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<Block>, Problem> parseBlockOrBlockTag(JsonElement element) {
 		return parseSomethingOrSomethingTag(
-				element, 
+				element,
 				Registries.BLOCK,
 				() -> "Expected block or block tag",
 				id -> "Unknown block or block tag `" + id + "`"
@@ -137,7 +138,7 @@ public final class BuiltinJson {
 
 	public static Result<EntityType<?>, Problem> parseEntityType(JsonElement element) {
 		return parseSomething(
-				element, 
+				element,
 				Registries.ENTITY_TYPE,
 				() -> "Expected entity type",
 				id -> "Unknown entity type `" + id + "`"
@@ -146,7 +147,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<EntityType<?>>, Problem> parseEntityTypeTag(JsonElement element) {
 		return parseSomethingTag(
-				element, 
+				element,
 				Registries.ENTITY_TYPE,
 				() -> "Expected entity type tag",
 				id -> "Unknown entity type tag `" + id + "`"
@@ -155,7 +156,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<EntityType<?>>, Problem> parseEntityTypeOrEntityTypeTag(JsonElement element) {
 		return parseSomethingOrSomethingTag(
-				element, 
+				element,
 				Registries.ENTITY_TYPE,
 				() -> "Expected entity type or entity type tag",
 				id -> "Unknown entity type or entity type tag `" + id + "`"
@@ -164,7 +165,7 @@ public final class BuiltinJson {
 
 	public static Result<Item, Problem> parseItem(JsonElement element) {
 		return parseSomething(
-				element, 
+				element,
 				Registries.ITEM,
 				() -> "Expected item",
 				id -> "Unknown item `" + id + "`"
@@ -173,7 +174,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<Item>, Problem> parseItemTag(JsonElement element) {
 		return parseSomethingTag(
-				element, 
+				element,
 				Registries.ITEM,
 				() -> "Expected item tag",
 				id -> "Unknown item tag `" + id + "`"
@@ -182,7 +183,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<Item>, Problem> parseItemOrItemTag(JsonElement element) {
 		return parseSomethingOrSomethingTag(
-				element, 
+				element,
 				Registries.ITEM,
 				() -> "Expected item or item tag",
 				id -> "Unknown item or item tag `" + id + "`"
@@ -191,7 +192,7 @@ public final class BuiltinJson {
 
 	public static Result<StatType<?>, Problem> parseStatType(JsonElement element) {
 		return parseSomething(
-				element, 
+				element,
 				Registries.STAT_TYPE,
 				() -> "Expected stat type",
 				id -> "Unknown stat type `" + id + "`"
@@ -200,7 +201,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<StatType<?>>, Problem> parseStatTypeTag(JsonElement element) {
 		return parseSomethingTag(
-				element, 
+				element,
 				Registries.STAT_TYPE,
 				() -> "Expected stat type tag",
 				id -> "Unknown stat type tag `" + id + "`"
@@ -209,7 +210,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<StatType<?>>, Problem> parseStatTypeOrStatTypeTag(JsonElement element) {
 		return parseSomethingOrSomethingTag(
-				element, 
+				element,
 				Registries.STAT_TYPE,
 				() -> "Expected stat type or stat type tag",
 				id -> "Unknown stat type or stat type tag `" + id + "`"
@@ -272,6 +273,14 @@ public final class BuiltinJson {
 		);
 	}
 
+	public static Result<ComponentChanges, Problem> parseComponentChanges(JsonElement element) {
+		try {
+			return Result.success(ComponentChanges.CODEC.parse(JsonOps.INSTANCE, element.getJson()).result().orElseThrow());
+		} catch (Exception e) {
+			return Result.failure(element.getPath().createProblem("Expected valid nbt"));
+		}
+	}
+
 	public static Result<ItemStack, Problem> parseItemStack(JsonElement element) {
 		try {
 			return element.getAsObject().andThen(object -> {
@@ -282,16 +291,16 @@ public final class BuiltinJson {
 						.ifFailure(problems::add)
 						.getSuccess();
 
-				var nbt = object.get("nbt")
+				var components = object.get("components")
 						.getSuccess()
-						.flatMap(nbtElement -> BuiltinJson.parseNbt(nbtElement)
+						.flatMap(nbtElement -> BuiltinJson.parseComponentChanges(nbtElement)
 								.ifFailure(problems::add)
 								.getSuccess()
 						);
 
 				if (problems.isEmpty()) {
 					var itemStack = new ItemStack(item.orElseThrow());
-					nbt.ifPresent(itemStack::setNbt);
+					components.ifPresent(itemStack::applyChanges);
 					return Result.success(itemStack);
 				} else {
 					return Result.failure(Problem.combine(problems));
@@ -310,9 +319,9 @@ public final class BuiltinJson {
 		}
 	}
 
-	public static Result<Text, Problem> parseText(JsonElement element) {
+	public static Result<Text, Problem> parseText(JsonElement element, DynamicRegistryManager manager) {
 		try {
-			return Result.success(Text.Serialization.fromJsonTree(element.getJson()));
+			return Result.success(Text.Serialization.fromJsonTree(element.getJson(), manager));
 		} catch (Exception e) {
 			return Result.failure(element.getPath().createProblem("Expected text"));
 		}
@@ -323,7 +332,7 @@ public final class BuiltinJson {
 				element,
 				id -> {
 					if (id.getNamespace().equals(SkillsAPI.MOD_ID)) {
-						id = new Identifier("puffish_attributes", id.getPath());
+					id = Identifier.of("puffish_attributes", id.getPath());
 					}
 					return Registries.ATTRIBUTE.getOrEmpty(id).orElseThrow();
 				},
@@ -336,9 +345,9 @@ public final class BuiltinJson {
 		return parseFromString(
 				element,
 				s -> switch (s) {
-					case "addition" -> EntityAttributeModifier.Operation.ADDITION;
-					case "multiply_base" -> EntityAttributeModifier.Operation.MULTIPLY_BASE;
-					case "multiply_total" -> EntityAttributeModifier.Operation.MULTIPLY_TOTAL;
+					case "addition" -> EntityAttributeModifier.Operation.ADD_VALUE;
+					case "multiply_base" -> EntityAttributeModifier.Operation.ADD_MULTIPLIED_BASE;
+					case "multiply_total" -> EntityAttributeModifier.Operation.ADD_MULTIPLIED_TOTAL;
 					default -> throw new RuntimeException();
 				},
 				() -> "Expected attribute operation",
@@ -383,7 +392,7 @@ public final class BuiltinJson {
 	private static <T> Result<RegistryEntryList<T>, Problem> parseSomethingTag(JsonElement element, Registry<T> registry, Supplier<String> expected, Function<Identifier, String> unknown) {
 		try {
 			var s = element.getJson().getAsString();
-			var id = s.startsWith("#") ? new Identifier(s.substring(1)) : new Identifier(s);
+			var id = s.startsWith("#") ? Identifier.of(s.substring(1)) : Identifier.of(s);
 			try {
 				return Result.success(registry.getReadOnlyWrapper()
 						.getOptional(TagKey.of(registry.getKey(), id))
@@ -400,14 +409,14 @@ public final class BuiltinJson {
 		try {
 			var s = element.getJson().getAsString();
 			if (s.startsWith("#")) {
-				var id = new Identifier(s.substring(1));
+				var id = Identifier.of(s.substring(1));
 				try {
 					return Result.success(registry.getReadOnlyWrapper().getOptional(TagKey.of(registry.getKey(), id)).orElseThrow());
 				} catch (Exception ignored) {
 					return Result.failure(element.getPath().createProblem(unknown.apply(id)));
 				}
 			} else {
-				var id = new Identifier(s);
+				var id = Identifier.of(s);
 				try {
 					return Result.success(RegistryEntryList.of(registry.getEntry(RegistryKey.of(registry.getKey(), id)).orElseThrow()));
 				} catch (Exception ignored) {

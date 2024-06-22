@@ -1,6 +1,6 @@
 package net.puffish.skillsmod.mixin;
 
-import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.BuiltBuffer;
 import net.minecraft.client.render.RenderLayer;
 import net.puffish.skillsmod.access.BuiltBufferAccess;
 import net.puffish.skillsmod.access.RenderLayerAccess;
@@ -28,10 +28,10 @@ public final class RenderLayerMixin implements RenderLayerAccess {
 			index = 0,
 			at = @At(
 					value = "INVOKE",
-					target = "Lnet/minecraft/client/render/BufferRenderer;drawWithGlobalProgram(Lnet/minecraft/client/render/BufferBuilder$BuiltBuffer;)V"
+					target = "Lnet/minecraft/client/render/BufferRenderer;drawWithGlobalProgram(Lnet/minecraft/client/render/BuiltBuffer;)V"
 			)
 	)
-	private BufferBuilder.BuiltBuffer modifyArgAtDrawWithGlobalProgram(BufferBuilder.BuiltBuffer builtBuffer) {
+	private BuiltBuffer modifyArgAtDrawWithGlobalProgram(BuiltBuffer builtBuffer) {
 		((BuiltBufferAccess) builtBuffer).setEmits(emits);
 		return builtBuffer;
 	}

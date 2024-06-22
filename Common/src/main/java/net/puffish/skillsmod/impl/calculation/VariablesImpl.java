@@ -185,7 +185,7 @@ public class VariablesImpl<T, R> implements Variables<T, R> {
 			ConfigContext context
 	) {
 		if (type.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
-			type = new Identifier(prototypeView.getId().getNamespace(), type.getPath());
+			type = Identifier.of(prototypeView.getId().getNamespace(), type.getPath());
 		}
 		var factory = prototypeView.getView(type, new OperationConfigContextImpl(context, maybeDataElement));
 		if (factory.isEmpty()) {

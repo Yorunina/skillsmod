@@ -1,10 +1,9 @@
 package net.puffish.skillsmod.main;
 
 import com.mojang.brigadier.arguments.ArgumentType;
-import io.netty.buffer.Unpooled;
 import net.minecraft.command.argument.ArgumentTypes;
 import net.minecraft.command.argument.serialize.ArgumentSerializer;
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.network.packet.s2c.common.CustomPayloadS2CPacket;
 import net.minecraft.registry.Registry;
@@ -21,10 +20,10 @@ import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlerEvent;
-import net.neoforged.neoforge.network.handling.IPlayPayloadHandler;
-import net.neoforged.neoforge.network.registration.IDirectionAwarePayloadHandlerBuilder;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforgespi.Environment;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.mixin.GameRulesAccessor;
@@ -40,17 +39,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Mod(SkillsAPI.MOD_ID)
 public class NeoForgeMain {
 	private final List<ServerEventListener> serverListeners = new ArrayList<>();
-	private final Map<Identifier, PacketBuilder> packetBuilders = new HashMap<>();
+	private final Map<Identifier, CustomPayload.Id<InOutPayload<?>>> outPackets = new HashMap<>();
+	private final List<Consumer<PayloadRegistrar>> payloadRegistrations = new ArrayList<>();
 
 	public NeoForgeMain(IEventBus modEventBus, Dist dist) {
 		if (dist.isClient()) {
-			new NeoForgeClientMain(packetBuilders);
+			new NeoForgeClientMain(modEventBus);
 		}
 
 		SkillsMod.setup(
@@ -101,15 +101,10 @@ public class NeoForgeMain {
 		}
 	}
 
-	public void onRegisterPayloadHandler(RegisterPayloadHandlerEvent event) {
+	public void onRegisterPayloadHandler(RegisterPayloadHandlersEvent event) {
 		var registrar = event.registrar(SkillsAPI.MOD_ID);
-		for (var entry : packetBuilders.entrySet()) {
-			var id = entry.getKey();
-			registrar.play(
-					id,
-					buf -> new SharedCustomPayload(id, new PacketByteBuf(Unpooled.buffer()).writeBytes(buf)),
-					entry.getValue()::apply
-			);
+		for (var payloadRegistration : payloadRegistrations) {
+			payloadRegistration.accept(registrar);
 		}
 	}
 
@@ -141,18 +136,24 @@ public class NeoForgeMain {
 		}
 
 		@Override
-		public <T extends InPacket> void registerInPacket(Identifier id, Function<PacketByteBuf, T> reader, ServerPacketHandler<T> handler) {
-			packetBuilders.computeIfAbsent(id, key -> new NeoForgeMain.PacketBuilder())
-					.setServerHandler(((payload, context) -> {
-						var packet = reader.apply(payload.data());
-						context.workHandler().execute(() -> handler.handle((ServerPlayerEntity) context.player().orElseThrow(), packet));
-					}));
+		public <T extends InPacket> void registerInPacket(Identifier id, Function<RegistryByteBuf, T> reader, ServerPacketHandler<T> handler) {
+			var pId = new CustomPayload.Id<InOutPayload<T>>(id);
+			payloadRegistrations.add(registrar -> registrar.playToServer(pId, CustomPayload.codecOf(
+					(value, buf) -> value.outPacket.write(buf),
+					buf -> new InOutPayload<>(pId, reader.apply(buf), null)
+			), (payload, context) -> handler.handle((ServerPlayerEntity) context.player(), payload.inValue())));
 		}
 
 		@Override
 		public void registerOutPacket(Identifier id) {
-			packetBuilders.computeIfAbsent(id, key -> new NeoForgeMain.PacketBuilder())
-					.fallbackClientHandler();
+			outPackets.put(id, new CustomPayload.Id<>(id));
+			if (Environment.get().getDist().isDedicatedServer()) {
+				var pId = new CustomPayload.Id<InOutPayload<?>>(id);
+				payloadRegistrations.add(registrar -> registrar.playToClient(pId, CustomPayload.codecOf(
+						(value, buf) -> value.outPacket.write(buf),
+						buf -> null
+				), (payload, context) -> { }));
+			}
 		}
 	}
 
@@ -163,64 +164,19 @@ public class NeoForgeMain {
 		}
 	}
 
-	private static class ServerPacketSenderImpl implements ServerPacketSender {
+	private class ServerPacketSenderImpl implements ServerPacketSender {
 		@Override
 		public void send(ServerPlayerEntity player, OutPacket packet) {
-			var buf = new PacketByteBuf(Unpooled.buffer());
-			packet.write(buf);
-			player.networkHandler.sendPacket(new CustomPayloadS2CPacket(
-					new SharedCustomPayload(packet.getId(), buf)
+			player.networkHandler.send(new CustomPayloadS2CPacket(
+					new InOutPayload<>(outPackets.get(packet.getId()), null, packet)
 			));
 		}
 	}
 
-	public record SharedCustomPayload(Identifier id, PacketByteBuf data) implements CustomPayload {
+	public record InOutPayload<T>(Id<? extends CustomPayload> id, T inValue, OutPacket outPacket) implements CustomPayload {
 		@Override
-		public void write(PacketByteBuf buf) {
-			buf.writeBytes(data.slice());
-		}
-	}
-
-	public static class PacketBuilder {
-		private Optional<IPlayPayloadHandler<SharedCustomPayload>> clientHandler = Optional.empty();
-		private Optional<IPlayPayloadHandler<SharedCustomPayload>> serverHandler = Optional.empty();
-
-		private boolean fallbackClient = false;
-		private boolean fallbackServer = false;
-
-		public void setClientHandler(IPlayPayloadHandler<SharedCustomPayload> handler) {
-			if (clientHandler.isPresent()) {
-				throw new IllegalStateException();
-			}
-			clientHandler = Optional.of(handler);
-		}
-
-		public void setServerHandler(IPlayPayloadHandler<SharedCustomPayload> handler) {
-			if (serverHandler.isPresent()) {
-				throw new IllegalStateException();
-			}
-			serverHandler = Optional.of(handler);
-		}
-
-		public void fallbackClientHandler() {
-			fallbackClient = true;
-		}
-
-		public void fallbackServerHandler() {
-			fallbackServer = true;
-		}
-
-		public void apply(IDirectionAwarePayloadHandlerBuilder<SharedCustomPayload, IPlayPayloadHandler<SharedCustomPayload>> handlers) {
-			clientHandler.ifPresentOrElse(handlers::client, () -> {
-				if (fallbackClient) {
-					handlers.client((payload, context) -> { });
-				}
-			});
-			serverHandler.ifPresentOrElse(handlers::server, () -> {
-				if (fallbackServer) {
-					handlers.server((payload, context) -> { });
-				}
-			});
+		public Id<? extends CustomPayload> getId() {
+			return id;
 		}
 	}
 }

@@ -1,10 +1,10 @@
 package net.puffish.skillsmod.network;
 
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.util.Identifier;
 
 public interface OutPacket {
 	Identifier getId();
 
-	void write(PacketByteBuf buf);
+	void write(RegistryByteBuf buf);
 }

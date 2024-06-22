@@ -65,6 +65,6 @@ public class LegacyOperationRegistry<T> {
 	}
 
 	private Identifier createId(String name) {
-		return new Identifier(prototype.getId().getNamespace(), "legacy_" + name);
+		return Identifier.of(prototype.getId().getNamespace(), "legacy_" + name);
 	}
 }

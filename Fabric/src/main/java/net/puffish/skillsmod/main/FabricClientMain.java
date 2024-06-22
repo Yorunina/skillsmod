@@ -6,8 +6,10 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.client.option.KeyBinding;
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.client.SkillsClientMod;
 import net.puffish.skillsmod.client.event.ClientEventListener;
@@ -20,9 +22,12 @@ import net.puffish.skillsmod.client.setup.ClientRegistrar;
 import net.puffish.skillsmod.network.InPacket;
 import net.puffish.skillsmod.network.OutPacket;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 public class FabricClientMain implements ClientModInitializer {
+	private final Map<Identifier, CustomPayload.Id<FabricMain.InOutPayload<?>>> outPackets = new HashMap<>();
 
 	@Override
 	public void onInitializeClient() {
@@ -34,20 +39,24 @@ public class FabricClientMain implements ClientModInitializer {
 		);
 	}
 
-	private static class ClientRegistrarImpl implements ClientRegistrar {
+	private class ClientRegistrarImpl implements ClientRegistrar {
 		@Override
-		public <T extends InPacket> void registerInPacket(Identifier id, Function<PacketByteBuf, T> reader, ClientPacketHandler<T> handler) {
+		public <T extends InPacket> void registerInPacket(Identifier id, Function<RegistryByteBuf, T> reader, ClientPacketHandler<T> handler) {
+			var pId = new CustomPayload.Id<FabricMain.InOutPayload<T>>(id);
+			PayloadTypeRegistry.playS2C().register(pId, CustomPayload.codecOf(
+					(value, buf) -> value.outPacket().write(buf),
+					buf -> new FabricMain.InOutPayload<>(pId, reader.apply(buf), null)
+			));
 			ClientPlayNetworking.registerGlobalReceiver(
-					id,
-					(client, handler2, buf, responseSender) -> {
-						var packet = reader.apply(buf);
-						client.execute(() -> handler.handle(packet));
-					}
+					pId,
+					(payload, context) -> handler.handle(payload.inValue())
 			);
 		}
 
 		@Override
-		public void registerOutPacket(Identifier id) { }
+		public void registerOutPacket(Identifier id) {
+			outPackets.put(id, new CustomPayload.Id<>(id));
+		}
 	}
 
 	private static class ClientEventReceiverImpl implements ClientEventReceiver {
@@ -73,12 +82,10 @@ public class FabricClientMain implements ClientModInitializer {
 		}
 	}
 
-	private static class ClientPacketSenderImpl implements ClientPacketSender {
+	private class ClientPacketSenderImpl implements ClientPacketSender {
 		@Override
 		public void send(OutPacket packet) {
-			var buf = new PacketByteBuf(Unpooled.buffer());
-			packet.write(buf);
-			ClientPlayNetworking.send(packet.getId(), buf);
+			ClientPlayNetworking.send(new FabricMain.InOutPayload<>(outPackets.get(packet.getId()), null, packet));
 		}
 	}
 }

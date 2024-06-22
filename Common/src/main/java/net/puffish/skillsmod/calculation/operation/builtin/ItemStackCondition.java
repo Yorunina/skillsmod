@@ -70,7 +70,7 @@ public final class ItemStackCondition implements Operation<ItemStack, Boolean> {
 	@Override
 	public Optional<Boolean> apply(ItemStack itemStack) {
 		return Optional.of(
-				optItemEntries.map(itemStack::itemMatches).orElse(true)
+				optItemEntries.map(itemStack::isIn).orElse(true)
 						&& optNbt.map(nbt -> nbt.test(itemStack)).orElse(true)
 		);
 	}

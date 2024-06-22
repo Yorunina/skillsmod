@@ -1,6 +1,6 @@
 package net.puffish.skillsmod.mixin;
 
-import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.BuiltBuffer;
 import net.puffish.skillsmod.access.BuiltBufferAccess;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.Unique;
 
 import java.util.List;
 
-@Mixin(BufferBuilder.BuiltBuffer.class)
+@Mixin(BuiltBuffer.class)
 public class BuiltBufferMixin implements BuiltBufferAccess {
 	@Unique
 	private List<Matrix4f> emits;

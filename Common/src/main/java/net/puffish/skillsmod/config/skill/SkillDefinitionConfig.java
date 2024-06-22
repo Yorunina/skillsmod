@@ -53,13 +53,13 @@ public class SkillDefinitionConfig {
 		var problems = new ArrayList<Problem>();
 
 		var optTitle = rootObject.get("title")
-				.andThen(BuiltinJson::parseText)
+				.andThen(titleElement -> BuiltinJson.parseText(titleElement, context.getServer().getRegistryManager()))
 				.ifFailure(problems::add)
 				.getSuccess();
 
 		var description = rootObject.get("description")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(descriptionElement -> BuiltinJson.parseText(descriptionElement)
+				.flatMap(descriptionElement -> BuiltinJson.parseText(descriptionElement, context.getServer().getRegistryManager())
 						.ifFailure(problems::add)
 						.getSuccess()
 				)
@@ -67,7 +67,7 @@ public class SkillDefinitionConfig {
 
 		var extraDescription = rootObject.get("extra_description")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(descriptionElement -> BuiltinJson.parseText(descriptionElement)
+				.flatMap(descriptionElement -> BuiltinJson.parseText(descriptionElement, context.getServer().getRegistryManager())
 						.ifFailure(problems::add)
 						.getSuccess()
 				)

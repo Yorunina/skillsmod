@@ -366,16 +366,15 @@ public class TextureBatchedRenderer {
 
 	public void draw() {
 		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-		RenderSystem.setShader(GameRenderer::getPositionColorTexProgram);
+		RenderSystem.setShader(GameRenderer::getPositionTexColorProgram);
 		for (var entry : batch.entrySet()) {
 			RenderSystem.setShaderTexture(0, entry.getKey());
-			var bufferBuilder = Tessellator.getInstance().getBuffer();
-			bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR_TEXTURE);
+			var bufferBuilder = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
 			for (var emit : entry.getValue()) {
-				bufferBuilder.vertex(emit.x1, emit.y1, emit.z1).color(emit.color.x(), emit.color.y(), emit.color.z(), emit.color.w()).texture(emit.minU, emit.minV).next();
-				bufferBuilder.vertex(emit.x2, emit.y2, emit.z2).color(emit.color.x(), emit.color.y(), emit.color.z(), emit.color.w()).texture(emit.minU, emit.maxV).next();
-				bufferBuilder.vertex(emit.x3, emit.y3, emit.z3).color(emit.color.x(), emit.color.y(), emit.color.z(), emit.color.w()).texture(emit.maxU, emit.maxV).next();
-				bufferBuilder.vertex(emit.x4, emit.y4, emit.z4).color(emit.color.x(), emit.color.y(), emit.color.z(), emit.color.w()).texture(emit.maxU, emit.minV).next();
+				bufferBuilder.vertex(emit.x1, emit.y1, emit.z1).color(emit.color.x(), emit.color.y(), emit.color.z(), emit.color.w()).texture(emit.minU, emit.minV);
+				bufferBuilder.vertex(emit.x2, emit.y2, emit.z2).color(emit.color.x(), emit.color.y(), emit.color.z(), emit.color.w()).texture(emit.minU, emit.maxV);
+				bufferBuilder.vertex(emit.x3, emit.y3, emit.z3).color(emit.color.x(), emit.color.y(), emit.color.z(), emit.color.w()).texture(emit.maxU, emit.maxV);
+				bufferBuilder.vertex(emit.x4, emit.y4, emit.z4).color(emit.color.x(), emit.color.y(), emit.color.z(), emit.color.w()).texture(emit.maxU, emit.minV);
 			}
 			BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
 		}

@@ -1,6 +1,7 @@
 package net.puffish.skillsmod.config;
 
 import net.minecraft.text.Text;
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
@@ -39,16 +40,16 @@ public class GeneralConfig {
 		this.spentPointsLimit = spentPointsLimit;
 	}
 
-	public static Result<GeneralConfig, Problem> parse(JsonElement rootElement) {
+	public static Result<GeneralConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject()
-				.andThen(GeneralConfig::parse);
+				.andThen(rootObject -> parse(rootObject, context));
 	}
 
-	public static Result<GeneralConfig, Problem> parse(JsonObject rootObject) {
+	public static Result<GeneralConfig, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
 		var optTitle = rootObject.get("title")
-				.andThen(BuiltinJson::parseText)
+				.andThen(titleElement -> BuiltinJson.parseText(titleElement, context.getServer().getRegistryManager()))
 				.ifFailure(problems::add)
 				.getSuccess();
 

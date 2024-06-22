@@ -8,6 +8,7 @@ import net.minecraft.client.gui.screen.advancement.AdvancementObtainedStatus;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.texture.Scaling;
+import net.minecraft.registry.Registries;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
@@ -42,13 +43,13 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 
 public class SkillsScreen extends Screen {
-	private static final Identifier WINDOW_TEXTURE = new Identifier("textures/gui/advancements/window.png");
-	private static final Identifier EXPERIENCE_BAR_BACKGROUND_TEXTURE = new Identifier("hud/experience_bar_background");
-	private static final Identifier EXPERIENCE_BAR_PROGRESS_TEXTURE = new Identifier("hud/experience_bar_progress");
-	private static final Identifier TAB_ABOVE_LEFT_SELECTED_TEXTURE = new Identifier("advancements/tab_above_left_selected");
-	private static final Identifier TAB_ABOVE_MIDDLE_SELECTED_TEXTURE = new Identifier("advancements/tab_above_middle_selected");
-	private static final Identifier TAB_ABOVE_LEFT_TEXTURE = new Identifier("advancements/tab_above_left");
-	private static final Identifier TAB_ABOVE_MIDDLE_TEXTURE = new Identifier("advancements/tab_above_middle");
+	private static final Identifier WINDOW_TEXTURE = Identifier.of("textures/gui/advancements/window.png");
+	private static final Identifier EXPERIENCE_BAR_BACKGROUND_TEXTURE = Identifier.of("hud/experience_bar_background");
+	private static final Identifier EXPERIENCE_BAR_PROGRESS_TEXTURE = Identifier.of("hud/experience_bar_progress");
+	private static final Identifier TAB_ABOVE_LEFT_SELECTED_TEXTURE = Identifier.of("advancements/tab_above_left_selected");
+	private static final Identifier TAB_ABOVE_MIDDLE_SELECTED_TEXTURE = Identifier.of("advancements/tab_above_middle_selected");
+	private static final Identifier TAB_ABOVE_LEFT_TEXTURE = Identifier.of("advancements/tab_above_left");
+	private static final Identifier TAB_ABOVE_MIDDLE_TEXTURE = Identifier.of("advancements/tab_above_middle");
 
 	private static final int TEXTURE_WIDTH = 256;
 	private static final int TEXTURE_HEIGHT = 256;
@@ -348,7 +349,7 @@ public class SkillsScreen extends Screen {
 			);
 		} else if (icon instanceof ClientIconConfig.EffectIconConfig effectIcon) {
 			matrices.translate(0f, 0f, 1f);
-			var sprite = client.getStatusEffectSpriteManager().getSprite(effectIcon.effect());
+			var sprite = client.getStatusEffectSpriteManager().getSprite(Registries.STATUS_EFFECT.getEntry(effectIcon.effect()));
 			var halfSize = Math.round(9f * sizeScale);
 			var size = halfSize * 2;
 			textureRenderer.emitSprite(
