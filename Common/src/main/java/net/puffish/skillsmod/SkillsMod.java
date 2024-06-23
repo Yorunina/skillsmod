@@ -39,7 +39,6 @@ import net.puffish.skillsmod.commands.SkillsCommand;
 import net.puffish.skillsmod.config.CategoryConfig;
 import net.puffish.skillsmod.config.ModConfig;
 import net.puffish.skillsmod.config.PackConfig;
-import net.puffish.skillsmod.config.experience.ExperienceSourceConfig;
 import net.puffish.skillsmod.config.reader.ConfigReader;
 import net.puffish.skillsmod.config.reader.FileConfigReader;
 import net.puffish.skillsmod.config.reader.PackConfigReader;
@@ -51,8 +50,8 @@ import net.puffish.skillsmod.experience.source.builtin.IncreaseStatExperienceSou
 import net.puffish.skillsmod.experience.source.builtin.KillEntityExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.MineBlockExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.TakeDamageExperienceSource;
-import net.puffish.skillsmod.impl.rewards.RewardUpdateContextImpl;
 import net.puffish.skillsmod.impl.config.ConfigContextImpl;
+import net.puffish.skillsmod.impl.rewards.RewardUpdateContextImpl;
 import net.puffish.skillsmod.network.Packets;
 import net.puffish.skillsmod.reward.builtin.AttributeReward;
 import net.puffish.skillsmod.reward.builtin.CommandReward;
@@ -125,7 +124,7 @@ public class SkillsMod {
 			ServerEventReceiver eventReceiver,
 			ServerPacketSender packetSender
 	) {
-		Path modConfigDir = configDir.resolve(SkillsAPI.MOD_ID);
+		var modConfigDir = configDir.resolve(SkillsAPI.MOD_ID);
 		try {
 			Files.createDirectories(modConfigDir);
 		} catch (IOException e) {
@@ -547,7 +546,7 @@ public class SkillsMod {
 	}
 
 	private void syncExperience(ServerPlayerEntity player, CategoryConfig category, CategoryData categoryData) {
-		int level = categoryData.getCurrentLevel(category);
+		var level = categoryData.getCurrentLevel(category);
 		packetSender.send(player, new ExperienceUpdateOutPacket(
 				category.getId(),
 				level,
@@ -557,18 +556,18 @@ public class SkillsMod {
 	}
 
 	public void refreshReward(ServerPlayerEntity player, Predicate<SkillRewardConfig> reward) {
-		for (CategoryConfig category : getAllCategories()) {
+		for (var category : getAllCategories()) {
 			getCategoryDataIfUnlocked(player, category)
 					.ifPresent(categoryData -> categoryData.refreshReward(category, player, reward));
 		}
 	}
 
 	public void visitExperienceSources(ServerPlayerEntity player, Function<ExperienceSource, Integer> function) {
-		for (CategoryConfig category : getAllCategories()) {
+		for (var category : getAllCategories()) {
 			category.getExperience().ifPresent(experience -> getCategoryDataIfUnlocked(player, category).ifPresent(categoryData -> {
-				int amount = 0;
+				var amount = 0;
 
-				for (ExperienceSourceConfig experienceSource : experience.getExperienceSources()) {
+				for (var experienceSource : experience.getExperienceSources()) {
 					amount += function.apply(experienceSource.getInstance());
 				}
 

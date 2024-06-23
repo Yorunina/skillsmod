@@ -100,7 +100,7 @@ public class AttributeReward implements Reward {
 
 		createMissingUUIDs(count);
 
-		for (int i = 0; i < uuids.size(); i++) {
+		for (var i = 0; i < uuids.size(); i++) {
 			var uuid = uuids.get(i);
 			if (instance.getModifier(uuid) == null) {
 				if (i < count) {
@@ -121,9 +121,9 @@ public class AttributeReward implements Reward {
 
 	@Override
 	public void dispose(RewardDisposeContext context) {
-		for (ServerPlayerEntity player : context.getServer().getPlayerManager().getPlayerList()) {
+		for (var player : context.getServer().getPlayerManager().getPlayerList()) {
 			var instance = Objects.requireNonNull(player.getAttributeInstance(attribute));
-			for (UUID uuid : uuids) {
+			for (var uuid : uuids) {
 				instance.removeModifier(uuid);
 			}
 		}
