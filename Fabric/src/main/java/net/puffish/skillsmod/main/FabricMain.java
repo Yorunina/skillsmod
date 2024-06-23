@@ -1,6 +1,7 @@
 package net.puffish.skillsmod.main;
 
 import com.mojang.brigadier.arguments.ArgumentType;
+import io.netty.buffer.Unpooled;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.ArgumentTypeRegistry;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -94,7 +95,9 @@ public class FabricMain implements ModInitializer {
 	private static class ServerPacketSenderImpl implements ServerPacketSender {
 		@Override
 		public void send(ServerPlayerEntity player, OutPacket packet) {
-			ServerPlayNetworking.send(player, packet.getIdentifier(), packet.getBuf());
+			var buf = new PacketByteBuf(Unpooled.buffer());
+			packet.write(buf);
+			ServerPlayNetworking.send(player, packet.getId(), buf);
 		}
 	}
 }

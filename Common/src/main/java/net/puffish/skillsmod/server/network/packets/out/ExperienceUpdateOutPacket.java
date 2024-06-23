@@ -5,14 +5,9 @@ import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.network.OutPacket;
 import net.puffish.skillsmod.network.Packets;
 
-public class ExperienceUpdateOutPacket extends OutPacket {
-	public static ExperienceUpdateOutPacket write(Identifier categoryId, int currentLevel, int currentExperience, int requiredExperience) {
-		var packet = new ExperienceUpdateOutPacket();
-		write(packet.buf, categoryId, currentLevel, currentExperience, requiredExperience);
-		return packet;
-	}
-
-	public static void write(PacketByteBuf buf, Identifier categoryId, int currentLevel, int currentExperience, int requiredExperience) {
+public record ExperienceUpdateOutPacket(Identifier categoryId, int currentLevel, int currentExperience, int requiredExperience) implements OutPacket {
+	@Override
+	public void write(PacketByteBuf buf) {
 		buf.writeIdentifier(categoryId);
 		buf.writeInt(currentLevel);
 		buf.writeInt(currentExperience);
@@ -20,7 +15,7 @@ public class ExperienceUpdateOutPacket extends OutPacket {
 	}
 
 	@Override
-	public Identifier getIdentifier() {
+	public Identifier getId() {
 		return Packets.EXPERIENCE_UPDATE;
 	}
 }

@@ -232,7 +232,7 @@ public class SkillsScreen extends Screen {
 				if (isInsideSkill(transformedMouse, skill, definition)) {
 					SkillsClientMod.getInstance()
 							.getPacketSender()
-							.send(SkillClickOutPacket.write(activeCategory.id(), skill.id()));
+							.send(new SkillClickOutPacket(activeCategory.id(), skill.id()));
 				}
 			}
 

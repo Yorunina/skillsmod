@@ -5,14 +5,9 @@ import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.network.OutPacket;
 import net.puffish.skillsmod.network.Packets;
 
-public class PointsUpdateOutPacket extends OutPacket {
-	public static PointsUpdateOutPacket write(Identifier categoryId, int spentPoints, int earnedPoints, boolean announceNewPoints) {
-		var packet = new PointsUpdateOutPacket();
-		write(packet.buf, categoryId, spentPoints, earnedPoints, announceNewPoints);
-		return packet;
-	}
-
-	public static void write(PacketByteBuf buf, Identifier categoryId, int spentPoints, int earnedPoints, boolean announceNewPoints) {
+public record PointsUpdateOutPacket(Identifier categoryId, int spentPoints, int earnedPoints, boolean announceNewPoints) implements OutPacket {
+	@Override
+	public void write(PacketByteBuf buf) {
 		buf.writeIdentifier(categoryId);
 		buf.writeInt(spentPoints);
 		buf.writeInt(earnedPoints);
@@ -20,7 +15,7 @@ public class PointsUpdateOutPacket extends OutPacket {
 	}
 
 	@Override
-	public Identifier getIdentifier() {
+	public Identifier getId() {
 		return Packets.POINTS_UPDATE;
 	}
 }

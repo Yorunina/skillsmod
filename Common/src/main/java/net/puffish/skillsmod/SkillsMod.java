@@ -323,7 +323,7 @@ public class SkillsMod {
 	private void tryUnlockSkill(ServerPlayerEntity player, Identifier categoryId, String skillId, boolean force) {
 		getCategory(categoryId).ifPresent(category -> getCategoryDataIfUnlocked(player, category).ifPresent(categoryData -> {
 			if (categoryData.tryUnlockSkill(category, player, skillId, force)) {
-				packetSender.send(player, SkillUpdateOutPacket.write(categoryId, skillId, true));
+				packetSender.send(player, new SkillUpdateOutPacket(categoryId, skillId, true));
 				syncPoints(player, category, categoryData);
 			}
 		}));
@@ -332,7 +332,7 @@ public class SkillsMod {
 	public void lockSkill(ServerPlayerEntity player, Identifier categoryId, String skillId) {
 		getCategory(categoryId).ifPresent(category -> getCategoryDataIfUnlocked(player, category).ifPresent(categoryData -> {
 			categoryData.lockSkill(skillId);
-			packetSender.send(player, SkillUpdateOutPacket.write(categoryId, skillId, false));
+			packetSender.send(player, new SkillUpdateOutPacket(categoryId, skillId, false));
 			applyRewards(player, category, categoryData);
 			syncPoints(player, category, categoryData);
 		}));
@@ -530,15 +530,15 @@ public class SkillsMod {
 	}
 
 	private void showCategory(ServerPlayerEntity player, CategoryConfig category, CategoryData categoryData) {
-		packetSender.send(player, ShowCategoryOutPacket.write(category, categoryData));
+		packetSender.send(player, new ShowCategoryOutPacket(category, categoryData));
 	}
 
 	private void hideCategory(ServerPlayerEntity player, CategoryConfig category) {
-		packetSender.send(player, HideCategoryOutPacket.write(category.getId()));
+		packetSender.send(player, new HideCategoryOutPacket(category.getId()));
 	}
 
 	private void syncPoints(ServerPlayerEntity player, CategoryConfig category, CategoryData categoryData) {
-		packetSender.send(player, PointsUpdateOutPacket.write(
+		packetSender.send(player, new PointsUpdateOutPacket(
 				category.getId(),
 				categoryData.getSpentPoints(category),
 				categoryData.getEarnedPoints(category),
@@ -548,7 +548,7 @@ public class SkillsMod {
 
 	private void syncExperience(ServerPlayerEntity player, CategoryConfig category, CategoryData categoryData) {
 		int level = categoryData.getCurrentLevel(category);
-		packetSender.send(player, ExperienceUpdateOutPacket.write(
+		packetSender.send(player, new ExperienceUpdateOutPacket(
 				category.getId(),
 				level,
 				categoryData.getCurrentExperience(category),
@@ -649,12 +649,12 @@ public class SkillsMod {
 
 	private void showToast(ServerPlayerEntity player, ToastType type) {
 		if (isOperatorOrHost(player)) {
-			packetSender.send(player, ShowToastOutPacket.write(type));
+			packetSender.send(player, new ShowToastOutPacket(type));
 		}
 	}
 
 	public void openScreen(ServerPlayerEntity player, Optional<Identifier> categoryId) {
-		packetSender.send(player, OpenScreenOutPacket.write(categoryId));
+		packetSender.send(player, new OpenScreenOutPacket(categoryId));
 	}
 
 	private boolean isConfigValid() {

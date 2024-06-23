@@ -166,8 +166,10 @@ public class NeoForgeMain {
 	private static class ServerPacketSenderImpl implements ServerPacketSender {
 		@Override
 		public void send(ServerPlayerEntity player, OutPacket packet) {
+			var buf = new PacketByteBuf(Unpooled.buffer());
+			packet.write(buf);
 			player.networkHandler.sendPacket(new CustomPayloadS2CPacket(
-					new SharedCustomPayload(packet.getIdentifier(), packet.getBuf())
+					new SharedCustomPayload(packet.getId(), buf)
 			));
 		}
 	}
