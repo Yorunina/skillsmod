@@ -299,7 +299,7 @@ public class SkillsScreen extends Screen {
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
-		float factor = (float) Math.pow(2, amount * 0.25);
+		var factor = (float) Math.pow(2, amount * 0.25);
 
 		scale *= factor;
 
@@ -345,7 +345,7 @@ public class SkillsScreen extends Screen {
 		} else if (icon instanceof ClientIconConfig.EffectIconConfig effectIcon) {
 			matrices.translate(0f, 0f, 1f);
 			var sprite = client.getStatusEffectSpriteManager().getSprite(effectIcon.effect());
-			int halfSize = Math.round(9f * sizeScale);
+			var halfSize = Math.round(9f * sizeScale);
 			var size = halfSize * 2;
 			textureRenderer.emitSpriteStretch(
 					matrices, sprite,

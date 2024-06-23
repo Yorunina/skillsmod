@@ -61,7 +61,7 @@ public class CategoryData {
 		nbt.putInt("points", extraPoints);
 		nbt.putInt("experience", earnedExperience);
 
-		NbtList unlockedNbt = new NbtList();
+		var unlockedNbt = new NbtList();
 		for (var skill : unlockedSkills) {
 			unlockedNbt.add(NbtString.of(skill));
 		}
@@ -120,7 +120,7 @@ public class CategoryData {
 				if (force || getSkillState(category, skill, definition) == Skill.State.AFFORDABLE) {
 					unlockSkill(skillId);
 
-					int count = countUnlocked(category, definitionId);
+					var count = countUnlocked(category, definitionId);
 
 					for (var reward : definition.getRewards()) {
 						reward.getInstance().update(new RewardUpdateContextImpl(player, count, true));
@@ -147,7 +147,7 @@ public class CategoryData {
 
 	public void refreshReward(CategoryConfig category, ServerPlayerEntity player, Predicate<SkillRewardConfig> predicate) {
 		for (var definition : category.getDefinitions().getAll()) {
-			int count = countUnlocked(category, definition.getId());
+			var count = countUnlocked(category, definition.getId());
 
 			for (var reward : definition.getRewards()) {
 				if (predicate.test(reward)) {
@@ -159,7 +159,7 @@ public class CategoryData {
 
 	public void applyRewards(CategoryConfig category, ServerPlayerEntity player) {
 		for (var definition : category.getDefinitions().getAll()) {
-			int count = countUnlocked(category, definition.getId());
+			var count = countUnlocked(category, definition.getId());
 
 			for (var reward : definition.getRewards()) {
 				reward.getInstance().update(new RewardUpdateContextImpl(player, count, false));

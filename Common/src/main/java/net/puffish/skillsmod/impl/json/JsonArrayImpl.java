@@ -33,7 +33,7 @@ public class JsonArrayImpl implements JsonArray {
 		var successes = new ArrayList<S>();
 		var failures = new ArrayList<F>();
 
-		for (int i = 0; i < json.size(); i++) {
+		for (var i = 0; i < json.size(); i++) {
 			function.apply(i, new JsonElementImpl(json.get(i), path.getArray(i)))
 					.ifSuccess(successes::add)
 					.ifFailure(failures::add);
