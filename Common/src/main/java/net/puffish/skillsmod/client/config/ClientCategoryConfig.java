@@ -99,7 +99,7 @@ public record ClientCategoryConfig(
 	}
 
 	public Bounds2i getBounds() {
-		Bounds2i bounds = Bounds2i.zero();
+		var bounds = Bounds2i.zero();
 		for (var skill : skills.values()) {
 			bounds.extend(new Vector2i(skill.x(), skill.y()));
 		}
