@@ -5,19 +5,14 @@ import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.network.OutPacket;
 import net.puffish.skillsmod.network.Packets;
 
-public class HideCategoryOutPacket extends OutPacket {
-	public static HideCategoryOutPacket write(Identifier categoryId) {
-		var packet = new HideCategoryOutPacket();
-		write(packet.buf, categoryId);
-		return packet;
-	}
-
-	public static void write(PacketByteBuf buf, Identifier categoryId) {
+public record HideCategoryOutPacket(Identifier categoryId) implements OutPacket {
+	@Override
+	public void write(PacketByteBuf buf) {
 		buf.writeIdentifier(categoryId);
 	}
 
 	@Override
-	public Identifier getIdentifier() {
+	public Identifier getId() {
 		return Packets.HIDE_CATEGORY;
 	}
 }
