@@ -1,5 +1,6 @@
 package net.puffish.skillsmod.main;
 
+import io.netty.buffer.Unpooled;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.network.PacketByteBuf;
@@ -104,9 +105,11 @@ public class ForgeClientMain {
 	private static class ClientPacketSenderImpl implements ClientPacketSender {
 		@Override
 		public void send(OutPacket packet) {
+			var buf = new PacketByteBuf(Unpooled.buffer());
+			packet.write(buf);
 			Objects.requireNonNull(MinecraftClient.getInstance().getNetworkHandler())
 					.sendPacket(new CustomPayloadC2SPacket(
-							new UnknownCustomPayload(packet.getIdentifier(), packet.getBuf())
+							new UnknownCustomPayload(packet.getId(), buf)
 					));
 		}
 	}
