@@ -48,7 +48,7 @@ public class SkillArgumentType implements ArgumentType<String> {
 
 	@Override
 	public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
-		S source = context.getSource();
+		var source = context.getSource();
 		if (source instanceof ServerCommandSource) {
 			var categoryId = SkillsMod.convertIdentifier(context.getArgument(categoryArgumentName, Identifier.class));
 			SkillsMod.getInstance()

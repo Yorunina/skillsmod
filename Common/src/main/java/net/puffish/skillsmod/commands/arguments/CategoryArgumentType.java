@@ -61,7 +61,7 @@ public class CategoryArgumentType implements ArgumentType<Identifier> {
 
 	@Override
 	public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
-		S source = context.getSource();
+		var source = context.getSource();
 		if (source instanceof ServerCommandSource) {
 			CommandUtils.suggestIdentifiers(SkillsMod.getInstance().getCategories(onlyWithExperience), builder);
 			return builder.buildFuture();
