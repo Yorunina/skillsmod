@@ -63,7 +63,7 @@ public class ExperienceConfig {
 	}
 
 	public int getRequiredTotalExperience(int level) {
-		int total = 0;
+		var total = 0;
 		for (var i = 0; i < level; i++) {
 			total += getRequiredExperience(level);
 		}
@@ -71,10 +71,10 @@ public class ExperienceConfig {
 	}
 
 	public int getCurrentExperience(int earnedExperience) {
-		int level = 0;
+		var level = 0;
 
 		while (true) {
-			int requiredExperience = getRequiredExperience(level);
+			var requiredExperience = getRequiredExperience(level);
 
 			if (earnedExperience < requiredExperience) {
 				return earnedExperience;
@@ -86,10 +86,10 @@ public class ExperienceConfig {
 	}
 
 	public int getCurrentLevel(int earnedExperience) {
-		int level = 0;
+		var level = 0;
 
 		while (true) {
-			int requiredExperience = getRequiredExperience(level);
+			var requiredExperience = getRequiredExperience(level);
 
 			if (earnedExperience < requiredExperience) {
 				return level;
