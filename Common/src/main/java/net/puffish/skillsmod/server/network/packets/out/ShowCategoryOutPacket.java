@@ -19,14 +19,10 @@ import net.puffish.skillsmod.skill.SkillConnection;
 
 import java.util.Optional;
 
-public class ShowCategoryOutPacket extends OutPacket {
-	public static ShowCategoryOutPacket write(CategoryConfig category, CategoryData categoryData) {
-		var packet = new ShowCategoryOutPacket();
-		write(packet.buf, category, categoryData);
-		return packet;
-	}
+public record ShowCategoryOutPacket(CategoryConfig category, CategoryData categoryData) implements OutPacket {
 
-	public static void write(PacketByteBuf buf, CategoryConfig category, CategoryData categoryData) {
+	@Override
+	public void write(PacketByteBuf buf) {
 		buf.writeIdentifier(category.getId());
 		write(buf, category.getGeneral());
 		write(buf, category.getDefinitions());
@@ -56,11 +52,11 @@ public class ShowCategoryOutPacket extends OutPacket {
 		}
 	}
 
-	public static void write(PacketByteBuf buf, SkillDefinitionsConfig definitions) {
-		buf.writeCollection(definitions.getAll(), ShowCategoryOutPacket::write);
+	public void write(PacketByteBuf buf, SkillDefinitionsConfig definitions) {
+		buf.writeCollection(definitions.getAll(), (buf1, definition) -> write(buf, definition));
 	}
 
-	public static void write(PacketByteBuf buf, GeneralConfig general) {
+	public void write(PacketByteBuf buf, GeneralConfig general) {
 		buf.writeText(general.getTitle());
 		write(buf, general.getIcon());
 		write(buf, general.getBackground());
@@ -69,7 +65,7 @@ public class ShowCategoryOutPacket extends OutPacket {
 		buf.writeInt(general.getSpentPointsLimit());
 	}
 
-	public static void write(PacketByteBuf buf, SkillDefinitionConfig definition) {
+	public void write(PacketByteBuf buf, SkillDefinitionConfig definition) {
 		buf.writeString(definition.getId());
 		buf.writeText(definition.getTitle());
 		buf.writeText(definition.getDescription());
@@ -83,11 +79,11 @@ public class ShowCategoryOutPacket extends OutPacket {
 		buf.writeInt(definition.getRequiredSpentPoints());
 	}
 
-	public static void write(PacketByteBuf buf, SkillsConfig skills) {
+	public void write(PacketByteBuf buf, SkillsConfig skills) {
 		buf.writeCollection(skills.getAll(), ShowCategoryOutPacket::write);
 	}
 
-	public static void write(PacketByteBuf buf, SkillConnectionsConfig connections) {
+	public void write(PacketByteBuf buf, SkillConnectionsConfig connections) {
 		buf.writeCollection(connections.getNormal().getAll(), ShowCategoryOutPacket::write);
 		buf.writeCollection(connections.getExclusive().getAll(), ShowCategoryOutPacket::write);
 	}
@@ -121,7 +117,7 @@ public class ShowCategoryOutPacket extends OutPacket {
 	}
 
 	@Override
-	public Identifier getIdentifier() {
+	public Identifier getId() {
 		return Packets.SHOW_CATEGORY;
 	}
 }

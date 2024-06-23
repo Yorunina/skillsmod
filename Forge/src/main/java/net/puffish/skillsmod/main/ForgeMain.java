@@ -1,6 +1,7 @@
 package net.puffish.skillsmod.main;
 
 import com.mojang.brigadier.arguments.ArgumentType;
+import io.netty.buffer.Unpooled;
 import net.minecraft.command.argument.ArgumentTypes;
 import net.minecraft.command.argument.serialize.ArgumentSerializer;
 import net.minecraft.network.PacketByteBuf;
@@ -147,7 +148,9 @@ public class ForgeMain {
 	private static class ServerPacketSenderImpl implements ServerPacketSender {
 		@Override
 		public void send(ServerPlayerEntity player, OutPacket packet) {
-			player.networkHandler.sendPacket(new CustomPayloadS2CPacket(packet.getIdentifier(), packet.getBuf()));
+			var buf = new PacketByteBuf(Unpooled.buffer());
+			packet.write(buf);
+			player.networkHandler.sendPacket(new CustomPayloadS2CPacket(packet.getId(), buf));
 		}
 	}
 }

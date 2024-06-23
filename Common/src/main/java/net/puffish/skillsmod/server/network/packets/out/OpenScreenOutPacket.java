@@ -7,15 +7,14 @@ import net.puffish.skillsmod.network.Packets;
 
 import java.util.Optional;
 
-public class OpenScreenOutPacket extends OutPacket {
-	public static OpenScreenOutPacket write(Optional<Identifier> category) {
-		var packet = new OpenScreenOutPacket();
-		packet.buf.writeOptional(category, PacketByteBuf::writeIdentifier);
-		return packet;
+public record OpenScreenOutPacket(Optional<Identifier> category) implements OutPacket {
+	@Override
+	public void write(PacketByteBuf buf) {
+		buf.writeOptional(category, PacketByteBuf::writeIdentifier);
 	}
 
 	@Override
-	public Identifier getIdentifier() {
+	public Identifier getId() {
 		return Packets.OPEN_SCREEN;
 	}
 }
