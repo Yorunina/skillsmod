@@ -1,5 +1,6 @@
 package net.puffish.skillsmod.main;
 
+import io.netty.buffer.Unpooled;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -75,7 +76,9 @@ public class FabricClientMain implements ClientModInitializer {
 	private static class ClientPacketSenderImpl implements ClientPacketSender {
 		@Override
 		public void send(OutPacket packet) {
-			ClientPlayNetworking.send(packet.getIdentifier(), packet.getBuf());
+			var buf = new PacketByteBuf(Unpooled.buffer());
+			packet.write(buf);
+			ClientPlayNetworking.send(packet.getId(), buf);
 		}
 	}
 }

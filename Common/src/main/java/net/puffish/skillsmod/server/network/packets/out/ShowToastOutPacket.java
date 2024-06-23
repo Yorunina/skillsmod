@@ -1,19 +1,19 @@
 package net.puffish.skillsmod.server.network.packets.out;
 
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.network.OutPacket;
 import net.puffish.skillsmod.network.Packets;
 import net.puffish.skillsmod.util.ToastType;
 
-public class ShowToastOutPacket extends OutPacket {
-	public static ShowToastOutPacket write(ToastType type) {
-		var packet = new ShowToastOutPacket();
-		packet.buf.writeEnumConstant(type);
-		return packet;
+public record ShowToastOutPacket(ToastType type) implements OutPacket {
+	@Override
+	public void write(PacketByteBuf buf) {
+		buf.writeEnumConstant(type);
 	}
 
 	@Override
-	public Identifier getIdentifier() {
+	public Identifier getId() {
 		return Packets.SHOW_TOAST;
 	}
 }
