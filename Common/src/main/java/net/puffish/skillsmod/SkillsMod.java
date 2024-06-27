@@ -333,6 +333,7 @@ public class SkillsMod {
 		getCategory(categoryId).ifPresent(category -> getCategoryDataIfUnlocked(player, category).ifPresent(categoryData -> {
 			categoryData.lockSkill(skillId);
 			packetSender.send(player, SkillUpdateOutPacket.write(categoryId, skillId, false));
+			applyRewards(player, category, categoryData);
 			syncPoints(player, category, categoryData);
 		}));
 	}
