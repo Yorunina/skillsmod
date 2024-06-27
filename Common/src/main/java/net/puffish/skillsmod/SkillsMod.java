@@ -557,8 +557,8 @@ public class SkillsMod {
 
 	public void refreshReward(ServerPlayerEntity player, Predicate<SkillRewardConfig> reward) {
 		for (CategoryConfig category : getAllCategories()) {
-			var categoryData = getPlayerData(player).getCategoryData(category);
-			categoryData.refreshReward(category, player, reward);
+			getCategoryDataIfUnlocked(player, category)
+					.ifPresent(categoryData -> categoryData.refreshReward(category, player, reward));
 		}
 	}
 
