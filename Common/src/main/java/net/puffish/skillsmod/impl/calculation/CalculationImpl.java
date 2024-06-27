@@ -26,9 +26,8 @@ public class CalculationImpl<T> implements Calculation<T> {
 	@Override
 	public double evaluate(T t) {
 		return cases.stream()
-				.flatMap(calc -> calc.getValue(variables.evaluate(t)).stream())
-				.findFirst()
-				.orElse(0.0);
+				.mapToDouble(calc -> calc.getValue(variables.evaluate(t)).orElse(0.0))
+				.sum();
 	}
 
 	public static <T> Result<CalculationImpl<T>, Problem> create(
