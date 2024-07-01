@@ -1,7 +1,6 @@
 package net.puffish.skillsmod.experience.source.builtin;
 
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -21,23 +20,14 @@ import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.calculation.LegacyCalculation;
-import net.puffish.skillsmod.calculation.operation.LegacyOperationRegistry;
-import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
-import net.puffish.skillsmod.calculation.operation.builtin.DamageTypeCondition;
-import net.puffish.skillsmod.calculation.operation.builtin.EffectOperation;
-import net.puffish.skillsmod.calculation.operation.builtin.EntityTypeCondition;
-import net.puffish.skillsmod.calculation.operation.builtin.ItemStackCondition;
-import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyDamageTypeTagCondition;
-import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyEntityTypeTagCondition;
-import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyItemTagCondition;
 import net.puffish.skillsmod.experience.source.builtin.util.AntiFarmingPerChunk;
 
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.function.Function;
 
-public class KillEntityExperienceSource implements ExperienceSource {
-	private static final Identifier ID = SkillsMod.createIdentifier("kill_entity");
+public class SharedKillEntityExperienceSource implements ExperienceSource {
+	private static final Identifier ID = SkillsMod.createIdentifier("shared_kill_entity");
 	private static final Prototype<Data> PROTOTYPE = Prototype.create(ID);
 
 	static {
@@ -66,70 +56,27 @@ public class KillEntityExperienceSource implements ExperienceSource {
 				BuiltinPrototypes.NUMBER,
 				OperationFactory.create(Data::entityDroppedXp)
 		);
-
-		// Backwards compatibility.
-		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
-		legacy.registerBooleanFunction(
-				"entity",
-				EntityTypeCondition::parse,
-				data -> data.entity().getType()
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("total_damage"),
+				BuiltinPrototypes.NUMBER,
+				OperationFactory.create(Data::totalDamage)
 		);
-		legacy.registerBooleanFunction(
-				"entity_tag",
-				LegacyEntityTypeTagCondition::parse,
-				data -> data.entity().getType()
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("participants"),
+				BuiltinPrototypes.NUMBER,
+				OperationFactory.create(data -> (double) data.participants)
 		);
-		legacy.registerBooleanFunction(
-				"weapon",
-				ItemStackCondition::parse,
-				Data::weapon
-		);
-		legacy.registerBooleanFunction(
-				"weapon_nbt",
-				ItemStackCondition::parse,
-				Data::weapon
-		);
-		legacy.registerBooleanFunction(
-				"weapon_tag",
-				LegacyItemTagCondition::parse,
-				Data::weapon
-		);
-		legacy.registerBooleanFunction(
-				"damage_type",
-				DamageTypeCondition::parse,
-				data -> data.damageSource().getType()
-		);
-		legacy.registerBooleanFunction(
-				"damage_type_tag",
-				LegacyDamageTypeTagCondition::parse,
-				data -> data.damageSource().getType()
-		);
-		legacy.registerNumberFunction(
-				"player_effect",
-				effect -> (double) (effect.getAmplifier() + 1),
-				EffectOperation::parse,
-				Data::player
-		);
-		legacy.registerNumberFunction(
-				"player_attribute",
-				EntityAttributeInstance::getValue,
-				AttributeOperation::parse,
-				Data::player
-		);
-		legacy.registerNumberFunction(
-				"entity_dropped_experience",
-				Data::entityDroppedXp
-		);
-		legacy.registerNumberFunction(
-				"entity_max_health",
-				data -> (double) data.entity().getMaxHealth()
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("share"),
+				BuiltinPrototypes.NUMBER,
+				OperationFactory.create(Data::share)
 		);
 	}
 
 	private final Calculation<Data> calculation;
 	private final Optional<AntiFarmingPerChunk> optAntiFarming;
 
-	private KillEntityExperienceSource(Calculation<Data> calculation, Optional<AntiFarmingPerChunk> optAntiFarming) {
+	private SharedKillEntityExperienceSource(Calculation<Data> calculation, Optional<AntiFarmingPerChunk> optAntiFarming) {
 		this.calculation = calculation;
 		this.optAntiFarming = optAntiFarming;
 	}
@@ -137,16 +84,16 @@ public class KillEntityExperienceSource implements ExperienceSource {
 	public static void register() {
 		SkillsAPI.registerExperienceSource(
 				ID,
-				KillEntityExperienceSource::parse
+				SharedKillEntityExperienceSource::parse
 		);
 	}
 
-	private static Result<KillEntityExperienceSource, Problem> parse(ExperienceSourceConfigContext context) {
+	private static Result<SharedKillEntityExperienceSource, Problem> parse(ExperienceSourceConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
 				.andThen(rootObject -> parse(rootObject, context));
 	}
-	private static Result<KillEntityExperienceSource, Problem> parse(JsonObject rootObject, ConfigContext context) {
+	private static Result<SharedKillEntityExperienceSource, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
 		var optCalculation = LegacyCalculation.parse(rootObject, PROTOTYPE, context)
@@ -162,7 +109,7 @@ public class KillEntityExperienceSource implements ExperienceSource {
 				);
 
 		if (problems.isEmpty()) {
-			return Result.success(new KillEntityExperienceSource(
+			return Result.success(new SharedKillEntityExperienceSource(
 					optCalculation.orElseThrow(),
 					optAntiFarming
 			));
@@ -171,11 +118,29 @@ public class KillEntityExperienceSource implements ExperienceSource {
 		}
 	}
 
-	private record Data(ServerPlayerEntity player, LivingEntity entity, ItemStack weapon, DamageSource damageSource, double entityDroppedXp) { }
+	private record Data(
+			ServerPlayerEntity player,
+			LivingEntity entity,
+			ItemStack weapon,
+			DamageSource damageSource,
+			double entityDroppedXp,
+			double totalDamage,
+			int participants,
+			double share
+	) { }
 
-	public int getValue(ServerPlayerEntity player, LivingEntity entity, ItemStack weapon, DamageSource damageSource, double entityDroppedXp) {
+	public int getValue(
+			ServerPlayerEntity player,
+			LivingEntity entity,
+			ItemStack weapon,
+			DamageSource damageSource,
+			double entityDroppedXp,
+			double totalDamage,
+			int participants,
+			double share
+	) {
 		return (int) Math.round(calculation.evaluate(
-				new Data(player, entity, weapon, damageSource, entityDroppedXp)
+				new Data(player, entity, weapon, damageSource, entityDroppedXp, totalDamage, participants, share)
 		));
 	}
 

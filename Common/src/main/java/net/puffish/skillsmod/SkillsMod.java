@@ -45,10 +45,12 @@ import net.puffish.skillsmod.config.reader.PackConfigReader;
 import net.puffish.skillsmod.config.skill.SkillConfig;
 import net.puffish.skillsmod.config.skill.SkillRewardConfig;
 import net.puffish.skillsmod.experience.source.builtin.CraftItemExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.DealDamageExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.EatFoodExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.IncreaseStatExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.KillEntityExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.MineBlockExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.SharedKillEntityExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.TakeDamageExperienceSource;
 import net.puffish.skillsmod.impl.config.ConfigContextImpl;
 import net.puffish.skillsmod.impl.rewards.RewardUpdateContextImpl;
@@ -177,10 +179,12 @@ public class SkillsMod {
 		TagCondition.register();
 
 		CraftItemExperienceSource.register();
+		DealDamageExperienceSource.register();
 		EatFoodExperienceSource.register();
 		IncreaseStatExperienceSource.register();
 		KillEntityExperienceSource.register();
 		MineBlockExperienceSource.register();
+		SharedKillEntityExperienceSource.register();
 		TakeDamageExperienceSource.register();
 	}
 
