@@ -15,6 +15,7 @@ import net.puffish.skillsmod.api.experience.source.ExperienceSourceConfigContext
 import net.puffish.skillsmod.api.experience.source.ExperienceSourceDisposeContext;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
 import net.puffish.skillsmod.calculation.LegacyCalculation;
 import net.puffish.skillsmod.calculation.operation.LegacyOperationRegistry;
 import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
@@ -28,15 +29,52 @@ public class EatFoodExperienceSource implements ExperienceSource {
 
 	static {
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("player"),
+				SkillsMod.createIdentifier("get_player"),
 				BuiltinPrototypes.PLAYER,
 				OperationFactory.create(Data::player)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("eaten_item_stack"),
+				SkillsMod.createIdentifier("get_eaten_item_stack"),
 				BuiltinPrototypes.ITEM_STACK,
 				OperationFactory.create(Data::itemStack)
 		);
+	}
+
+	private final Calculation<Data> calculation;
+
+	private EatFoodExperienceSource(Calculation<Data> calculation) {
+		this.calculation = calculation;
+	}
+
+	public static void register() {
+		SkillsAPI.registerExperienceSource(
+				ID,
+				EatFoodExperienceSource::parse
+		);
+	}
+
+	private static Result<EatFoodExperienceSource, Problem> parse(ExperienceSourceConfigContext context) {
+		return context.getData().andThen(rootElement ->
+				LegacyCalculation.parse(rootElement, PROTOTYPE, context)
+						.mapSuccess(EatFoodExperienceSource::new)
+		);
+	}
+
+	private record Data(ServerPlayerEntity player, ItemStack itemStack) { }
+
+	public int getValue(ServerPlayerEntity player, ItemStack itemStack) {
+		return (int) Math.round(calculation.evaluate(
+				new Data(player, itemStack)
+		));
+	}
+
+	@Override
+	public void dispose(ExperienceSourceDisposeContext context) {
+		// Nothing to do.
+	}
+
+	static {
+
 
 		// Backwards compatibility.
 		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
@@ -81,38 +119,16 @@ public class EatFoodExperienceSource implements ExperienceSource {
 					return fc == null ? 0.0 : fc.getSaturationModifier();
 				}
 		);
-	}
 
-	private final Calculation<Data> calculation;
-
-	private EatFoodExperienceSource(Calculation<Data> calculation) {
-		this.calculation = calculation;
-	}
-
-	public static void register() {
-		SkillsAPI.registerExperienceSource(
-				ID,
-				EatFoodExperienceSource::parse
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("player"),
+				SkillsMod.createIdentifier("get_player")
 		);
-	}
-
-	private static Result<EatFoodExperienceSource, Problem> parse(ExperienceSourceConfigContext context) {
-		return context.getData().andThen(rootElement ->
-				LegacyCalculation.parse(rootElement, PROTOTYPE, context)
-						.mapSuccess(EatFoodExperienceSource::new)
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("eaten_item_stack"),
+				SkillsMod.createIdentifier("get_eaten_item_stack")
 		);
-	}
-
-	private record Data(ServerPlayerEntity player, ItemStack itemStack) { }
-
-	public int getValue(ServerPlayerEntity player, ItemStack itemStack) {
-		return (int) Math.round(calculation.evaluate(
-				new Data(player, itemStack)
-		));
-	}
-
-	@Override
-	public void dispose(ExperienceSourceDisposeContext context) {
-		// Nothing to do.
 	}
 }

@@ -46,71 +46,71 @@ public final class BuiltinPrototypes {
 
 	static {
 		WORLD.registerOperation(
-				new Identifier("server"),
+				new Identifier("get_server"),
 				SERVER,
 				OperationFactory.create(ServerWorld::getServer)
 		);
 		WORLD.registerOperation(
-				new Identifier("time_of_day"),
+				new Identifier("get_time_of_day"),
 				NUMBER,
 				OperationFactory.create(world -> (double) world.getTimeOfDay())
 		);
 
 		ENTITY.registerOperation(
-				new Identifier("type"),
+				new Identifier("get_type"),
 				ENTITY_TYPE,
 				OperationFactory.create(Entity::getType)
 		);
 		ENTITY.registerOperation(
-				new Identifier("world"),
+				new Identifier("get_world"),
 				WORLD,
 				OperationFactory.create(entity -> (ServerWorld) entity.getWorld())
 		);
 
 		LIVING_ENTITY.registerOperation(
-				new Identifier("entity"),
+				new Identifier("as_entity"),
 				ENTITY,
 				OperationFactory.create(p -> p)
 		);
 		LIVING_ENTITY.registerOperation(
-				new Identifier("world"),
+				new Identifier("get_world"),
 				WORLD,
 				OperationFactory.create(livingEntity -> (ServerWorld) livingEntity.getWorld())
 		);
 		LIVING_ENTITY.registerOperation(
-				new Identifier("type"),
+				new Identifier("get_type"),
 				ENTITY_TYPE,
 				OperationFactory.create(Entity::getType)
 		);
 		LIVING_ENTITY.registerOperation(
-				new Identifier("max_health"),
+				new Identifier("get_max_health"),
 				NUMBER,
 				OperationFactory.create(livingEntity -> (double) livingEntity.getMaxHealth())
 		);
 		LIVING_ENTITY.registerOperation(
-				new Identifier("health"),
+				new Identifier("get_health"),
 				NUMBER,
 				OperationFactory.create(livingEntity -> (double) livingEntity.getHealth())
 		);
 
 		PLAYER.registerOperation(
-				new Identifier("living_entity"),
+				new Identifier("as_living_entity"),
 				LIVING_ENTITY,
 				OperationFactory.create(p -> p)
 		);
 		PLAYER.registerOperation(
-				new Identifier("entity"),
+				new Identifier("as_entity"),
 				ENTITY,
 				OperationFactory.create(p -> p)
 		);
 		PLAYER.registerOperation(
-				new Identifier("world"),
+				new Identifier("get_world"),
 				WORLD,
 				OperationFactory.create(player -> (ServerWorld) player.getWorld())
 		);
 
 		ITEM.registerOperation(
-				new Identifier("saturation_modifier"),
+				new Identifier("get_saturation_modifier"),
 				NUMBER,
 				OperationFactory.create(item -> {
 					var fc = item.getFoodComponent();
@@ -118,7 +118,7 @@ public final class BuiltinPrototypes {
 				})
 		);
 		ITEM.registerOperation(
-				new Identifier("nutrition"),
+				new Identifier("get_nutrition"),
 				NUMBER,
 				OperationFactory.create(item -> {
 					var fc = item.getFoodComponent();
@@ -127,73 +127,73 @@ public final class BuiltinPrototypes {
 		);
 
 		ITEM_STACK.registerOperation(
-				new Identifier("item"),
+				new Identifier("get_item"),
 				ITEM,
 				OperationFactory.create(ItemStack::getItem)
 		);
 		ITEM_STACK.registerOperation(
-				new Identifier("count"),
+				new Identifier("get_count"),
 				NUMBER,
 				OperationFactory.create(itemStack -> (double) itemStack.getCount())
 		);
 
 		BLOCK.registerOperation(
-				new Identifier("hardness"),
+				new Identifier("get_hardness"),
 				NUMBER,
 				OperationFactory.create(block -> (double) block.getHardness())
 		);
 		BLOCK.registerOperation(
-				new Identifier("blast_resistance"),
+				new Identifier("get_blast_resistance"),
 				NUMBER,
 				OperationFactory.create(block -> (double) block.getBlastResistance())
 		);
 
 		BLOCK_STATE.registerOperation(
-				new Identifier("block"),
+				new Identifier("get_block"),
 				BLOCK,
 				OperationFactory.create(BlockState::getBlock)
 		);
 
 		DAMAGE_SOURCE.registerOperation(
-				new Identifier("type"),
+				new Identifier("get_type"),
 				DAMAGE_TYPE,
 				OperationFactory.create(DamageSource::getType)
 		);
 		DAMAGE_SOURCE.registerOperation(
-				new Identifier("attacker"),
+				new Identifier("get_attacker"),
 				ENTITY,
 				OperationFactory.createOptional(damageSource -> Optional.ofNullable(damageSource.getAttacker()))
 		);
 		DAMAGE_SOURCE.registerOperation(
-				new Identifier("source"),
+				new Identifier("get_source"),
 				ENTITY,
 				OperationFactory.createOptional(damageSource -> Optional.ofNullable(damageSource.getSource()))
 		);
 
 		STAT.registerOperation(
-				new Identifier("type"),
+				new Identifier("get_type"),
 				STAT_TYPE,
 				OperationFactory.create(Stat::getType)
 		);
 
 		STATUS_EFFECT_INSTANCE.registerOperation(
-				new Identifier("level"),
+				new Identifier("get_level"),
 				NUMBER,
 				OperationFactory.create(effect -> (double) (effect.getAmplifier() + 1))
 		);
 		STATUS_EFFECT_INSTANCE.registerOperation(
-				new Identifier("duration"),
+				new Identifier("get_duration"),
 				NUMBER,
 				OperationFactory.create(effect -> (double) effect.getDuration())
 		);
 
 		ENTITY_ATTRIBUTE_INSTANCE.registerOperation(
-				new Identifier("value"),
+				new Identifier("get_value"),
 				NUMBER,
 				OperationFactory.create(EntityAttributeInstance::getValue)
 		);
 		ENTITY_ATTRIBUTE_INSTANCE.registerOperation(
-				new Identifier("base_value"),
+				new Identifier("get_base_value"),
 				NUMBER,
 				OperationFactory.create(EntityAttributeInstance::getBaseValue)
 		);
