@@ -16,6 +16,7 @@ import net.puffish.skillsmod.api.experience.source.ExperienceSourceConfigContext
 import net.puffish.skillsmod.api.experience.source.ExperienceSourceDisposeContext;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
 import net.puffish.skillsmod.calculation.LegacyCalculation;
 import net.puffish.skillsmod.calculation.operation.LegacyOperationRegistry;
 import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
@@ -31,21 +32,56 @@ public class MineBlockExperienceSource implements ExperienceSource {
 
 	static {
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("player"),
+				SkillsMod.createIdentifier("get_player"),
 				BuiltinPrototypes.PLAYER,
 				OperationFactory.create(Data::player)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("mined_block_state"),
+				SkillsMod.createIdentifier("get_mined_block_state"),
 				BuiltinPrototypes.BLOCK_STATE,
 				OperationFactory.create(Data::blockState)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("tool_item_stack"),
+				SkillsMod.createIdentifier("get_tool_item_stack"),
 				BuiltinPrototypes.ITEM_STACK,
 				OperationFactory.create(Data::tool)
 		);
+	}
 
+	private final Calculation<Data> calculation;
+
+	private MineBlockExperienceSource(Calculation<Data> calculation) {
+		this.calculation = calculation;
+	}
+
+	public static void register() {
+		SkillsAPI.registerExperienceSource(
+				ID,
+				MineBlockExperienceSource::parse
+		);
+	}
+
+	private static Result<MineBlockExperienceSource, Problem> parse(ExperienceSourceConfigContext context) {
+		return context.getData().andThen(rootElement ->
+				LegacyCalculation.parse(rootElement, PROTOTYPE, context)
+						.mapSuccess(MineBlockExperienceSource::new)
+		);
+	}
+
+	private record Data(ServerPlayerEntity player, BlockState blockState, ItemStack tool) { }
+
+	public int getValue(ServerPlayerEntity player, BlockState blockState, ItemStack tool) {
+		return (int) Math.round(calculation.evaluate(
+				new Data(player, blockState, tool)
+		));
+	}
+
+	@Override
+	public void dispose(ExperienceSourceDisposeContext context) {
+		// Nothing to do.
+	}
+
+	static {
 		// Backwards compatibility.
 		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
 		legacy.registerBooleanFunction(
@@ -90,38 +126,21 @@ public class MineBlockExperienceSource implements ExperienceSource {
 				AttributeOperation::parse,
 				Data::player
 		);
-	}
 
-	private final Calculation<Data> calculation;
-
-	private MineBlockExperienceSource(Calculation<Data> calculation) {
-		this.calculation = calculation;
-	}
-
-	public static void register() {
-		SkillsAPI.registerExperienceSource(
-				ID,
-				MineBlockExperienceSource::parse
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("player"),
+				SkillsMod.createIdentifier("get_player")
 		);
-	}
-
-	private static Result<MineBlockExperienceSource, Problem> parse(ExperienceSourceConfigContext context) {
-		return context.getData().andThen(rootElement ->
-				LegacyCalculation.parse(rootElement, PROTOTYPE, context)
-						.mapSuccess(MineBlockExperienceSource::new)
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("mined_block_state"),
+				SkillsMod.createIdentifier("get_mined_block_state")
 		);
-	}
-
-	private record Data(ServerPlayerEntity player, BlockState blockState, ItemStack tool) { }
-
-	public int getValue(ServerPlayerEntity player, BlockState blockState, ItemStack tool) {
-		return (int) Math.round(calculation.evaluate(
-				new Data(player, blockState, tool)
-		));
-	}
-
-	@Override
-	public void dispose(ExperienceSourceDisposeContext context) {
-		// Nothing to do.
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("tool_item_stack"),
+				SkillsMod.createIdentifier("get_tool_item_stack")
+		);
 	}
 }
