@@ -9,6 +9,7 @@ import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -22,9 +23,15 @@ public final class ScoreboardOperation implements Operation<Entity, Double> {
 
 	public static void register() {
 		BuiltinPrototypes.ENTITY.registerOperation(
-				SkillsMod.createIdentifier("scoreboard"),
+				SkillsMod.createIdentifier("get_score"),
 				BuiltinPrototypes.NUMBER,
 				ScoreboardOperation::parse
+		);
+
+		LegacyBuiltinPrototypes.registerAlias(
+				BuiltinPrototypes.ENTITY,
+				SkillsMod.createIdentifier("scoreboard"),
+				SkillsMod.createIdentifier("get_score")
 		);
 	}
 

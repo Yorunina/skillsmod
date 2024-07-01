@@ -15,6 +15,7 @@ import net.puffish.skillsmod.api.experience.source.ExperienceSourceConfigContext
 import net.puffish.skillsmod.api.experience.source.ExperienceSourceDisposeContext;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
 import net.puffish.skillsmod.calculation.LegacyCalculation;
 import net.puffish.skillsmod.calculation.operation.LegacyOperationRegistry;
 import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
@@ -28,44 +29,14 @@ public class CraftItemExperienceSource implements ExperienceSource {
 
 	static {
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("player"),
+				SkillsMod.createIdentifier("get_player"),
 				BuiltinPrototypes.PLAYER,
 				OperationFactory.create(Data::player)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("crafted_item_stack"),
+				SkillsMod.createIdentifier("get_crafted_item_stack"),
 				BuiltinPrototypes.ITEM_STACK,
 				OperationFactory.create(Data::itemStack)
-		);
-
-		// Backwards compatibility.
-		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
-		legacy.registerBooleanFunction(
-				"item",
-				ItemStackCondition::parse,
-				Data::itemStack
-		);
-		legacy.registerBooleanFunction(
-				"item_nbt",
-				ItemStackCondition::parse,
-				Data::itemStack
-		);
-		legacy.registerBooleanFunction(
-				"item_tag",
-				LegacyItemTagCondition::parse,
-				Data::itemStack
-		);
-		legacy.registerNumberFunction(
-				"player_effect",
-				effect -> (double) (effect.getAmplifier() + 1),
-				EffectOperation::parse,
-				Data::player
-		);
-		legacy.registerNumberFunction(
-				"player_attribute",
-				EntityAttributeInstance::getValue,
-				AttributeOperation::parse,
-				Data::player
 		);
 	}
 
@@ -100,5 +71,50 @@ public class CraftItemExperienceSource implements ExperienceSource {
 	@Override
 	public void dispose(ExperienceSourceDisposeContext context) {
 		// Nothing to do.
+	}
+
+	static {
+
+
+		// Backwards compatibility.
+		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
+		legacy.registerBooleanFunction(
+				"item",
+				ItemStackCondition::parse,
+				Data::itemStack
+		);
+		legacy.registerBooleanFunction(
+				"item_nbt",
+				ItemStackCondition::parse,
+				Data::itemStack
+		);
+		legacy.registerBooleanFunction(
+				"item_tag",
+				LegacyItemTagCondition::parse,
+				Data::itemStack
+		);
+		legacy.registerNumberFunction(
+				"player_effect",
+				effect -> (double) (effect.getAmplifier() + 1),
+				EffectOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"player_attribute",
+				EntityAttributeInstance::getValue,
+				AttributeOperation::parse,
+				Data::player
+		);
+
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("player"),
+				SkillsMod.createIdentifier("get_player")
+		);
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("crafted_item_stack"),
+				SkillsMod.createIdentifier("get_crafted_item_stack")
+		);
 	}
 }
