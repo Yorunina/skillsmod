@@ -16,6 +16,7 @@ import net.puffish.skillsmod.api.experience.source.ExperienceSourceConfigContext
 import net.puffish.skillsmod.api.experience.source.ExperienceSourceDisposeContext;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
 import net.puffish.skillsmod.calculation.LegacyCalculation;
 import net.puffish.skillsmod.calculation.operation.LegacyOperationRegistry;
 import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
@@ -33,21 +34,56 @@ public class TakeDamageExperienceSource implements ExperienceSource {
 
 	static {
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("player"),
+				SkillsMod.createIdentifier("get_player"),
 				BuiltinPrototypes.PLAYER,
 				OperationFactory.create(Data::player)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("damage_source"),
+				SkillsMod.createIdentifier("get_damage_source"),
 				BuiltinPrototypes.DAMAGE_SOURCE,
 				OperationFactory.create(Data::damageSource)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("damage"),
+				SkillsMod.createIdentifier("get_taken_damage"),
 				BuiltinPrototypes.NUMBER,
 				OperationFactory.create(data -> (double) data.damage())
 		);
+	}
 
+	private final Calculation<Data> calculation;
+
+	private TakeDamageExperienceSource(Calculation<Data> calculation) {
+		this.calculation = calculation;
+	}
+
+	public static void register() {
+		SkillsAPI.registerExperienceSource(
+				ID,
+				TakeDamageExperienceSource::parse
+		);
+	}
+
+	private static Result<TakeDamageExperienceSource, Problem> parse(ExperienceSourceConfigContext context) {
+		return context.getData().andThen(rootElement ->
+				LegacyCalculation.parse(rootElement, PROTOTYPE, context)
+						.mapSuccess(TakeDamageExperienceSource::new)
+		);
+	}
+
+	private record Data(ServerPlayerEntity player, float damage, DamageSource damageSource) { }
+
+	public int getValue(ServerPlayerEntity player, float damage, DamageSource damageSource) {
+		return (int) Math.round(calculation.evaluate(
+				new Data(player, damage, damageSource)
+		));
+	}
+
+	@Override
+	public void dispose(ExperienceSourceDisposeContext context) {
+		// Nothing to do.
+	}
+
+	static {
 		// Backwards compatibility.
 		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
 		legacy.registerBooleanFunction(
@@ -96,38 +132,21 @@ public class TakeDamageExperienceSource implements ExperienceSource {
 				"damage",
 				data -> (double) data.damage()
 		);
-	}
 
-	private final Calculation<Data> calculation;
-
-	private TakeDamageExperienceSource(Calculation<Data> calculation) {
-		this.calculation = calculation;
-	}
-
-	public static void register() {
-		SkillsAPI.registerExperienceSource(
-				ID,
-				TakeDamageExperienceSource::parse
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("player"),
+				SkillsMod.createIdentifier("get_player")
 		);
-	}
-
-	private static Result<TakeDamageExperienceSource, Problem> parse(ExperienceSourceConfigContext context) {
-		return context.getData().andThen(rootElement ->
-				LegacyCalculation.parse(rootElement, PROTOTYPE, context)
-						.mapSuccess(TakeDamageExperienceSource::new)
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("damage_source"),
+				SkillsMod.createIdentifier("get_damage_source")
 		);
-	}
-
-	private record Data(ServerPlayerEntity player, float damage, DamageSource damageSource) { }
-
-	public int getValue(ServerPlayerEntity player, float damage, DamageSource damageSource) {
-		return (int) Math.round(calculation.evaluate(
-				new Data(player, damage, damageSource)
-		));
-	}
-
-	@Override
-	public void dispose(ExperienceSourceDisposeContext context) {
-		// Nothing to do.
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("damage"),
+				SkillsMod.createIdentifier("get_taken_damage")
+		);
 	}
 }

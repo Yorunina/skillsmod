@@ -4,14 +4,15 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.puffish.skillsmod.SkillsMod;
-import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
-import net.puffish.skillsmod.api.json.JsonElement;
-import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.calculation.operation.Operation;
 import net.puffish.skillsmod.api.calculation.operation.OperationConfigContext;
-import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -25,9 +26,15 @@ public class EffectOperation implements Operation<LivingEntity, StatusEffectInst
 
 	public static void register() {
 		BuiltinPrototypes.LIVING_ENTITY.registerOperation(
-				SkillsMod.createIdentifier("effect"),
+				SkillsMod.createIdentifier("get_effect"),
 				BuiltinPrototypes.STATUS_EFFECT_INSTANCE,
 				EffectOperation::parse
+		);
+
+		LegacyBuiltinPrototypes.registerAlias(
+				BuiltinPrototypes.LIVING_ENTITY,
+				SkillsMod.createIdentifier("effect"),
+				SkillsMod.createIdentifier("get_effect")
 		);
 	}
 

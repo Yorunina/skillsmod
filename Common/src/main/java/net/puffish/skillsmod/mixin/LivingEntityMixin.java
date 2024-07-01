@@ -30,7 +30,7 @@ public abstract class LivingEntityMixin {
 	private int entityDroppedXp = 0;
 
 	@Unique
-	private WeakHashMap<ServerPlayerEntity, Float> damageShare;
+	private final Map<ServerPlayerEntity, Float> damageShare = new WeakHashMap<>();
 
 	@Unique
 	private final AntiFarmingPerEntity.Data antiFarmingData = new AntiFarmingPerEntity.Data();
@@ -83,6 +83,7 @@ public abstract class LivingEntityMixin {
 					.getWorldChunk(entity.getBlockPos()))
 					.getAntiFarmingData();
 			antiFarmingData.removeOutdated();
+
 			SkillsAPI.updateExperienceSources(
 					player,
 					KillEntityExperienceSource.class,

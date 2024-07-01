@@ -14,6 +14,7 @@ import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.api.experience.source.ExperienceSource;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
 import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
 import net.puffish.skillsmod.calculation.operation.builtin.BlockCondition;
 import net.puffish.skillsmod.calculation.operation.builtin.BlockStateCondition;
@@ -186,6 +187,8 @@ public class SkillsMod {
 		MineBlockExperienceSource.register();
 		SharedKillEntityExperienceSource.register();
 		TakeDamageExperienceSource.register();
+
+		LegacyBuiltinPrototypes.register();
 	}
 
 	public static Identifier createIdentifier(String path) {

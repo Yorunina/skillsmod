@@ -15,6 +15,7 @@ import net.puffish.skillsmod.api.experience.source.ExperienceSourceConfigContext
 import net.puffish.skillsmod.api.experience.source.ExperienceSourceDisposeContext;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
 import net.puffish.skillsmod.calculation.LegacyCalculation;
 import net.puffish.skillsmod.calculation.operation.LegacyOperationRegistry;
 import net.puffish.skillsmod.calculation.operation.builtin.AttributeOperation;
@@ -27,43 +28,19 @@ public class IncreaseStatExperienceSource implements ExperienceSource {
 
 	static {
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("player"),
+				SkillsMod.createIdentifier("get_player"),
 				BuiltinPrototypes.PLAYER,
 				OperationFactory.create(Data::player)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("stat"),
+				SkillsMod.createIdentifier("get_stat"),
 				BuiltinPrototypes.STAT,
 				OperationFactory.create(Data::stat)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("amount"),
+				SkillsMod.createIdentifier("get_increase_amount"),
 				BuiltinPrototypes.NUMBER,
 				OperationFactory.create(data -> (double) data.amount())
-		);
-
-		// Backwards compatibility.
-		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
-		legacy.registerBooleanFunction(
-				"stat",
-				StatCondition::parse,
-				Data::stat
-		);
-		legacy.registerNumberFunction(
-				"player_effect",
-				effect -> (double) (effect.getAmplifier() + 1),
-				EffectOperation::parse,
-				Data::player
-		);
-		legacy.registerNumberFunction(
-				"player_attribute",
-				EntityAttributeInstance::getValue,
-				AttributeOperation::parse,
-				Data::player
-		);
-		legacy.registerNumberFunction(
-				"amount",
-				data -> (double) data.amount()
 		);
 	}
 
@@ -98,5 +75,49 @@ public class IncreaseStatExperienceSource implements ExperienceSource {
 	@Override
 	public void dispose(ExperienceSourceDisposeContext context) {
 		// Nothing to do.
+	}
+
+	static {
+
+
+		// Backwards compatibility.
+		var legacy = new LegacyOperationRegistry<>(PROTOTYPE);
+		legacy.registerBooleanFunction(
+				"stat",
+				StatCondition::parse,
+				Data::stat
+		);
+		legacy.registerNumberFunction(
+				"player_effect",
+				effect -> (double) (effect.getAmplifier() + 1),
+				EffectOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"player_attribute",
+				EntityAttributeInstance::getValue,
+				AttributeOperation::parse,
+				Data::player
+		);
+		legacy.registerNumberFunction(
+				"amount",
+				data -> (double) data.amount()
+		);
+
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("player"),
+				SkillsMod.createIdentifier("get_player")
+		);
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("stat"),
+				SkillsMod.createIdentifier("get_stat")
+		);
+		LegacyBuiltinPrototypes.registerAlias(
+				PROTOTYPE,
+				SkillsMod.createIdentifier("amount"),
+				SkillsMod.createIdentifier("get_increase_amount")
+		);
 	}
 }

@@ -12,6 +12,7 @@ import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -25,9 +26,15 @@ public class AttributeOperation implements Operation<LivingEntity, EntityAttribu
 
 	public static void register() {
 		BuiltinPrototypes.LIVING_ENTITY.registerOperation(
-				SkillsMod.createIdentifier("attribute"),
+				SkillsMod.createIdentifier("get_attribute"),
 				BuiltinPrototypes.ENTITY_ATTRIBUTE_INSTANCE,
 				AttributeOperation::parse
+		);
+
+		LegacyBuiltinPrototypes.registerAlias(
+				BuiltinPrototypes.LIVING_ENTITY,
+				SkillsMod.createIdentifier("attribute"),
+				SkillsMod.createIdentifier("get_attribute")
 		);
 	}
 
