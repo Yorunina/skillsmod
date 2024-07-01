@@ -29,22 +29,22 @@ public class DealDamageExperienceSource implements ExperienceSource {
 
 	static {
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("player"),
+				SkillsMod.createIdentifier("get_player"),
 				BuiltinPrototypes.PLAYER,
 				OperationFactory.create(Data::player)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("damaged_living_entity"),
+				SkillsMod.createIdentifier("get_damaged_living_entity"),
 				BuiltinPrototypes.LIVING_ENTITY,
 				OperationFactory.create(Data::entity)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("damage_source"),
+				SkillsMod.createIdentifier("get_damage_source"),
 				BuiltinPrototypes.DAMAGE_SOURCE,
 				OperationFactory.create(Data::damageSource)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("damage"),
+				SkillsMod.createIdentifier("get_dealt_damage"),
 				BuiltinPrototypes.NUMBER,
 				OperationFactory.create(data -> (double) data.damage())
 		);

@@ -11,6 +11,7 @@ import net.puffish.skillsmod.api.util.Result;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -27,6 +28,10 @@ public class PrototypeImpl<T> implements Prototype<T> {
 	@Override
 	public <R> void registerOperation(Identifier id, PrototypeView<R> view, OperationFactory<T, R> factory) {
 		register(id, context -> factory.apply(context).mapSuccess(o -> new PrototypeViewImpl<>(view, o)));
+	}
+
+	public void registerAlias(Identifier id, Identifier existingId) {
+		register(id, Objects.requireNonNull(factories.get(existingId)));
 	}
 
 	private void register(Identifier id, Function<OperationConfigContext, Result<PrototypeView<T>, Problem>> factory) {
