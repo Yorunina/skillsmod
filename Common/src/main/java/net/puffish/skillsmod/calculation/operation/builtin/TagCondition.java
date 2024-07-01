@@ -9,6 +9,7 @@ import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -22,9 +23,15 @@ public final class TagCondition implements Operation<Entity, Boolean> {
 
 	public static void register() {
 		BuiltinPrototypes.ENTITY.registerOperation(
-				SkillsMod.createIdentifier("tag"),
+				SkillsMod.createIdentifier("has_tag"),
 				BuiltinPrototypes.BOOLEAN,
 				TagCondition::parse
+		);
+
+		LegacyBuiltinPrototypes.registerAlias(
+				BuiltinPrototypes.ENTITY,
+				SkillsMod.createIdentifier("tag"),
+				SkillsMod.createIdentifier("has_tag")
 		);
 	}
 

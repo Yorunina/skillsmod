@@ -32,42 +32,42 @@ public class SharedKillEntityExperienceSource implements ExperienceSource {
 
 	static {
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("player"),
+				SkillsMod.createIdentifier("get_player"),
 				BuiltinPrototypes.PLAYER,
 				OperationFactory.create(Data::player)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("weapon_item_stack"),
+				SkillsMod.createIdentifier("get_weapon_item_stack"),
 				BuiltinPrototypes.ITEM_STACK,
 				OperationFactory.create(Data::weapon)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("killed_living_entity"),
+				SkillsMod.createIdentifier("get_killed_living_entity"),
 				BuiltinPrototypes.LIVING_ENTITY,
 				OperationFactory.create(Data::entity)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("damage_source"),
+				SkillsMod.createIdentifier("get_damage_source"),
 				BuiltinPrototypes.DAMAGE_SOURCE,
 				OperationFactory.create(Data::damageSource)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("dropped_experience"),
+				SkillsMod.createIdentifier("get_dropped_experience"),
 				BuiltinPrototypes.NUMBER,
 				OperationFactory.create(Data::entityDroppedXp)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("total_damage"),
+				SkillsMod.createIdentifier("get_total_dealt_damage"),
 				BuiltinPrototypes.NUMBER,
 				OperationFactory.create(Data::totalDamage)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("participants"),
+				SkillsMod.createIdentifier("get_participants"),
 				BuiltinPrototypes.NUMBER,
 				OperationFactory.create(data -> (double) data.participants)
 		);
 		PROTOTYPE.registerOperation(
-				SkillsMod.createIdentifier("share"),
+				SkillsMod.createIdentifier("get_share"),
 				BuiltinPrototypes.NUMBER,
 				OperationFactory.create(Data::share)
 		);
