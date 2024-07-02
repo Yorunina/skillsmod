@@ -22,9 +22,9 @@ import net.puffish.skillsmod.client.SkillsClientMod;
 import net.puffish.skillsmod.client.config.ClientBackgroundConfig;
 import net.puffish.skillsmod.client.config.ClientFrameConfig;
 import net.puffish.skillsmod.client.config.ClientIconConfig;
-import net.puffish.skillsmod.client.data.ClientCategoryData;
 import net.puffish.skillsmod.client.config.skill.ClientSkillConfig;
 import net.puffish.skillsmod.client.config.skill.ClientSkillDefinitionConfig;
+import net.puffish.skillsmod.client.data.ClientCategoryData;
 import net.puffish.skillsmod.client.network.packets.out.SkillClickOutPacket;
 import net.puffish.skillsmod.client.rendering.ConnectionBatchedRenderer;
 import net.puffish.skillsmod.client.rendering.ItemBatchedRenderer;
@@ -36,8 +36,8 @@ import org.joml.Vector4fc;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
@@ -69,14 +69,10 @@ public class SkillsScreen extends Screen {
 
 	private Optional<ClientCategoryData> optActiveCategoryData = Optional.empty();
 
-	private int activeCategoryIndex = 0;
+	private Optional<Identifier> optActiveCategoryId;
 
 	private float minScale = 1f;
 	private float maxScale = 1f;
-	private float scale = 1;
-
-	private int x = 0;
-	private int y = 0;
 
 	private double dragStartX = 0;
 	private double dragStartY = 0;
@@ -93,14 +89,7 @@ public class SkillsScreen extends Screen {
 	public SkillsScreen(Map<Identifier, ClientCategoryData> categories, Optional<Identifier> optCategoryId) {
 		super(ScreenTexts.EMPTY);
 		this.categories = categories;
-		optCategoryId.ifPresent(categoryId -> {
-			for (var id : categories.keySet()) {
-				if (id.equals(categoryId)) {
-					break;
-				}
-				this.activeCategoryIndex++;
-			}
-		});
+		optActiveCategoryId = optCategoryId;
 	}
 
 	@Override
@@ -126,31 +115,30 @@ public class SkillsScreen extends Screen {
 			contentPaddingBottom = 17;
 		}
 
-		this.x = this.width / 2;
-		this.y = this.height / 2;
+		var halfWidth = this.width / 2;
+		var halfHeight = this.height / 2;
 
 		this.bounds = optActiveCategoryData
 				.map(activeCategoryData -> activeCategoryData.getConfig().getBounds())
 				.orElseGet(Bounds2i::zero);
 		this.bounds.grow(CONTENT_GROW);
-		this.bounds.extend(new Vector2i(contentPaddingLeft - this.x, contentPaddingTop - this.y));
-		this.bounds.extend(new Vector2i(this.width - this.x - contentPaddingRight, this.height - this.y - contentPaddingBottom));
+		this.bounds.extend(new Vector2i(contentPaddingLeft - halfWidth, contentPaddingTop - halfHeight));
+		this.bounds.extend(new Vector2i(this.width - halfWidth - contentPaddingRight, this.height - halfHeight - contentPaddingBottom));
 
 		var contentWidth = this.width - contentPaddingLeft - contentPaddingRight;
 		var contentHeight = this.height - contentPaddingTop - contentPaddingBottom;
 
-		var halfWidth = MathHelper.ceilDiv(this.bounds.height() * contentWidth, contentHeight * 2);
-		var halfHeight = MathHelper.ceilDiv(this.bounds.width() * contentHeight, contentWidth * 2);
+		var halfContentWidth = MathHelper.ceilDiv(this.bounds.height() * contentWidth, contentHeight * 2);
+		var halfContentHeight = MathHelper.ceilDiv(this.bounds.width() * contentHeight, contentWidth * 2);
 
-		this.bounds.extend(new Vector2i(-halfWidth, -halfHeight));
-		this.bounds.extend(new Vector2i(halfWidth, halfHeight));
+		this.bounds.extend(new Vector2i(-halfContentWidth, -halfContentHeight));
+		this.bounds.extend(new Vector2i(halfContentWidth, halfContentHeight));
 
 		this.minScale = Math.max(
 				((float) contentWidth) / ((float) this.bounds.width()),
 				((float) contentHeight) / ((float) this.bounds.height())
 		);
 		this.maxScale = 1f;
-		this.scale = 1f;
 	}
 
 	private Vector2i getMousePos(double mouseX, double mouseY) {
@@ -160,10 +148,10 @@ public class SkillsScreen extends Screen {
 		);
 	}
 
-	private Vector2i getTransformedMousePos(double mouseX, double mouseY) {
+	private Vector2i getTransformedMousePos(double mouseX, double mouseY, ClientCategoryData activeCategoryData) {
 		return new Vector2i(
-				(int) Math.round((mouseX - x) / scale),
-				(int) Math.round((mouseY - y) / scale)
+				(int) Math.round((mouseX - activeCategoryData.getX() - width / 2.0) / activeCategoryData.getScale()),
+				(int) Math.round((mouseY - activeCategoryData.getY() - height / 2.0) / activeCategoryData.getScale())
 		);
 	}
 
@@ -189,12 +177,14 @@ public class SkillsScreen extends Screen {
 	}
 
 	private void syncCategory() {
-		var opt = categories.values()
-				.stream()
-				.skip(Math.max(0, Math.min(this.activeCategoryIndex, categories.size() - 1)))
-				.findFirst();
-		if (!Objects.equals(opt, optActiveCategoryData)) {
-			optActiveCategoryData = opt;
+		var opt = optActiveCategoryId.flatMap(
+				activeCategoryId -> Optional.ofNullable(categories.get(activeCategoryId))
+		);
+		opt.ifPresent(ClientCategoryData::updateLastOpen);
+		if (optActiveCategoryData.isEmpty() || optActiveCategoryData.orElseThrow() != opt.orElse(null)) {
+			optActiveCategoryData = categories.values()
+					.stream()
+					.max(Comparator.comparing(ClientCategoryData::getLastOpen));
 			resize();
 		}
 	}
@@ -219,7 +209,7 @@ public class SkillsScreen extends Screen {
 
 	private void mouseClickedWithCategory(double mouseX, double mouseY, int button, ClientCategoryData activeCategoryData) {
 		var mouse = getMousePos(mouseX, mouseY);
-		var transformedMouse = getTransformedMousePos(mouseX, mouseY);
+		var transformedMouse = getTransformedMousePos(mouseX, mouseY, activeCategoryData);
 		var activeCategory = activeCategoryData.getConfig();
 
 		if (isInsideContent(mouse)) {
@@ -237,8 +227,8 @@ public class SkillsScreen extends Screen {
 			}
 
 			if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
-				dragStartX = mouseX - x;
-				dragStartY = mouseY - y;
+				dragStartX = mouseX - activeCategoryData.getX();
+				dragStartY = mouseY - activeCategoryData.getY();
 				dragging = true;
 			}
 		} else {
@@ -247,7 +237,7 @@ public class SkillsScreen extends Screen {
 
 		forEachCategory((i, category) -> {
 			if (isInsideTab(mouse, i)) {
-				activeCategoryIndex = i;
+				optActiveCategoryId = Optional.ofNullable(category.getConfig().id());
 				syncCategory();
 			}
 		});
@@ -276,10 +266,14 @@ public class SkillsScreen extends Screen {
 	public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
 		if (dragging) {
 			if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
-				x = (int) Math.round(mouseX - dragStartX);
-				y = (int) Math.round(mouseY - dragStartY);
-
-				limitPosition();
+				optActiveCategoryData.ifPresent(activeCategoryData -> {
+					applyChangesWithLimits(
+							(int) Math.round(mouseX - dragStartX),
+							(int) Math.round(mouseY - dragStartY),
+							activeCategoryData.getScale(),
+							activeCategoryData
+					);
+				});
 
 				return true;
 			}
@@ -290,32 +284,50 @@ public class SkillsScreen extends Screen {
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-		var factor = (float) Math.pow(2, verticalAmount * 0.25);
+		optActiveCategoryData.ifPresent(activeCategoryData -> {
+			var factor = (float) Math.pow(2, verticalAmount * 0.25);
 
-		scale *= factor;
+			var x = activeCategoryData.getX();
+			var y = activeCategoryData.getY();
+			var scale = activeCategoryData.getScale();
 
-		if (scale < minScale) {
-			scale = minScale;
-			factor = minScale / scale;
-		}
-		if (scale > maxScale) {
-			scale = maxScale;
-			factor = maxScale / scale;
-		}
+			scale *= factor;
 
-		x -= (int) Math.round((factor - 1f) * (mouseX - x));
-		y -= (int) Math.round((factor - 1f) * (mouseY - y));
+			if (scale < minScale) {
+				scale = minScale;
+				factor = minScale / scale;
+			}
+			if (scale > maxScale) {
+				scale = maxScale;
+				factor = maxScale / scale;
+			}
 
-		limitPosition();
+			applyChangesWithLimits(
+					x - (int) Math.round((factor - 1f) * (mouseX - x - this.width / 2f)),
+					y - (int) Math.round((factor - 1f) * (mouseY - y - this.height / 2f)),
+					scale,
+					activeCategoryData
+			);
+		});
 
 		return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
 	}
 
-	private void limitPosition() {
-		y = Math.min(y, (int) Math.floor(contentPaddingTop - bounds.min().y() * scale));
-		x = Math.min(x, (int) Math.floor(contentPaddingLeft - bounds.min().x() * scale));
-		x = Math.max(x, (int) Math.ceil(width - contentPaddingRight - bounds.max().x() * scale));
-		y = Math.max(y, (int) Math.ceil(height - contentPaddingBottom - bounds.max().y() * scale));
+	private void applyChangesWithLimits(int x, int y, float scale, ClientCategoryData activeCategoryData) {
+		var halfWidth = this.width / 2;
+		var halfHeight = this.height / 2;
+
+		activeCategoryData.setX(MathHelper.clamp(
+				x,
+				(int) Math.ceil(halfWidth - contentPaddingRight - bounds.max().x() * scale),
+				(int) Math.floor(contentPaddingLeft - halfWidth - bounds.min().x() * scale)
+		));
+		activeCategoryData.setY(MathHelper.clamp(
+				y,
+				(int) Math.ceil(halfHeight - contentPaddingBottom - bounds.max().y() * scale),
+				(int) Math.floor(contentPaddingTop - halfHeight - bounds.min().y() * scale)
+		));
+		activeCategoryData.setScale(scale);
 	}
 
 	private void drawIcon(DrawContext context, TextureBatchedRenderer textureRenderer, ItemBatchedRenderer itemRenderer, ClientIconConfig icon, float sizeScale, int x, int y) {
@@ -533,14 +545,14 @@ public class SkillsScreen extends Screen {
 		}
 
 		var mouse = getMousePos(mouseX, mouseY);
-		var transformedMouse = getTransformedMousePos(mouseX, mouseY);
+		var transformedMouse = getTransformedMousePos(mouseX, mouseY, activeCategoryData);
 		var activeCategory = activeCategoryData.getConfig();
 
 		var matrices = context.getMatrices();
 		matrices.push();
 
-		matrices.translate(x, y, 0f);
-		matrices.scale(scale, scale, 1f);
+		matrices.translate(activeCategoryData.getX() + this.width / 2f, activeCategoryData.getY() + this.height / 2f, 0f);
+		matrices.scale(activeCategoryData.getScale(), activeCategoryData.getScale(), 1f);
 
 		drawBackground(context, activeCategory.background());
 

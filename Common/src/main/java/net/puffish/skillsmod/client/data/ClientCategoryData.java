@@ -24,6 +24,13 @@ public class ClientCategoryData {
 	private int currentExperience;
 	private int requiredExperience;
 
+	private float scale = 1;
+
+	private int x = 0;
+	private int y = 0;
+
+	private long lastOpen;
+
 	public ClientCategoryData(
 			ClientCategoryConfig config,
 			Map<String, Skill.State> skillStates,
@@ -376,5 +383,37 @@ public class ClientCategoryData {
 
 	public int getExperienceToNextLevel() {
 		return requiredExperience - currentExperience;
+	}
+
+	public float getScale() {
+		return scale;
+	}
+
+	public void setScale(float scale) {
+		this.scale = scale;
+	}
+
+	public int getX() {
+		return x;
+	}
+
+	public void setX(int x) {
+		this.x = x;
+	}
+
+	public int getY() {
+		return y;
+	}
+
+	public void setY(int y) {
+		this.y = y;
+	}
+
+	public long getLastOpen() {
+		return lastOpen;
+	}
+
+	public void updateLastOpen() {
+		this.lastOpen = System.currentTimeMillis();
 	}
 }
