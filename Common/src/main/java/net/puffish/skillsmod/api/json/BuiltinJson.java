@@ -30,123 +30,227 @@ import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public final class BuiltinJson {
 	private BuiltinJson() { }
 
 	public static Result<Identifier, Problem> parseIdentifier(JsonElement element) {
-		try {
-			return Result.success(new Identifier(element.getJson().getAsString()));
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createProblem("Expected valid identifier"));
-		}
+		return parseFromString(
+				element,
+				Identifier::new,
+				() -> "Expected identifier",
+				s -> "Invalid identifier `" + s + "`"
+		);
 	}
 
 	public static Result<String, Problem> parseIdentifierPath(JsonElement element) {
-		try {
-			return Result.success(new Identifier(Identifier.DEFAULT_NAMESPACE, element.getJson().getAsString()).getPath());
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createProblem("Expected valid identifier path"));
-		}
+		return parseFromString(
+				element,
+				s -> new Identifier(Identifier.DEFAULT_NAMESPACE, s).getPath(),
+				() -> "Expected identifier path",
+				s -> "Invalid identifier path `" + s + "`"
+		);
 	}
 
 	public static Result<StatusEffect, Problem> parseEffect(JsonElement element) {
-		return parseSomething(Registries.STATUS_EFFECT, element, () -> "Expected valid effect");
+		return parseSomething(
+				element, 
+				Registries.STATUS_EFFECT,
+				() -> "Expected effect",
+				id -> "Unknown effect `" + id + "`"
+		);
 	}
 
 	public static Result<RegistryEntryList<StatusEffect>, Problem> parseEffectTag(JsonElement element) {
-		return parseSomethingTag(Registries.STATUS_EFFECT, element, () -> "Expected valid effect tag");
+		return parseSomethingTag(
+				element, 
+				Registries.STATUS_EFFECT,
+				() -> "Expected effect tag",
+				id -> "Unknown effect tag `" + id + "`"
+		);
 	}
 
 	public static Result<RegistryEntryList<StatusEffect>, Problem> parseEffectOrEffectTag(JsonElement element) {
-		return parseSomethingOrSomethingTag(Registries.STATUS_EFFECT, element, () -> "Expected valid effect or effect tag");
+		return parseSomethingOrSomethingTag(
+				element, 
+				Registries.STATUS_EFFECT,
+				() -> "Expected effect or effect tag",
+				id -> "Unknown effect or effect tag `" + id + "`"
+		);
 	}
 
 	public static Result<Block, Problem> parseBlock(JsonElement element) {
-		return parseSomething(Registries.BLOCK, element, () -> "Expected valid block");
+		return parseSomething(
+				element, 
+				Registries.BLOCK,
+				() -> "Expected block",
+				id -> "Unknown block `" + id + "`"
+		);
 	}
 
 	public static Result<RegistryEntryList<Block>, Problem> parseBlockTag(JsonElement element) {
-		return parseSomethingTag(Registries.BLOCK, element, () -> "Expected valid block tag");
+		return parseSomethingTag(
+				element,
+				Registries.BLOCK,
+				() -> "Expected block tag",
+				id -> "Unknown block tag `" + id + "`"
+		);
 	}
 
 	public static Result<RegistryEntryList<Block>, Problem> parseBlockOrBlockTag(JsonElement element) {
-		return parseSomethingOrSomethingTag(Registries.BLOCK, element, () -> "Expected valid block or block tag");
+		return parseSomethingOrSomethingTag(
+				element, 
+				Registries.BLOCK,
+				() -> "Expected block or block tag",
+				id -> "Unknown block or block tag `" + id + "`"
+		);
 	}
 
 	public static Result<DamageType, Problem> parseDamageType(JsonElement element, DynamicRegistryManager manager) {
-		return parseSomething(manager.get(RegistryKeys.DAMAGE_TYPE), element, () -> "Expected valid damage type");
+		return parseSomething(
+				element,
+				manager.get(RegistryKeys.DAMAGE_TYPE),
+				() -> "Expected damage type",
+				id -> "Unknown damage type `" + id + "`"
+		);
 	}
 
 	public static Result<RegistryEntryList<DamageType>, Problem> parseDamageTypeTag(JsonElement element, DynamicRegistryManager manager) {
-		return parseSomethingTag(manager.get(RegistryKeys.DAMAGE_TYPE), element, () -> "Expected valid damage type tag");
+		return parseSomethingTag(
+				element,
+				manager.get(RegistryKeys.DAMAGE_TYPE),
+				() -> "Expected damage type tag",
+				id -> "Unknown damage type tag `" + id + "`"
+		);
 	}
 
 	public static Result<RegistryEntryList<DamageType>, Problem> parseDamageTypeOrDamageTypeTag(JsonElement element, DynamicRegistryManager manager) {
-		return parseSomethingOrSomethingTag(manager.get(RegistryKeys.DAMAGE_TYPE), element, () -> "Expected valid damage type or damage type tag");
+		return parseSomethingOrSomethingTag(
+				element,
+				manager.get(RegistryKeys.DAMAGE_TYPE),
+				() -> "Expected damage type or damage type tag",
+				id -> "Unknown damage type or damage type tag `" + id + "`"
+		);
 	}
 
 	public static Result<EntityType<?>, Problem> parseEntityType(JsonElement element) {
-		return parseSomething(Registries.ENTITY_TYPE, element, () -> "Expected valid entity type");
+		return parseSomething(
+				element, 
+				Registries.ENTITY_TYPE,
+				() -> "Expected entity type",
+				id -> "Unknown entity type `" + id + "`"
+		);
 	}
 
 	public static Result<RegistryEntryList<EntityType<?>>, Problem> parseEntityTypeTag(JsonElement element) {
-		return parseSomethingTag(Registries.ENTITY_TYPE, element, () -> "Expected valid entity type tag");
+		return parseSomethingTag(
+				element, 
+				Registries.ENTITY_TYPE,
+				() -> "Expected entity type tag",
+				id -> "Unknown entity type tag `" + id + "`"
+		);
 	}
 
 	public static Result<RegistryEntryList<EntityType<?>>, Problem> parseEntityTypeOrEntityTypeTag(JsonElement element) {
-		return parseSomethingOrSomethingTag(Registries.ENTITY_TYPE, element, () -> "Expected valid entity type or entity type tag");
+		return parseSomethingOrSomethingTag(
+				element, 
+				Registries.ENTITY_TYPE,
+				() -> "Expected entity type or entity type tag",
+				id -> "Unknown entity type or entity type tag `" + id + "`"
+		);
 	}
 
 	public static Result<Item, Problem> parseItem(JsonElement element) {
-		return parseSomething(Registries.ITEM, element, () -> "Expected valid item");
+		return parseSomething(
+				element, 
+				Registries.ITEM,
+				() -> "Expected item",
+				id -> "Unknown item `" + id + "`"
+		);
 	}
 
 	public static Result<RegistryEntryList<Item>, Problem> parseItemTag(JsonElement element) {
-		return parseSomethingTag(Registries.ITEM, element, () -> "Expected valid item tag");
+		return parseSomethingTag(
+				element, 
+				Registries.ITEM,
+				() -> "Expected item tag",
+				id -> "Unknown item tag `" + id + "`"
+		);
 	}
 
 	public static Result<RegistryEntryList<Item>, Problem> parseItemOrItemTag(JsonElement element) {
-		return parseSomethingOrSomethingTag(Registries.ITEM, element, () -> "Expected valid item or item tag");
+		return parseSomethingOrSomethingTag(
+				element, 
+				Registries.ITEM,
+				() -> "Expected item or item tag",
+				id -> "Unknown item or item tag `" + id + "`"
+		);
 	}
 
 	public static Result<StatType<?>, Problem> parseStatType(JsonElement element) {
-		return parseSomething(Registries.STAT_TYPE, element, () -> "Expected valid stat type");
+		return parseSomething(
+				element, 
+				Registries.STAT_TYPE,
+				() -> "Expected stat type",
+				id -> "Unknown stat type `" + id + "`"
+		);
 	}
 
 	public static Result<RegistryEntryList<StatType<?>>, Problem> parseStatTypeTag(JsonElement element) {
-		return parseSomethingTag(Registries.STAT_TYPE, element, () -> "Expected valid stat type tag");
+		return parseSomethingTag(
+				element, 
+				Registries.STAT_TYPE,
+				() -> "Expected stat type tag",
+				id -> "Unknown stat type tag `" + id + "`"
+		);
 	}
 
 	public static Result<RegistryEntryList<StatType<?>>, Problem> parseStatTypeOrStatTypeTag(JsonElement element) {
-		return parseSomethingOrSomethingTag(Registries.STAT_TYPE, element, () -> "Expected valid stat type or stat type tag");
+		return parseSomethingOrSomethingTag(
+				element, 
+				Registries.STAT_TYPE,
+				() -> "Expected stat type or stat type tag",
+				id -> "Unknown stat type or stat type tag `" + id + "`"
+		);
 	}
 
 	public static Result<StatePredicate, Problem> parseStatePredicate(JsonElement element) {
 		try {
 			return Result.success(StatePredicate.CODEC.parse(JsonOps.INSTANCE, element.getJson()).result().orElseThrow());
 		} catch (Exception e) {
-			return Result.failure(element.getPath().createProblem("Expected valid state predicate"));
+			return Result.failure(element.getPath().createProblem("Expected state predicate"));
 		}
 	}
 
 	public static Result<NbtPredicate, Problem> parseNbtPredicate(JsonElement element) {
-		try {
-			return Result.success(new NbtPredicate(StringNbtReader.parse(element.getJson().getAsString())));
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createProblem("Expected valid state predicate"));
-		}
+		return parseFromString(
+				element,
+				s -> {
+					try {
+						return new NbtPredicate(StringNbtReader.parse(s));
+					} catch (Exception e) {
+						throw  new RuntimeException(e);
+					}
+				},
+				() -> "Expected state predicate",
+				s -> "Invalid state predicate `" + s + "`"
+		);
 	}
 
 	public static Result<Stat<?>, Problem> parseStat(JsonElement element) {
-		try {
-			return parseIdentifier(element).mapSuccess(id -> getOrCreateStat(Registries.STAT_TYPE.getOrEmpty(
-					Identifier.splitOn(id.getNamespace(), '.')
-			).orElseThrow(), Identifier.splitOn(id.getPath(), '.')));
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createProblem("Expected valid stat"));
-		}
+		return parseFromIdentifier(
+				element,
+				id -> getOrCreateStat(
+						Registries.STAT_TYPE.getOrEmpty(
+								Identifier.splitOn(id.getNamespace(), '.')
+						).orElseThrow(),
+						Identifier.splitOn(id.getPath(), '.')
+				),
+				() -> "Expected stat",
+				id -> "Unknown stat `" + id + "`"
+		);
 	}
 
 	private static <T> Stat<T> getOrCreateStat(StatType<T> statType, Identifier id) {
@@ -154,11 +258,18 @@ public final class BuiltinJson {
 	}
 
 	public static Result<NbtCompound, Problem> parseNbt(JsonElement element) {
-		try {
-			return Result.success(StringNbtReader.parse(element.getJson().getAsString()));
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createProblem("Expected valid nbt"));
-		}
+		return parseFromString(
+				element,
+				s -> {
+					try {
+						return StringNbtReader.parse(s);
+					} catch (Exception e) {
+						throw new RuntimeException(e);
+					}
+				},
+				() -> "Expected NBT",
+				s -> "Invalid NBT `" + s + "`"
+		);
 	}
 
 	public static Result<ItemStack, Problem> parseItemStack(JsonElement element) {
@@ -187,7 +298,7 @@ public final class BuiltinJson {
 				}
 			});
 		} catch (Exception e) {
-			return Result.failure(element.getPath().createProblem("Expected valid item stack"));
+			return Result.failure(element.getPath().createProblem("Expected item stack"));
 		}
 	}
 
@@ -195,7 +306,7 @@ public final class BuiltinJson {
 		try {
 			return Result.success(AdvancementFrame.CODEC.parse(JsonOps.INSTANCE, element.getJson()).result().orElseThrow());
 		} catch (Exception e) {
-			return Result.failure(element.getPath().createProblem("Expected valid frame"));
+			return Result.failure(element.getPath().createProblem("Expected frame"));
 		}
 	}
 
@@ -203,64 +314,108 @@ public final class BuiltinJson {
 		try {
 			return Result.success(Text.Serialization.fromJsonTree(element.getJson()));
 		} catch (Exception e) {
-			return Result.failure(element.getPath().createProblem("Expected valid text"));
+			return Result.failure(element.getPath().createProblem("Expected text"));
 		}
 	}
 
 	public static Result<EntityAttribute, Problem> parseAttribute(JsonElement element) {
-		try {
-			return parseIdentifier(element).mapSuccess(id -> {
-				// Backwards compatibility.
-				if (id.getNamespace().equals(SkillsAPI.MOD_ID)) {
-					id = new Identifier("puffish_attributes", id.getPath());
-				}
-				return Registries.ATTRIBUTE.getOrEmpty(id).orElseThrow();
-			});
-		} catch (Exception e) {
-			return Result.failure(element.getPath().createProblem("Expected valid attribute"));
-		}
+		return parseFromIdentifier(
+				element,
+				id -> {
+					if (id.getNamespace().equals(SkillsAPI.MOD_ID)) {
+						id = new Identifier("puffish_attributes", id.getPath());
+					}
+					return Registries.ATTRIBUTE.getOrEmpty(id).orElseThrow();
+				},
+				() -> "Expected attribute",
+				id -> "Unknown attribute `" + id + "`"
+		);
 	}
 
 	public static Result<EntityAttributeModifier.Operation, Problem> parseAttributeOperation(JsonElement element) {
-		return element.getAsString().andThen(string -> switch (string) {
-			case "addition" -> Result.success(EntityAttributeModifier.Operation.ADDITION);
-			case "multiply_base" -> Result.success(EntityAttributeModifier.Operation.MULTIPLY_BASE);
-			case "multiply_total" -> Result.success(EntityAttributeModifier.Operation.MULTIPLY_TOTAL);
-			default -> Result.failure(element.getPath().createProblem("Expected valid attribute operation"));
-		});
+		return parseFromString(
+				element,
+				s -> switch (s) {
+					case "addition" -> EntityAttributeModifier.Operation.ADDITION;
+					case "multiply_base" -> EntityAttributeModifier.Operation.MULTIPLY_BASE;
+					case "multiply_total" -> EntityAttributeModifier.Operation.MULTIPLY_TOTAL;
+					default -> throw new RuntimeException();
+				},
+				() -> "Expected attribute operation",
+				s -> "Unknown attribute operation `" + s + "`"
+		);
 	}
 
-	private static <T> Result<T, Problem> parseSomething(Registry<T> registry, JsonElement element, Supplier<String> message) {
+	private static <T> Result<T, Problem> parseFromString(JsonElement element, Function<String, T> parser, Supplier<String> expected, Function<String, String> unknown) {
 		try {
-			var string = element.getJson().getAsString();
-			return Result.success(registry.getOrEmpty(new Identifier(string)).orElseThrow());
-		} catch (Exception ignored) {
-			return Result.failure(element.getPath().createProblem(message.get()));
-		}
-	}
-
-	private static <T> Result<RegistryEntryList<T>, Problem> parseSomethingTag(Registry<T> registry, JsonElement element, Supplier<String> message) {
-		try {
-			var string = element.getJson().getAsString();
-			if (string.startsWith("#")) {
-				string = string.substring(1);
+			var s = element.getJson().getAsString();
+			try {
+				return Result.success(parser.apply(s));
+			} catch (Exception ignored) {
+				return Result.failure(element.getPath().createProblem(unknown.apply(s)));
 			}
-			return Result.success(registry.getReadOnlyWrapper().getOptional(TagKey.of(registry.getKey(), new Identifier(string))).orElseThrow());
 		} catch (Exception ignored) {
-			return Result.failure(element.getPath().createProblem(message.get()));
+			return Result.failure(element.getPath().createProblem(expected.get()));
 		}
 	}
 
-	private static <T> Result<RegistryEntryList<T>, Problem> parseSomethingOrSomethingTag(Registry<T> registry, JsonElement element, Supplier<String> message) {
+	private static <T> Result<T, Problem> parseFromIdentifier(JsonElement element, Function<Identifier, T> parser, Supplier<String> expected, Function<Identifier, String> unknown) {
+		return parseIdentifier(element)
+				.mapFailure(problem -> element.getPath().createProblem(expected.get()))
+				.andThen(id -> {
+					try {
+						return Result.success(parser.apply(id));
+					} catch (Exception ignored) {
+						return Result.failure(element.getPath().createProblem(unknown.apply(id)));
+					}
+				});
+	}
+
+	private static <T> Result<T, Problem> parseSomething(JsonElement element, Registry<T> registry, Supplier<String> expected, Function<Identifier, String> unknown) {
+		return parseFromIdentifier(
+				element,
+				id -> registry.getOrEmpty(id).orElseThrow(),
+				expected,
+				unknown
+		);
+	}
+
+	private static <T> Result<RegistryEntryList<T>, Problem> parseSomethingTag(JsonElement element, Registry<T> registry, Supplier<String> expected, Function<Identifier, String> unknown) {
 		try {
-			var string = element.getJson().getAsString();
-			if (string.startsWith("#")) {
-				return Result.success(registry.getReadOnlyWrapper().getOptional(TagKey.of(registry.getKey(), new Identifier(string.substring(1)))).orElseThrow());
+			var s = element.getJson().getAsString();
+			var id = s.startsWith("#") ? new Identifier(s.substring(1)) : new Identifier(s);
+			try {
+				return Result.success(registry.getReadOnlyWrapper()
+						.getOptional(TagKey.of(registry.getKey(), id))
+						.orElseThrow());
+			} catch (Exception ignored) {
+				return Result.failure(element.getPath().createProblem(unknown.apply(id)));
+			}
+		} catch (Exception ignored) {
+			return Result.failure(element.getPath().createProblem(expected.get()));
+		}
+	}
+
+	private static <T> Result<RegistryEntryList<T>, Problem> parseSomethingOrSomethingTag(JsonElement element, Registry<T> registry, Supplier<String> expected, Function<Identifier, String> unknown) {
+		try {
+			var s = element.getJson().getAsString();
+			if (s.startsWith("#")) {
+				var id = new Identifier(s.substring(1));
+				try {
+					return Result.success(registry.getReadOnlyWrapper().getOptional(TagKey.of(registry.getKey(), id)).orElseThrow());
+				} catch (Exception ignored) {
+					return Result.failure(element.getPath().createProblem(unknown.apply(id)));
+				}
 			} else {
-				return Result.success(RegistryEntryList.of(registry.getEntry(RegistryKey.of(registry.getKey(), new Identifier(string))).orElseThrow()));
+				var id = new Identifier(s);
+				try {
+					return Result.success(RegistryEntryList.of(registry.getEntry(RegistryKey.of(registry.getKey(), id)).orElseThrow()));
+				} catch (Exception ignored) {
+					return Result.failure(element.getPath().createProblem(unknown.apply(id)));
+				}
 			}
 		} catch (Exception ignored) {
-			return Result.failure(element.getPath().createProblem(message.get()));
+			return Result.failure(element.getPath().createProblem(expected.get()));
 		}
 	}
 }
