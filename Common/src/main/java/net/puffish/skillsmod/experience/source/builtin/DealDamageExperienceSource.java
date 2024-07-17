@@ -2,6 +2,7 @@ package net.puffish.skillsmod.experience.source.builtin;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.SkillsMod;
@@ -32,6 +33,11 @@ public class DealDamageExperienceSource implements ExperienceSource {
 				SkillsMod.createIdentifier("get_player"),
 				BuiltinPrototypes.PLAYER,
 				OperationFactory.create(Data::player)
+		);
+		PROTOTYPE.registerOperation(
+				SkillsMod.createIdentifier("get_weapon_item_stack"),
+				BuiltinPrototypes.ITEM_STACK,
+				OperationFactory.create(Data::weapon)
 		);
 		PROTOTYPE.registerOperation(
 				SkillsMod.createIdentifier("get_damaged_living_entity"),
@@ -107,11 +113,11 @@ public class DealDamageExperienceSource implements ExperienceSource {
 		}
 	}
 
-	private record Data(ServerPlayerEntity player, LivingEntity entity, float damage, DamageSource damageSource) { }
+	private record Data(ServerPlayerEntity player, LivingEntity entity, ItemStack weapon, float damage, DamageSource damageSource) { }
 
-	public int getValue(ServerPlayerEntity player, LivingEntity entity, float damage, DamageSource damageSource) {
+	public int getValue(ServerPlayerEntity player, LivingEntity entity, ItemStack weapon, float damage, DamageSource damageSource) {
 		return (int) Math.round(calculation.evaluate(
-				new Data(player, entity, damage, damageSource)
+				new Data(player, entity, weapon, damage, damageSource)
 		));
 	}
 
