@@ -38,12 +38,13 @@ public abstract class LivingEntityMixin {
 	@Inject(method = "applyDamage", at = @At("TAIL"))
 	private void injectAtApplyDamage(DamageSource source, float damage, CallbackInfo ci) {
 		var entity = ((LivingEntity) (Object) this);
+		var weapon = ((DamageSourceAccess) source).getWeapon().orElse(ItemStack.EMPTY);
 
 		if (entity instanceof ServerPlayerEntity player) {
 			SkillsAPI.updateExperienceSources(
 					player,
 					TakeDamageExperienceSource.class,
-					experienceSource -> experienceSource.getValue(player, damage, source)
+					experienceSource -> experienceSource.getValue(player, weapon, damage, source)
 			);
 		}
 
@@ -65,7 +66,7 @@ public abstract class LivingEntityMixin {
 								.map(antiFarming -> antiFarmingData.addAndLimit(antiFarming, damage))
 								.orElse(damage);
 						if (limitedDamage > MathHelper.EPSILON) {
-							return experienceSource.getValue(player, entity, limitedDamage, source);
+							return experienceSource.getValue(player, entity, weapon, limitedDamage, source);
 						}
 						return 0;
 					}
