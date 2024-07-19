@@ -13,6 +13,7 @@
 		"ItemStackMixin",
 		"LivingEntityInvoker",
 		"LivingEntityMixin",
+		"PlayerEntityMixin",
 		"ServerPlayerEntityMixin",
 		"WorldChunkMixin"
 	],
