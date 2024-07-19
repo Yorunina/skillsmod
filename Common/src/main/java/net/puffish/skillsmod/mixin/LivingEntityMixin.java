@@ -12,7 +12,6 @@ import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.experience.source.builtin.DealDamageExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.KillEntityExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.SharedKillEntityExperienceSource;
-import net.puffish.skillsmod.experience.source.builtin.TakeDamageExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.util.AntiFarmingPerEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -40,14 +39,6 @@ public abstract class LivingEntityMixin {
 	private void injectAtApplyDamage(DamageSource source, float damage, CallbackInfo ci) {
 		var entity = ((LivingEntity) (Object) this);
 		var weapon = ((DamageSourceAccess) source).getWeapon().orElse(ItemStack.EMPTY);
-
-		if (entity instanceof ServerPlayerEntity player) {
-			SkillsAPI.updateExperienceSources(
-					player,
-					TakeDamageExperienceSource.class,
-					experienceSource -> experienceSource.getValue(player, weapon, damage, source)
-			);
-		}
 
 		if (source.getAttacker() instanceof ServerPlayerEntity player) {
 			damageShare.compute(player, (key, value) -> {
