@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public class ServerData extends PersistentState {
-	public final Map<UUID, PlayerData> players = new HashMap<>();
+	private final Map<UUID, PlayerData> players = new HashMap<>();
 
 	private ServerData() {
 
@@ -63,6 +63,10 @@ public class ServerData extends PersistentState {
 
 	public PlayerData getPlayerData(ServerPlayerEntity player) {
 		return players.computeIfAbsent(player.getUuid(), uuid -> PlayerData.empty());
+	}
+
+	public void putPlayerData(ServerPlayerEntity player, PlayerData data) {
+		players.put(player.getUuid(), data);
 	}
 
 	@Override

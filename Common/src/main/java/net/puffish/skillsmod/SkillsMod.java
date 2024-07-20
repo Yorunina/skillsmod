@@ -640,7 +640,7 @@ public class SkillsMod {
 		);
 	}
 
-	private void syncAllCategories(ServerPlayerEntity player) {
+	public void syncAllCategories(ServerPlayerEntity player) {
 		if (isConfigValid()) {
 			var categories = getAllCategories();
 			if (categories.isEmpty()) {
