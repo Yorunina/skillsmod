@@ -10,6 +10,7 @@ import net.puffish.skillsmod.access.DamageSourceAccess;
 import net.puffish.skillsmod.access.WorldChunkAccess;
 import net.puffish.skillsmod.api.SkillsAPI;
 import net.puffish.skillsmod.experience.source.builtin.DealDamageExperienceSource;
+import net.puffish.skillsmod.experience.source.builtin.HealExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.KillEntityExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.SharedKillEntityExperienceSource;
 import net.puffish.skillsmod.experience.source.builtin.util.AntiFarmingPerEntity;
@@ -34,6 +35,19 @@ public abstract class LivingEntityMixin {
 
 	@Unique
 	private final AntiFarmingPerEntity.Data antiFarmingData = new AntiFarmingPerEntity.Data();
+
+	@Inject(method = "heal", at = @At("TAIL"))
+	private void injectAtHeal(float amount, CallbackInfo ci) {
+		if (amount > 0) {
+			if (((LivingEntity) (Object) this) instanceof ServerPlayerEntity player) {
+				SkillsAPI.updateExperienceSources(
+						player,
+						HealExperienceSource.class,
+						experienceSource -> experienceSource.getValue(player, amount)
+				);
+			}
+		}
+	}
 
 	@Inject(method = "applyDamage", at = @At("TAIL"))
 	private void injectAtApplyDamage(DamageSource source, float damage, CallbackInfo ci) {
