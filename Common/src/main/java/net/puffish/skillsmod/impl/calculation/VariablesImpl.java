@@ -13,6 +13,7 @@ import net.puffish.skillsmod.api.json.JsonPath;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.impl.calculation.operation.OperationConfigContextImpl;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -94,23 +95,26 @@ public class VariablesImpl<T, R> implements Variables<T, R> {
 	) {
 		var problems = new ArrayList<Problem>();
 
-		var optPrototypeView = parseOperation(rootObject, prototypeView, context, "legacy_")
-				.getSuccess() // Backwards compatibility.
-				.or(() -> rootObject.getArray("operations")
-						.ifFailure(problems::add)
-						.getSuccess()
-						.flatMap(array -> {
-							var view = Optional.of(prototypeView);
-							for (var element : (Iterable<JsonElement>) array.stream()::iterator) {
-								view = view.flatMap(
-										v -> parseOperation(element, v, context)
-												.ifFailure(problems::add)
-												.getSuccess()
-								);
-							}
-							return view;
-						})
-				);
+		var optPrototypeView = rootObject.getArray("operations")
+				.mapSuccess(array -> {
+					var view = Optional.of(prototypeView);
+					for (var element : (Iterable<JsonElement>) array.stream()::iterator) {
+						view = view.flatMap(
+								v -> parseOperation(element, v, context)
+										.ifFailure(problems::add)
+										.getSuccess()
+						);
+					}
+					return view;
+				})
+				.orElse(LegacyUtils.wrapDeprecated(
+						() -> parseOperation(rootObject, prototypeView, context, "legacy_").mapSuccess(Optional::of),
+						3,
+						context
+				))
+				.ifFailure(problems::add)
+				.getSuccess()
+				.flatMap(Function.identity());
 
 		var optFallback = rootObject.get("fallback")
 				.getSuccess()
