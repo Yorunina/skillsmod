@@ -11,6 +11,7 @@ import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -33,14 +34,18 @@ public final class EntityTypeCondition implements Operation<EntityType<?>, Boole
 	public static Result<EntityTypeCondition, Problem> parse(OperationConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(EntityTypeCondition::parse);
+				.andThen(rootObject -> parse(rootObject, context));
 	}
 
-	public static Result<EntityTypeCondition, Problem> parse(JsonObject rootObject) {
+	public static Result<EntityTypeCondition, Problem> parse(JsonObject rootObject, OperationConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
-		var optEntityType = rootObject.get("entity") // Backwards compatibility.
-				.orElse(problem -> rootObject.get("entity_type"))
+		var optEntityType = rootObject.get("entity_type")
+				.orElse(LegacyUtils.wrapDeprecated(
+						() -> rootObject.get("entity"),
+						3,
+						context
+				))
 				.andThen(BuiltinJson::parseEntityTypeOrEntityTypeTag)
 				.ifFailure(problems::add)
 				.getSuccess();
