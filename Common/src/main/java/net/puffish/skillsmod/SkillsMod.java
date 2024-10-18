@@ -82,6 +82,7 @@ import net.puffish.skillsmod.util.DisposeContext;
 import net.puffish.skillsmod.util.PathUtils;
 import net.puffish.skillsmod.util.PrefixedLogger;
 import net.puffish.skillsmod.util.ToastType;
+import net.puffish.skillsmod.util.VersionedConfigContext;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -98,7 +99,7 @@ import java.util.stream.Collectors;
 
 public class SkillsMod {
 	public static final int MIN_CONFIG_VERSION = 1;
-	public static final int MAX_CONFIG_VERSION = 2;
+	public static final int MAX_CONFIG_VERSION = 3;
 
 	private static SkillsMod instance;
 
@@ -254,8 +255,9 @@ public class SkillsMod {
 
 	private Result<Map<Identifier, CategoryConfig>, Problem> loadConfig(ConfigReader reader, ModConfig modConfig, MinecraftServer server) {
 		var context = new ConfigContextImpl(server);
+		var versionedContext = new VersionedConfigContext(context, modConfig.getVersion());
 
-		return reader.readCategories(SkillsAPI.MOD_ID, modConfig.getCategories(), context)
+		return reader.readCategories(SkillsAPI.MOD_ID, modConfig.getCategories(), versionedContext)
 				.ifSuccess(map -> {
 					if (modConfig.getShowWarnings() && !context.warnings().isEmpty()) {
 						logger.warn("Configuration loaded successfully with warning(s):"
@@ -269,7 +271,6 @@ public class SkillsMod {
 	}
 
 	private Optional<Map<Identifier, CategoryConfig>> loadPackConfig(ModConfig modConfig, MinecraftServer server) {
-		var context = new ConfigContextImpl(server);
 		var cumulatedMap = new LinkedHashMap<Identifier, CategoryConfig>();
 		var resourceManager = server.getResourceManager();
 		var anyProblems = false;
@@ -287,23 +288,27 @@ public class SkillsMod {
 
 			anyProblems |= reader.readResource(id, resource)
 					.andThen(rootElement -> PackConfig.parse(name, rootElement))
-					.andThen(packConfig -> reader.readCategories(name, packConfig.getCategories(), context))
-					.ifSuccess(map -> {
-						if (modConfig.getShowWarnings() && !context.warnings().isEmpty()) {
-							logger.warn("Data pack `" + name + "` loaded successfully with warning(s):"
-									+ System.lineSeparator()
-									+ context.warnings().stream().collect(Collectors.joining(System.lineSeparator()))
-							);
-						} else {
-							logger.info("Data pack `" + name + "` loaded successfully!");
-						}
-						cumulatedMap.putAll(map);
+					.andThen(packConfig -> {
+						var context = new ConfigContextImpl(server);
+						var versionedContext = new VersionedConfigContext(context, packConfig.getVersion());
+						return reader.readCategories(name, packConfig.getCategories(), versionedContext)
+								.ifSuccess(map -> {
+									if (modConfig.getShowWarnings() && !context.warnings().isEmpty()) {
+										logger.warn("Data pack `" + name + "` loaded successfully with warning(s):"
+												+ System.lineSeparator()
+												+ context.warnings().stream().collect(Collectors.joining(System.lineSeparator()))
+										);
+									} else {
+										logger.info("Data pack `" + name + "` loaded successfully!");
+									}
+									cumulatedMap.putAll(map);
+								});
 					})
 					.ifFailure(problem ->
 							logger.error("Data pack `" + name + "` could not be loaded:"
 									+ System.lineSeparator()
 									+ problem
-					))
+							))
 					.getFailure()
 					.isPresent();
 		}

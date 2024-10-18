@@ -8,6 +8,7 @@ import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +31,10 @@ public class LegacyCalculation {
 
 		var variablesList = new ArrayList<Variables<T, Double>>();
 
-		for (var keys : List.of("parameters", "conditions", "variables")) {
+		for (var keys : LegacyUtils.isRemoved(3, context)
+				? List.of("variables")
+				: List.of("parameters", "conditions", "variables")
+		) {
 			rootObject.get(keys)
 					.getSuccess() // ignore failure because this property is optional
 					.ifPresent(variablesElement -> Variables.parse(variablesElement, prototype, context)

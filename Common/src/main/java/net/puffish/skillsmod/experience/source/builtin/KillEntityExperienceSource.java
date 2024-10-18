@@ -97,7 +97,7 @@ public class KillEntityExperienceSource implements ExperienceSource {
 
 		var optAntiFarming = rootObject.get("anti_farming")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(element -> AntiFarmingPerChunk.parse(element)
+				.flatMap(element -> AntiFarmingPerChunk.parse(element, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 						.flatMap(Function.identity())

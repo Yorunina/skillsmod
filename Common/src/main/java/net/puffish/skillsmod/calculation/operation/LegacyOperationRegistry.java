@@ -5,15 +5,16 @@ import net.puffish.skillsmod.api.calculation.operation.OperationFactory;
 import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.calculation.prototype.Prototype;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.impl.calculation.prototype.PrototypeImpl;
 
 import java.util.Optional;
 import java.util.function.Function;
 
 public class LegacyOperationRegistry<T> {
-	private final Prototype<T> prototype;
+	private final PrototypeImpl<T> prototype;
 
 	public LegacyOperationRegistry(Prototype<T> prototype) {
-		this.prototype = prototype;
+		this.prototype = (PrototypeImpl<T>) prototype;
 	}
 
 	public <U> void registerBooleanFunction(
@@ -21,7 +22,7 @@ public class LegacyOperationRegistry<T> {
 			OperationFactory<U, Boolean> factory,
 			Function<T, U> function
 	) {
-		prototype.registerOperation(
+		prototype.registerLegacyOperation(
 				createId(name),
 				BuiltinPrototypes.NUMBER,
 				factory.compose(function).andThen(b -> b ? 1.0 : 0.0)
@@ -33,7 +34,7 @@ public class LegacyOperationRegistry<T> {
 			OperationFactory<U, Boolean> factory,
 			Function<T, Optional<U>> function
 	) {
-		prototype.registerOperation(
+		prototype.registerLegacyOperation(
 				createId(name),
 				BuiltinPrototypes.NUMBER,
 				factory.optional().compose(function).andThen(b -> b ? 1.0 : 0.0)
@@ -46,7 +47,7 @@ public class LegacyOperationRegistry<T> {
 			OperationFactory<U, R> factory,
 			Function<T, U> function
 	) {
-		prototype.registerOperation(
+		prototype.registerLegacyOperation(
 				createId(name),
 				BuiltinPrototypes.NUMBER,
 				factory.compose(function).andThen(postFunction)
@@ -57,7 +58,7 @@ public class LegacyOperationRegistry<T> {
 			String name,
 			Function<T, Double> function
 	) {
-		prototype.registerOperation(
+		prototype.registerLegacyOperation(
 				createId(name),
 				BuiltinPrototypes.NUMBER,
 				context -> Result.success(t -> Optional.of(function.apply(t)))
