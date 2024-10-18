@@ -2,10 +2,12 @@ package net.puffish.skillsmod.experience.source.builtin.util;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,18 +15,19 @@ import java.util.Map;
 import java.util.Optional;
 
 public record AntiFarmingPerChunk(int limitPerChunk, int resetAfterSeconds) {
-	public static Result<Optional<AntiFarmingPerChunk>, Problem> parse(JsonElement rootElement) {
+	public static Result<Optional<AntiFarmingPerChunk>, Problem> parse(JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject()
-				.andThen(AntiFarmingPerChunk::parse);
+				.andThen(rootObject -> parse(rootObject, context));
 	}
 
-	public static Result<Optional<AntiFarmingPerChunk>, Problem> parse(JsonObject rootObject) {
+	public static Result<Optional<AntiFarmingPerChunk>, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
-		// Deprecated
-		var enabled = rootObject.getBoolean("enabled")
-				.getSuccess()
-				.orElse(true);
+		var enabled = LegacyUtils.deprecated(
+				() -> rootObject.getBoolean("enabled"),
+		3,
+				context
+		).orElse(true);
 
 		var optLimitPerChunk = rootObject.getInt("limit_per_chunk")
 				.ifFailure(problems::add)
