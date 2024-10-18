@@ -11,9 +11,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PackConfig {
+	private final int version;
 	private final List<String> categories;
 
-	private PackConfig(List<String> categories) {
+	private PackConfig(int version, List<String> categories) {
+		this.version = version;
 		this.categories = categories;
 	}
 
@@ -44,11 +46,16 @@ public class PackConfig {
 
 		if (problems.isEmpty()) {
 			return Result.success(new PackConfig(
+					version,
 					optCategories.orElseThrow()
 			));
 		} else {
 			return Result.failure(Problem.combine(problems));
 		}
+	}
+
+	public int getVersion() {
+		return version;
 	}
 
 	public List<String> getCategories() {

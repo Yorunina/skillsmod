@@ -11,6 +11,7 @@ import net.puffish.skillsmod.api.reward.RewardDisposeContext;
 import net.puffish.skillsmod.api.reward.RewardUpdateContext;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 
@@ -33,14 +34,18 @@ public class ScoreboardReward implements Reward {
 	private static Result<ScoreboardReward, Problem> parse(RewardConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(ScoreboardReward::parse);
+				.andThen(rootObject -> parse(rootObject, context));
 	}
 
-	private static Result<ScoreboardReward, Problem> parse(JsonObject rootObject) {
+	private static Result<ScoreboardReward, Problem> parse(JsonObject rootObject, RewardConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
-		var optObjective = rootObject.getString("scoreboard") // Backwards compatibility.
-				.orElse(problem -> rootObject.getString("objective"))
+		var optObjective = rootObject.getString("objective")
+				.orElse(LegacyUtils.wrapDeprecated(
+						() -> rootObject.getString("scoreboard"),
+						3,
+						context
+				))
 				.ifFailure(problems::add)
 				.getSuccess();
 

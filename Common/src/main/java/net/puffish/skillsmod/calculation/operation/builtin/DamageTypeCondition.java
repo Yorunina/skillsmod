@@ -9,6 +9,7 @@ import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -37,8 +38,12 @@ public final class DamageTypeCondition implements Operation<String, Boolean> {
 	public static Result<DamageTypeCondition, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
-		var optDamageType = rootObject.get("damage") // Backwards compatibility.
-				.orElse(problem -> rootObject.get("damage_type"))
+		var optDamageType = rootObject.get("damage_type")
+				.orElse(LegacyUtils.wrapDeprecated(
+						() -> rootObject.get("damage"),
+						3,
+						context
+				))
 				.andThen(JsonElement::getAsString)
 				.ifFailure(problems::add)
 				.getSuccess();
