@@ -6,6 +6,7 @@ import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.util.DisposeContext;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,10 +29,11 @@ public class ExperienceConfig {
 	public static Result<Optional<ExperienceConfig>, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
-		// Deprecated
-		var enabled = rootObject.getBoolean("enabled")
-				.getSuccess()
-				.orElse(true);
+		var enabled = LegacyUtils.deprecated(
+				() -> rootObject.getBoolean("enabled"),
+				3,
+				context
+		).orElse(true);
 
 		var optExperiencePerLevel = rootObject.get("experience_per_level")
 				.andThen(ExperiencePerLevelConfig::parse)

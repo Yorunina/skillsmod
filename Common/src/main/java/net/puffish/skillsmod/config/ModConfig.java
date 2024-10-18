@@ -11,10 +11,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ModConfig {
+	private final int version;
 	private final boolean showWarnings;
 	private final List<String> categories;
 
-	private ModConfig(boolean showWarnings, List<String> categories) {
+	private ModConfig(int version, boolean showWarnings, List<String> categories) {
+		this.version = version;
 		this.showWarnings = showWarnings;
 		this.categories = categories;
 	}
@@ -53,12 +55,17 @@ public class ModConfig {
 
 		if (problems.isEmpty()) {
 			return Result.success(new ModConfig(
+					version,
 					showWarnings,
 					categories
 			));
 		} else {
 			return Result.failure(Problem.combine(problems));
 		}
+	}
+
+	public int getVersion() {
+		return version;
 	}
 
 	public boolean getShowWarnings() {
