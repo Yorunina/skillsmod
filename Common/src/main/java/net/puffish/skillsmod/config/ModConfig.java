@@ -10,10 +10,10 @@ import net.puffish.skillsmod.api.util.Result;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ModConfig {
+public class ModConfig implements Config {
 	private final int version;
-	private final boolean showWarnings;
 	private final List<String> categories;
+	private final boolean showWarnings;
 
 	private ModConfig(int version, boolean showWarnings, List<String> categories) {
 		this.version = version;
@@ -64,15 +64,17 @@ public class ModConfig {
 		}
 	}
 
+	@Override
 	public int getVersion() {
 		return version;
 	}
 
-	public boolean getShowWarnings() {
-		return showWarnings;
-	}
-
+	@Override
 	public List<String> getCategories() {
 		return categories;
+	}
+
+	public boolean getShowWarnings() {
+		return showWarnings;
 	}
 }
