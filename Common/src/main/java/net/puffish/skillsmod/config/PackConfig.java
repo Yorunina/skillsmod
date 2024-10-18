@@ -10,7 +10,7 @@ import net.puffish.skillsmod.api.util.Result;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PackConfig {
+public class PackConfig implements Config {
 	private final int version;
 	private final List<String> categories;
 
@@ -54,10 +54,12 @@ public class PackConfig {
 		}
 	}
 
+	@Override
 	public int getVersion() {
 		return version;
 	}
 
+	@Override
 	public List<String> getCategories() {
 		return categories;
 	}

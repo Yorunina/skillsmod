@@ -12,6 +12,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.puffish.skillsmod.api.Skill;
 import net.puffish.skillsmod.api.SkillsAPI;
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.experience.source.ExperienceSource;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
@@ -38,6 +39,7 @@ import net.puffish.skillsmod.commands.OpenCommand;
 import net.puffish.skillsmod.commands.PointsCommand;
 import net.puffish.skillsmod.commands.SkillsCommand;
 import net.puffish.skillsmod.config.CategoryConfig;
+import net.puffish.skillsmod.config.Config;
 import net.puffish.skillsmod.config.ModConfig;
 import net.puffish.skillsmod.config.PackConfig;
 import net.puffish.skillsmod.config.reader.ConfigReader;
@@ -88,6 +90,7 @@ import net.puffish.skillsmod.util.VersionedConfigContext;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -225,56 +228,38 @@ public class SkillsMod {
 		}
 
 		var reader = new FileConfigReader(modConfigDir);
-		var cumulatedMap = new LinkedHashMap<Identifier, CategoryConfig>();
+		var context = new ConfigContextImpl(server);
 
 		reader.read(Path.of("config.json"))
 				.andThen(ModConfig::parse)
-				.andThen(modConfig ->
-						loadConfig(reader, modConfig, server)
-								.mapSuccess(map -> {
-									cumulatedMap.putAll(map);
-									return modConfig;
-								})
+				.andThen(modConfig -> loadCategories(reader, modConfig, SkillsAPI.MOD_ID, context)
+						.ifSuccess(map -> {
+							var cumulatedMap = new LinkedHashMap<>(map);
+							showSuccess("Configuration", modConfig.getShowWarnings(), context);
+
+							loadPackConfig(server, cumulatedMap, modConfig.getShowWarnings());
+
+							categories.set(Optional.of(cumulatedMap), () -> {
+								for (var category : cumulatedMap.values()) {
+									category.dispose(new DisposeContext(server));
+								}
+							});
+						})
 				)
-				.ifFailure(problem -> logger.error(
-						"Configuration could not be loaded:"
-								+ System.lineSeparator()
-								+ problem
-				))
-				.getSuccess()
-				.flatMap(modConfig -> loadPackConfig(modConfig, server))
-				.ifPresentOrElse(map -> {
-					cumulatedMap.putAll(map);
-
-					categories.set(Optional.of(cumulatedMap), () -> {
-						for (var category : cumulatedMap.values()) {
-							category.dispose(new DisposeContext(server));
-						}
-					});
-				}, () -> categories.set(Optional.empty(), () -> { }));
-	}
-
-	private Result<Map<Identifier, CategoryConfig>, Problem> loadConfig(ConfigReader reader, ModConfig modConfig, MinecraftServer server) {
-		var context = new ConfigContextImpl(server);
-		var versionedContext = new VersionedConfigContext(context, modConfig.getVersion());
-
-		return reader.readCategories(SkillsAPI.MOD_ID, modConfig.getCategories(), versionedContext)
-				.ifSuccess(map -> {
-					if (modConfig.getShowWarnings() && !context.warnings().isEmpty()) {
-						logger.warn("Configuration loaded successfully with warning(s):"
-								+ System.lineSeparator()
-								+ context.warnings().stream().collect(Collectors.joining(System.lineSeparator()))
-						);
-					} else {
-						logger.info("Configuration loaded successfully!");
-					}
+				.ifFailure(problem -> {
+					categories.set(Optional.empty(), () -> { });
+					showFailure("Configuration", problem);
 				});
 	}
 
-	private Optional<Map<Identifier, CategoryConfig>> loadPackConfig(ModConfig modConfig, MinecraftServer server) {
-		var cumulatedMap = new LinkedHashMap<Identifier, CategoryConfig>();
+	private Result<Map<Identifier, CategoryConfig>, Problem> loadCategories(ConfigReader reader, Config config, String namespace,  ConfigContext context) {
+		var versionedContext = new VersionedConfigContext(context, config.getVersion());
+
+		return reader.readCategories(namespace, config.getCategories(), versionedContext);
+	}
+
+	private void loadPackConfig(MinecraftServer server, Map<Identifier, CategoryConfig> cumulatedMap, boolean showWarning) {
 		var resourceManager = server.getResourceManager();
-		var anyProblems = false;
 
 		var resources = resourceManager.findResources(
 				SkillsAPI.MOD_ID,
@@ -288,41 +273,52 @@ public class SkillsMod {
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
-			var name = id.getNamespace();
-			var reader = new PackConfigReader(resourceManager, name);
+			var namespace = id.getNamespace();
+			var reader = new PackConfigReader(resourceManager, namespace);
+			var context = new ConfigContextImpl(server);
 
-			anyProblems |= reader.readResource(id, resource)
-					.andThen(rootElement -> PackConfig.parse(name, rootElement))
-					.andThen(packConfig -> {
-						var context = new ConfigContextImpl(server);
-						var versionedContext = new VersionedConfigContext(context, packConfig.getVersion());
-						return reader.readCategories(name, packConfig.getCategories(), versionedContext)
-								.ifSuccess(map -> {
-									if (modConfig.getShowWarnings() && !context.warnings().isEmpty()) {
-										logger.warn("Data pack `" + name + "` loaded successfully with warning(s):"
-												+ System.lineSeparator()
-												+ context.warnings().stream().collect(Collectors.joining(System.lineSeparator()))
-										);
-									} else {
-										logger.info("Data pack `" + name + "` loaded successfully!");
-									}
-									cumulatedMap.putAll(map);
-								});
+			reader.readResource(id, resource)
+					.andThen(rootElement -> PackConfig.parse(namespace, rootElement))
+					.andThen(packConfig -> loadCategories(reader, packConfig, namespace, context))
+					.andThen(map -> {
+						var problems = new ArrayList<Problem>();
+
+						for (var key : map.keySet()) {
+							if (cumulatedMap.containsKey(key)) {
+								problems.add(Problem.message("Category `" + key + "` already exists."));
+							}
+						}
+
+						if (problems.isEmpty()) {
+							return Result.success(map);
+						} else {
+							return Result.failure(Problem.combine(problems));
+						}
 					})
-					.ifFailure(problem ->
-							logger.error("Data pack `" + name + "` could not be loaded:"
-									+ System.lineSeparator()
-									+ problem
-							))
-					.getFailure()
-					.isPresent();
+					.ifFailure(problem -> showFailure("Data pack `" + namespace + "`", problem))
+					.ifSuccess(map -> {
+						cumulatedMap.putAll(map);
+						showSuccess("Data pack `" + namespace + "`", showWarning, context);
+					});
 		}
+	}
 
-		if (anyProblems) {
-			return Optional.empty();
+	private void showSuccess(String name, boolean showWarnings, ConfigContextImpl context) {
+		if (showWarnings && !context.warnings().isEmpty()) {
+			logger.warn(name + " loaded successfully with warning(s):"
+					+ System.lineSeparator()
+					+ context.warnings().stream().collect(Collectors.joining(System.lineSeparator()))
+			);
 		} else {
-			return Optional.of(cumulatedMap);
+			logger.info(name + " loaded successfully!");
 		}
+	}
+
+	private void showFailure(String name, Problem problem) {
+		logger.error(name + " could not be loaded:"
+				+ System.lineSeparator()
+				+ problem
+		);
 	}
 
 	private void onSkillClickPacket(ServerPlayerEntity player, SkillClickInPacket packet) {
