@@ -1,31 +1,74 @@
 package net.puffish.skillsmod.config;
 
+import net.minecraft.util.Identifier;
+import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.common.BackgroundPosition;
 
-public class BackgroundConfig {
-	private final com.google.gson.JsonElement data;
+import java.util.ArrayList;
 
-	private BackgroundConfig(com.google.gson.JsonElement data) {
-		this.data = data;
-	}
+public record BackgroundConfig(
+		Identifier texture,
+		int width,
+		int height,
+		BackgroundPosition position
+) {
 
 	public static Result<BackgroundConfig, Problem> parse(JsonElement rootElement) {
-		// Backwards compatibility.
-		return rootElement.getAsString()
-				.andThen(texture -> {
-					var data = new com.google.gson.JsonObject();
-					data.addProperty("texture", texture);
-					data.addProperty("width", 16);
-					data.addProperty("height", 16);
-					data.addProperty("position", "tile");
-					return Result.success(new BackgroundConfig(data));
-				})
-				.orElse(failure -> Result.success(new BackgroundConfig(rootElement.getJson())));
+		return rootElement.getAsObject()
+				.andThen(BackgroundConfig::parse)
+				.orElse(failure -> BuiltinJson.parseIdentifier(rootElement)
+						.mapSuccess(texture -> new BackgroundConfig(texture, 16, 16, BackgroundPosition.TILE))
+				);
 	}
 
-	public com.google.gson.JsonElement getData() {
-		return data;
+	public static Result<BackgroundConfig, Problem> parse(JsonObject rootObject) {
+		var problems = new ArrayList<Problem>();
+
+		var optTexture = rootObject.get("texture")
+				.andThen(BuiltinJson::parseIdentifier)
+				.ifFailure(problems::add)
+				.getSuccess();
+
+		var optWidth = rootObject.getInt("width")
+				.ifFailure(problems::add)
+				.getSuccess();
+
+		var optHeight = rootObject.getInt("height")
+				.ifFailure(problems::add)
+				.getSuccess();
+
+		var position = rootObject.get("position")
+				.getSuccess()
+				.flatMap(element -> parseBackgroundPosition(element)
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
+				.orElse(BackgroundPosition.NONE);
+
+		if (problems.isEmpty()) {
+			return Result.success(new BackgroundConfig(
+					optTexture.orElseThrow(),
+					optWidth.orElseThrow(),
+					optHeight.orElseThrow(),
+					position
+			));
+		} else {
+			return Result.failure(Problem.combine(problems));
+		}
+	}
+
+	public static Result<BackgroundPosition, Problem> parseBackgroundPosition(JsonElement rootElement) {
+		return rootElement.getAsString().andThen(string -> switch (string) {
+			case "none" -> Result.success(BackgroundPosition.NONE);
+			case "tile" -> Result.success(BackgroundPosition.TILE);
+			case "fill" -> Result.success(BackgroundPosition.FILL);
+			case "fill_width" -> Result.success(BackgroundPosition.FILL_WIDTH);
+			case "fill_height" -> Result.success(BackgroundPosition.FILL_HEIGHT);
+			default -> Result.failure(rootElement.getPath().createProblem("Expected valid background position"));
+		});
 	}
 }
