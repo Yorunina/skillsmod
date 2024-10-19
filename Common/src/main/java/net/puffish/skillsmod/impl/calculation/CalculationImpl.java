@@ -37,11 +37,11 @@ public class CalculationImpl<T> implements Calculation<T> {
 	) {
 		var variableNames = variables.streamNames().collect(Collectors.toSet());
 
-		return rootElement.getAsArray()
-				.andThen(rootObject -> create(rootObject, variables, variableNames, context))
-				.orElse(failure -> CalculationCase.parseSimplified(rootElement, variableNames)
+		return rootElement.getAsArray().flatMap(
+				rootObject -> create(rootObject, variables, variableNames, context),
+				failure -> CalculationCase.parseSimplified(rootElement, variableNames)
 						.mapSuccess(calculationCase -> new CalculationImpl<>(variables, List.of(calculationCase)))
-				);
+		);
 	}
 
 	private static <T> Result<CalculationImpl<T>, Problem> create(
