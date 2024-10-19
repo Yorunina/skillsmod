@@ -30,6 +30,7 @@ import net.puffish.skillsmod.client.network.packets.out.SkillClickOutPacket;
 import net.puffish.skillsmod.client.rendering.ConnectionBatchedRenderer;
 import net.puffish.skillsmod.client.rendering.ItemBatchedRenderer;
 import net.puffish.skillsmod.client.rendering.TextureBatchedRenderer;
+import net.puffish.skillsmod.common.BackgroundPosition;
 import net.puffish.skillsmod.util.Bounds2i;
 import net.puffish.skillsmod.util.Vec2i;
 import org.lwjgl.glfw.GLFW;
@@ -475,9 +476,9 @@ public class SkillsScreen extends Screen {
 			}
 			case FILL -> {
 				if (bounds.width() * background.height() > background.width() * bounds.height()) {
-					position = ClientBackgroundConfig.Position.FILL_WIDTH;
+					position = BackgroundPosition.FILL_WIDTH;
 				} else {
-					position = ClientBackgroundConfig.Position.FILL_HEIGHT;
+					position = BackgroundPosition.FILL_HEIGHT;
 				}
 			}
 			default -> { }
