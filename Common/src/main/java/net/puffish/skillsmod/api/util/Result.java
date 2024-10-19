@@ -34,6 +34,8 @@ public sealed interface Result<S, F> permits Result.Success, Result.Failure {
 
 	<F2> Result<S, F2> orElse(Function<? super F, ? extends Result<S, F2>> function);
 
+	<S2, F2> Result<S2, F2> flatMap(Function<? super S, ? extends Result<S2, F2>> fSuccess, Function<? super F, ? extends Result<S2, F2>> fFailure);
+
 	final class Success<S, F> implements Result<S, F> {
 		private final S s;
 
@@ -94,6 +96,11 @@ public sealed interface Result<S, F> permits Result.Success, Result.Failure {
 		@Override
 		public <F2> Result<S, F2> orElse(Function<? super F, ? extends Result<S, F2>> function) {
 			return Result.success(s);
+		}
+
+		@Override
+		public <S2, F2> Result<S2, F2> flatMap(Function<? super S, ? extends Result<S2, F2>> fSuccess, Function<? super F, ? extends Result<S2, F2>> fFailure) {
+			return fSuccess.apply(s);
 		}
 	}
 
@@ -157,6 +164,11 @@ public sealed interface Result<S, F> permits Result.Success, Result.Failure {
 		@Override
 		public <F2> Result<S, F2> orElse(Function<? super F, ? extends Result<S, F2>> function) {
 			return function.apply(f);
+		}
+
+		@Override
+		public <S2, F2> Result<S2, F2> flatMap(Function<? super S, ? extends Result<S2, F2>> fSuccess, Function<? super F, ? extends Result<S2, F2>> fFailure) {
+			return fFailure.apply(f);
 		}
 	}
 }
