@@ -1,4 +1,4 @@
-package net.puffish.skillsmod.skill;
+package net.puffish.skillsmod.common;
 
 public record SkillConnection(String skillAId, String skillBId, boolean bidirectional) {
 

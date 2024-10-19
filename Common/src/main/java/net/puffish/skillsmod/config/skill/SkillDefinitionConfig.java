@@ -1,16 +1,15 @@
 package net.puffish.skillsmod.config.skill;
 
-import net.minecraft.advancement.AdvancementFrame;
 import net.minecraft.text.Text;
 import net.puffish.skillsmod.api.config.ConfigContext;
+import net.puffish.skillsmod.api.json.BuiltinJson;
+import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.util.DisposeContext;
 import net.puffish.skillsmod.config.FrameConfig;
 import net.puffish.skillsmod.config.IconConfig;
-import net.puffish.skillsmod.api.json.JsonElement;
-import net.puffish.skillsmod.api.json.JsonObject;
-import net.puffish.skillsmod.api.json.BuiltinJson;
-import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -74,19 +73,17 @@ public class SkillDefinitionConfig {
 				.orElseGet(Text::empty);
 
 		var optIcon = rootObject.get("icon")
-				.andThen(IconConfig::parse)
+				.andThen(element -> IconConfig.parse(element, context))
 				.ifFailure(problems::add)
 				.getSuccess();
 
 		var frame = rootObject.get("frame")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(frameElement -> BuiltinJson.parseFrame(frameElement)
-						.mapSuccess(FrameConfig::fromAdvancementFrame)
-						.orElse(problem -> FrameConfig.parse(frameElement))
+				.flatMap(element -> FrameConfig.parse(element)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)
-				.orElseGet(() -> FrameConfig.fromAdvancementFrame(AdvancementFrame.TASK));
+				.orElseGet(FrameConfig::createDefault);
 
 		var size = rootObject.getFloat("size")
 				.getSuccess() // ignore failure because this property is optional
