@@ -1,52 +1,87 @@
 package net.puffish.skillsmod.config;
 
+import net.minecraft.entity.effect.StatusEffect;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.Identifier;
+import net.puffish.skillsmod.api.config.ConfigContext;
+import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.json.JsonPath;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
+import java.util.function.Function;
 
-public class IconConfig {
-	private final String type;
-	private final com.google.gson.JsonElement data;
+public sealed interface IconConfig permits IconConfig.EffectIconConfig, IconConfig.ItemIconConfig, IconConfig.TextureIconConfig {
 
-	private IconConfig(String type, com.google.gson.JsonElement data) {
-		this.type = type;
-		this.data = data;
-	}
-
-	public static Result<IconConfig, Problem> parse(JsonElement rootElement) {
+	static Result<IconConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject()
-				.andThen(IconConfig::parse);
+				.andThen(rootObject -> parse(rootObject, context));
 	}
 
-	public static Result<IconConfig, Problem> parse(JsonObject rootObject) {
+	static Result<IconConfig, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
-		var type = rootObject.getString("type")
+		var optTypeElement = rootObject.get("type")
 				.ifFailure(problems::add)
 				.getSuccess();
 
-		var data = rootObject.get("data")
+		var optType = optTypeElement.flatMap(
+				typeElement -> typeElement.getAsString()
+						.ifFailure(problems::add)
+						.getSuccess()
+		);
+
+		var optData = rootObject.get("data")
 				.ifFailure(problems::add)
 				.getSuccess();
 
 		if (problems.isEmpty()) {
-			return Result.success(new IconConfig(
-					type.orElseThrow(),
-					data.orElseThrow().getJson()
-			));
+			return build(
+					optType.orElseThrow(),
+					optData.orElseThrow(),
+					optTypeElement.orElseThrow().getPath(),
+					context
+			);
 		} else {
 			return Result.failure(Problem.combine(problems));
 		}
 	}
 
-	public String getType() {
-		return type;
+	private static Result<IconConfig, Problem> build(String type, JsonElement dataElement, JsonPath typeElementPath, ConfigContext context) {
+		return switch (type) {
+			case "item" -> ItemIconConfig.parse(dataElement).mapSuccess(Function.identity());
+			case "effect" -> EffectIconConfig.parse(dataElement).mapSuccess(Function.identity());
+			case "texture" -> TextureIconConfig.parse(dataElement).mapSuccess(Function.identity());
+			default -> Result.failure(typeElementPath.createProblem("Expected a valid icon type"));
+		};
 	}
 
-	public com.google.gson.JsonElement getData() {
-		return data;
+	record ItemIconConfig(ItemStack item) implements IconConfig {
+		public static Result<ItemIconConfig, Problem> parse(JsonElement rootElement) {
+			return BuiltinJson.parseItemStack(rootElement).mapSuccess(ItemIconConfig::new);
+		}
+	}
+
+	record EffectIconConfig(StatusEffect effect) implements IconConfig {
+		public static Result<EffectIconConfig, Problem> parse(JsonElement rootElement) {
+			return rootElement
+					.getAsObject()
+					.andThen(rootObject -> rootObject.get("effect"))
+					.andThen(BuiltinJson::parseEffect)
+					.mapSuccess(EffectIconConfig::new);
+		}
+	}
+
+	record TextureIconConfig(Identifier texture) implements IconConfig {
+		public static Result<TextureIconConfig, Problem> parse(JsonElement rootElement) {
+			return rootElement
+					.getAsObject()
+					.andThen(rootObject -> rootObject.get("texture"))
+					.andThen(BuiltinJson::parseIdentifier)
+					.mapSuccess(TextureIconConfig::new);
+		}
 	}
 }
