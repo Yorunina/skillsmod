@@ -1,12 +1,20 @@
 package net.puffish.skillsmod.server.network.packets.out;
 
+import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
+import net.puffish.skillsmod.common.FrameType;
+import net.puffish.skillsmod.common.IconType;
+import net.puffish.skillsmod.common.SkillConnection;
 import net.puffish.skillsmod.config.BackgroundConfig;
 import net.puffish.skillsmod.config.CategoryConfig;
 import net.puffish.skillsmod.config.FrameConfig;
 import net.puffish.skillsmod.config.GeneralConfig;
 import net.puffish.skillsmod.config.IconConfig;
+import net.puffish.skillsmod.config.colors.ColorConfig;
+import net.puffish.skillsmod.config.colors.ColorsConfig;
+import net.puffish.skillsmod.config.colors.ConnectionsColorsConfig;
+import net.puffish.skillsmod.config.colors.FillStrokeColorsConfig;
 import net.puffish.skillsmod.config.skill.SkillConfig;
 import net.puffish.skillsmod.config.skill.SkillConnectionsConfig;
 import net.puffish.skillsmod.config.skill.SkillDefinitionConfig;
@@ -15,9 +23,6 @@ import net.puffish.skillsmod.config.skill.SkillsConfig;
 import net.puffish.skillsmod.network.OutPacket;
 import net.puffish.skillsmod.network.Packets;
 import net.puffish.skillsmod.server.data.CategoryData;
-import net.puffish.skillsmod.skill.SkillConnection;
-
-import java.util.Optional;
 
 public record ShowCategoryOutPacket(CategoryConfig category, CategoryData categoryData) implements OutPacket {
 
@@ -60,7 +65,7 @@ public record ShowCategoryOutPacket(CategoryConfig category, CategoryData catego
 		buf.writeText(general.getTitle());
 		write(buf, general.getIcon());
 		write(buf, general.getBackground());
-		buf.writeOptional(Optional.ofNullable(general.getColors()), (buf1, element) -> buf1.writeString(element.toString()));
+		write(buf, general.getColors());
 		buf.writeBoolean(general.isExclusiveRoot());
 		buf.writeInt(general.getSpentPointsLimit());
 	}
@@ -103,17 +108,59 @@ public record ShowCategoryOutPacket(CategoryConfig category, CategoryData catego
 	}
 
 	public static void write(PacketByteBuf buf, IconConfig icon) {
-		buf.writeString(icon.getType());
-		buf.writeOptional(Optional.ofNullable(icon.getData()), (buf1, element) -> buf1.writeString(element.toString()));
+		if (icon instanceof IconConfig.EffectIconConfig effectIcon) {
+			buf.writeEnumConstant(IconType.EFFECT);
+			buf.writeInt(StatusEffect.getRawId(effectIcon.effect()));
+		} else if (icon instanceof IconConfig.ItemIconConfig itemIcon) {
+			buf.writeEnumConstant(IconType.ITEM);
+			buf.writeItemStack(itemIcon.item());
+		} else if (icon instanceof IconConfig.TextureIconConfig textureIcon) {
+			buf.writeEnumConstant(IconType.TEXTURE);
+			buf.writeIdentifier(textureIcon.texture());
+		}
 	}
 
 	public static void write(PacketByteBuf buf, FrameConfig frame) {
-		buf.writeString(frame.getType());
-		buf.writeOptional(Optional.ofNullable(frame.getData()), (buf1, element) -> buf1.writeString(element.toString()));
+		if (frame instanceof FrameConfig.AdvancementFrameConfig advancementFrame) {
+			buf.writeEnumConstant(FrameType.ADVANCEMENT);
+			buf.writeEnumConstant(advancementFrame.frame());
+		} else if (frame instanceof FrameConfig.TextureFrameConfig textureFrame) {
+			buf.writeEnumConstant(FrameType.TEXTURE);
+			buf.writeOptional(textureFrame.lockedTexture(), PacketByteBuf::writeIdentifier);
+			buf.writeIdentifier(textureFrame.availableTexture());
+			buf.writeOptional(textureFrame.affordableTexture(), PacketByteBuf::writeIdentifier);
+			buf.writeIdentifier(textureFrame.unlockedTexture());
+			buf.writeOptional(textureFrame.excludedTexture(), PacketByteBuf::writeIdentifier);
+		}
 	}
 
 	public static void write(PacketByteBuf buf, BackgroundConfig background) {
-		buf.writeOptional(Optional.ofNullable(background.getData()), (buf1, element) -> buf1.writeString(element.toString()));
+		buf.writeIdentifier(background.texture());
+		buf.writeInt(background.width());
+		buf.writeInt(background.height());
+		buf.writeEnumConstant(background.position());
+	}
+
+	public static void write(PacketByteBuf buf, ColorsConfig colors) {
+		write(buf, colors.connections());
+		write(buf, colors.points());
+	}
+
+	public static void write(PacketByteBuf buf, ConnectionsColorsConfig connectionsColors) {
+		write(buf, connectionsColors.locked());
+		write(buf, connectionsColors.available());
+		write(buf, connectionsColors.affordable());
+		write(buf, connectionsColors.unlocked());
+		write(buf, connectionsColors.excluded());
+	}
+
+	public static void write(PacketByteBuf buf, FillStrokeColorsConfig fillStrokeColors) {
+		write(buf, fillStrokeColors.fill());
+		write(buf, fillStrokeColors.stroke());
+	}
+
+	public static void write(PacketByteBuf buf, ColorConfig color) {
+		buf.writeInt(color.argb());
 	}
 
 	@Override
