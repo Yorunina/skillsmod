@@ -20,11 +20,11 @@ public sealed interface FrameConfig permits FrameConfig.AdvancementFrameConfig, 
 	}
 
 	static Result<FrameConfig, Problem> parse(JsonElement rootElement) {
-		return rootElement.getAsObject()
-				.andThen(FrameConfig::parse)
-				.orElse(failure -> BuiltinJson.parseFrame(rootElement)
+		return rootElement.getAsObject().flatMap(
+				FrameConfig::parse,
+				failure -> BuiltinJson.parseFrame(rootElement)
 						.mapSuccess(AdvancementFrameConfig::new)
-				);
+		);
 	}
 
 	static Result<FrameConfig, Problem> parse(JsonObject rootObject) {
