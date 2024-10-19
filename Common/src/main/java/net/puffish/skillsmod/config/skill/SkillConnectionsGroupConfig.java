@@ -4,8 +4,8 @@ import net.puffish.skillsmod.api.json.JsonArray;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
-import net.puffish.skillsmod.skill.SkillConnection;
-import net.puffish.skillsmod.skill.SkillPair;
+import net.puffish.skillsmod.common.SkillConnection;
+import net.puffish.skillsmod.common.SkillPair;
 import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;

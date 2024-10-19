@@ -7,6 +7,7 @@ import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.config.colors.ColorsConfig;
 
 import java.util.ArrayList;
 
@@ -14,7 +15,7 @@ public class GeneralConfig {
 	private final Text title;
 	private final IconConfig icon;
 	private final BackgroundConfig background;
-	private final com.google.gson.JsonElement colors;
+	private final ColorsConfig colors;
 	private final boolean unlockedByDefault;
 	private final int startingPoints;
 	private final boolean exclusiveRoot;
@@ -24,7 +25,7 @@ public class GeneralConfig {
 			Text title,
 			IconConfig icon,
 			BackgroundConfig background,
-			com.google.gson.JsonElement colors,
+			ColorsConfig colors,
 			boolean unlockedByDefault,
 			int startingPoints,
 			boolean exclusiveRoot,
@@ -54,7 +55,7 @@ public class GeneralConfig {
 				.getSuccess();
 
 		var optIcon = rootObject.get("icon")
-				.andThen(IconConfig::parse)
+				.andThen(element -> IconConfig.parse(element, context))
 				.ifFailure(problems::add)
 				.getSuccess();
 
@@ -65,8 +66,11 @@ public class GeneralConfig {
 
 		var colors = rootObject.get("colors")
 				.getSuccess() // ignore failure because this property is optional
-				.map(JsonElement::getJson)
-				.orElse(new com.google.gson.JsonObject());
+				.flatMap(element -> ColorsConfig.parse(element)
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
+				.orElseGet(ColorsConfig::createDefault);
 
 		var unlockedByDefault = rootObject.get("unlocked_by_default")
 				.getSuccess() // ignore failure because this property is optional
@@ -140,7 +144,7 @@ public class GeneralConfig {
 		return background;
 	}
 
-	public com.google.gson.JsonElement getColors() {
+	public ColorsConfig getColors() {
 		return colors;
 	}
 

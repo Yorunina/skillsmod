@@ -1,62 +1,134 @@
 package net.puffish.skillsmod.config;
 
 import net.minecraft.advancement.AdvancementFrame;
+import net.minecraft.util.Identifier;
+import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
+import net.puffish.skillsmod.api.json.JsonPath;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 
 import java.util.ArrayList;
+import java.util.Optional;
+import java.util.function.Function;
 
-public class FrameConfig {
-	private final String type;
-	private final com.google.gson.JsonElement data;
+public sealed interface FrameConfig permits FrameConfig.AdvancementFrameConfig, FrameConfig.TextureFrameConfig {
 
-	private FrameConfig(String type, com.google.gson.JsonElement data) {
-		this.type = type;
-		this.data = data;
+	static FrameConfig createDefault() {
+		return new AdvancementFrameConfig(AdvancementFrame.TASK);
 	}
 
-	public static FrameConfig fromAdvancementFrame(AdvancementFrame frame) {
-		var data = new com.google.gson.JsonObject();
-		data.addProperty("frame", frame.asString());
-		return new FrameConfig(
-				"advancement",
-				data
-		);
-	}
-
-	public static Result<FrameConfig, Problem> parse(JsonElement rootElement) {
+	static Result<FrameConfig, Problem> parse(JsonElement rootElement) {
 		return rootElement.getAsObject()
-				.andThen(FrameConfig::parse);
+				.andThen(FrameConfig::parse)
+				.orElse(failure -> BuiltinJson.parseFrame(rootElement)
+						.mapSuccess(AdvancementFrameConfig::new)
+				);
 	}
 
-	public static Result<FrameConfig, Problem> parse(JsonObject rootObject) {
+	static Result<FrameConfig, Problem> parse(JsonObject rootObject) {
 		var problems = new ArrayList<Problem>();
 
-		var type = rootObject.getString("type")
+		var optTypeElement = rootObject.get("type")
 				.ifFailure(problems::add)
 				.getSuccess();
 
-		var data = rootObject.get("data")
+		var optType = optTypeElement.flatMap(
+				typeElement -> typeElement.getAsString()
+						.ifFailure(problems::add)
+						.getSuccess()
+		);
+
+		var optData = rootObject.get("data")
 				.ifFailure(problems::add)
 				.getSuccess();
 
 		if (problems.isEmpty()) {
-			return Result.success(new FrameConfig(
-					type.orElseThrow(),
-					data.orElseThrow().getJson()
-			));
+			return build(
+					optType.orElseThrow(),
+					optData.orElseThrow(),
+					optTypeElement.orElseThrow().getPath()
+			);
 		} else {
 			return Result.failure(Problem.combine(problems));
 		}
 	}
 
-	public String getType() {
-		return type;
+	private static Result<FrameConfig, Problem> build(String type, JsonElement dataElement, JsonPath typeElementPath) {
+		return switch (type) {
+			case "advancement" -> AdvancementFrameConfig.parse(dataElement).mapSuccess(Function.identity());
+			case "texture" -> TextureFrameConfig.parse(dataElement).mapSuccess(Function.identity());
+			default -> Result.failure(typeElementPath.createProblem("Expected a valid icon type"));
+		};
 	}
 
-	public com.google.gson.JsonElement getData() {
-		return data;
+	record AdvancementFrameConfig(AdvancementFrame frame) implements FrameConfig {
+		public static Result<AdvancementFrameConfig, Problem> parse(JsonElement rootElement) {
+			return rootElement
+					.getAsObject()
+					.andThen(rootObject -> rootObject.get("frame"))
+					.andThen(BuiltinJson::parseFrame)
+					.mapSuccess(AdvancementFrameConfig::new);
+		}
+	}
+
+	record TextureFrameConfig(
+			Optional<Identifier> lockedTexture,
+			Identifier availableTexture,
+			Optional<Identifier> affordableTexture,
+			Identifier unlockedTexture,
+			Optional<Identifier> excludedTexture
+	) implements FrameConfig {
+		public static Result<TextureFrameConfig, Problem> parse(JsonElement rootElement) {
+			return rootElement.getAsObject().andThen(TextureFrameConfig::parse);
+		}
+
+		private static Result<TextureFrameConfig, Problem> parse(JsonObject rootObject) {
+			var problems = new ArrayList<Problem>();
+
+			var optAffordableTexture = rootObject.get("affordable")
+					.getSuccess() // ignore failure because this property is optional
+					.flatMap(element -> BuiltinJson.parseIdentifier(element)
+							.ifFailure(problems::add)
+							.getSuccess()
+					);
+
+			var optAvailableTexture = rootObject.get("available")
+					.andThen(BuiltinJson::parseIdentifier)
+					.ifFailure(problems::add)
+					.getSuccess();
+
+			var optLockedTexture = rootObject.get("locked")
+					.getSuccess() // ignore failure because this property is optional
+					.flatMap(element -> BuiltinJson.parseIdentifier(element)
+							.ifFailure(problems::add)
+							.getSuccess()
+					);
+
+			var optUnlockedTexture = rootObject.get("unlocked")
+					.andThen(BuiltinJson::parseIdentifier)
+					.ifFailure(problems::add)
+					.getSuccess();
+			
+			var optExcludedTexture = rootObject.get("excluded")
+					.getSuccess() // ignore failure because this property is optional
+					.flatMap(element -> BuiltinJson.parseIdentifier(element)
+							.ifFailure(problems::add)
+							.getSuccess()
+					);
+
+			if (problems.isEmpty()) {
+				return Result.success(new TextureFrameConfig(
+						optLockedTexture,
+						optAvailableTexture.orElseThrow(),
+						optAffordableTexture,
+						optUnlockedTexture.orElseThrow(),
+						optExcludedTexture
+				));
+			} else {
+				return Result.failure(Problem.combine(problems));
+			}
+		}
 	}
 }

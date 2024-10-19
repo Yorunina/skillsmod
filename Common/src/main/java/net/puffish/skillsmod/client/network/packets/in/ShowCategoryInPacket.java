@@ -1,23 +1,29 @@
 package net.puffish.skillsmod.client.network.packets.in;
 
+import net.minecraft.advancement.AdvancementFrame;
+import net.minecraft.entity.effect.StatusEffect;
+import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.text.TextCodecs;
 import net.puffish.skillsmod.api.Skill;
-import net.puffish.skillsmod.api.json.JsonElement;
-import net.puffish.skillsmod.api.json.JsonPath;
 import net.puffish.skillsmod.client.config.ClientBackgroundConfig;
 import net.puffish.skillsmod.client.config.ClientCategoryConfig;
 import net.puffish.skillsmod.client.config.ClientFrameConfig;
 import net.puffish.skillsmod.client.config.ClientIconConfig;
+import net.puffish.skillsmod.client.config.colors.ClientColorConfig;
 import net.puffish.skillsmod.client.config.colors.ClientColorsConfig;
+import net.puffish.skillsmod.client.config.colors.ClientConnectionsColorsConfig;
+import net.puffish.skillsmod.client.config.colors.ClientFillStrokeColorsConfig;
 import net.puffish.skillsmod.client.config.skill.ClientSkillConfig;
 import net.puffish.skillsmod.client.config.skill.ClientSkillConnectionConfig;
 import net.puffish.skillsmod.client.config.skill.ClientSkillDefinitionConfig;
 import net.puffish.skillsmod.client.data.ClientCategoryData;
+import net.puffish.skillsmod.common.BackgroundPosition;
+import net.puffish.skillsmod.common.FrameType;
+import net.puffish.skillsmod.common.IconType;
 import net.puffish.skillsmod.network.InPacket;
 
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class ShowCategoryInPacket implements InPacket {
@@ -124,41 +130,85 @@ public class ShowCategoryInPacket implements InPacket {
 		);
 	}
 
-	public static ClientIconConfig readSkillIcon(PacketByteBuf buf) {
-		var type = buf.readString();
-		return buf.readOptional(PacketByteBuf::readString)
-				.flatMap(data -> JsonElement.parseString(data, JsonPath.create("Client Skill Icon")).getSuccess())
-				.flatMap(rootElement -> switch (type) {
-					case "item" -> ClientIconConfig.ItemIconConfig.parse(rootElement).getSuccess();
-					case "effect" -> ClientIconConfig.EffectIconConfig.parse(rootElement).getSuccess();
-					case "texture" -> ClientIconConfig.TextureIconConfig.parse(rootElement).getSuccess();
-					default -> Optional.empty();
-				}).orElseGet(ClientIconConfig.TextureIconConfig::createMissing);
+	public static ClientIconConfig readSkillIcon(RegistryByteBuf buf) {
+		var type = buf.readEnumConstant(IconType.class);
+		return switch (type) {
+			case EFFECT -> {
+				var effect = StatusEffect.ENTRY_PACKET_CODEC.decode(buf).value();
+				yield new ClientIconConfig.EffectIconConfig(effect);
+			}
+			case ITEM -> {
+				var itemStack = ItemStack.PACKET_CODEC.decode(buf);
+				yield new ClientIconConfig.ItemIconConfig(itemStack);
+			}
+			case TEXTURE -> {
+				var texture = buf.readIdentifier();
+				yield new ClientIconConfig.TextureIconConfig(texture);
+			}
+		};
 	}
 
 	public static ClientFrameConfig readFrameIcon(PacketByteBuf buf) {
-		var type = buf.readString();
-		return buf.readOptional(PacketByteBuf::readString)
-				.flatMap(data -> JsonElement.parseString(data, JsonPath.create("Client Frame Icon")).getSuccess())
-				.flatMap(rootElement -> switch (type) {
-					case "advancement" -> ClientFrameConfig.AdvancementFrameConfig.parse(rootElement).getSuccess();
-					case "texture" -> ClientFrameConfig.TextureFrameConfig.parse(rootElement).getSuccess();
-					default -> Optional.empty();
-				}).orElseGet(ClientFrameConfig.TextureFrameConfig::createMissing);
+		var type = buf.readEnumConstant(FrameType.class);
+		return switch (type) {
+			case ADVANCEMENT -> {
+				var advancementFrame = buf.readEnumConstant(AdvancementFrame.class);
+				yield new ClientFrameConfig.AdvancementFrameConfig(advancementFrame);
+			}
+			case TEXTURE -> {
+				var lockedTexture = buf.readOptional(PacketByteBuf::readIdentifier);
+				var availableTexture = buf.readIdentifier();
+				var affordableTexture = buf.readOptional(PacketByteBuf::readIdentifier);
+				var unlockedTexture = buf.readIdentifier();
+				var excludedTexture = buf.readOptional(PacketByteBuf::readIdentifier);
+				yield new ClientFrameConfig.TextureFrameConfig(
+						lockedTexture,
+						availableTexture,
+						affordableTexture,
+						unlockedTexture,
+						excludedTexture
+				);
+			}
+		};
 	}
 
 	public static ClientBackgroundConfig readBackground(PacketByteBuf buf) {
-		return buf.readOptional(PacketByteBuf::readString)
-				.flatMap(data -> JsonElement.parseString(data, JsonPath.create("Client Background")).getSuccess())
-				.flatMap(rootElement -> ClientBackgroundConfig.parse(rootElement).getSuccess())
-				.orElseGet(ClientBackgroundConfig::createMissing);
+		var texture = buf.readIdentifier();
+		var width = buf.readInt();
+		var height = buf.readInt();
+		var position = buf.readEnumConstant(BackgroundPosition.class);
+
+		return new ClientBackgroundConfig(texture, width, height, position);
 	}
 
 	public static ClientColorsConfig readColors(PacketByteBuf buf) {
-		return buf.readOptional(PacketByteBuf::readString)
-				.flatMap(data -> JsonElement.parseString(data, JsonPath.create("Client Colors")).getSuccess())
-				.flatMap(rootElement -> ClientColorsConfig.parse(rootElement).getSuccess())
-				.orElseGet(ClientColorsConfig::createDefault);
+		var connections = readConnectionsColors(buf);
+		var points = readFillStrokeColors(buf);
+
+		return new ClientColorsConfig(connections, points);
+	}
+
+	public static ClientConnectionsColorsConfig readConnectionsColors(PacketByteBuf buf) {
+		var locked = readFillStrokeColors(buf);
+		var available = readFillStrokeColors(buf);
+		var affordable = readFillStrokeColors(buf);
+		var unlocked = readFillStrokeColors(buf);
+		var excluded = readFillStrokeColors(buf);
+
+		return new ClientConnectionsColorsConfig(locked, available, affordable, unlocked, excluded);
+	}
+
+	public static ClientFillStrokeColorsConfig readFillStrokeColors(PacketByteBuf buf) {
+		var fill = readColor(buf);
+		var stroke = readColor(buf);
+
+		return new ClientFillStrokeColorsConfig(fill, stroke);
+	}
+
+	public static ClientColorConfig readColor(PacketByteBuf buf) {
+		var argb = buf.readInt();
+
+		return new ClientColorConfig(argb);
 	}
 
 	public static ClientSkillConfig readSkill(PacketByteBuf buf) {
