@@ -18,11 +18,11 @@ public record BackgroundConfig(
 ) {
 
 	public static Result<BackgroundConfig, Problem> parse(JsonElement rootElement) {
-		return rootElement.getAsObject()
-				.andThen(BackgroundConfig::parse)
-				.orElse(failure -> BuiltinJson.parseIdentifier(rootElement)
+		return rootElement.getAsObject().flatMap(
+				BackgroundConfig::parse,
+				failure -> BuiltinJson.parseIdentifier(rootElement)
 						.mapSuccess(texture -> new BackgroundConfig(texture, 16, 16, BackgroundPosition.TILE))
-				);
+		);
 	}
 
 	public static Result<BackgroundConfig, Problem> parse(JsonObject rootObject) {
