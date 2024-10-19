@@ -15,13 +15,12 @@ public record FillStrokeColorsConfig(
 			JsonElement rootElement,
 			FillStrokeColorsConfig defaultColors
 	) {
-		return rootElement.getAsString()
-				.andThen(string -> ColorConfig.parse(string, rootElement.getPath())
-						.mapSuccess(fill -> new FillStrokeColorsConfig(fill, defaultColors.stroke))
-				)
-				.orElse(failure -> rootElement.getAsObject()
+		return rootElement.getAsString().flatMap(
+				string -> ColorConfig.parse(string, rootElement.getPath())
+						.mapSuccess(fill -> new FillStrokeColorsConfig(fill, defaultColors.stroke)),
+				failure -> rootElement.getAsObject()
 						.andThen(rootObject -> parse(rootObject, defaultColors))
-				);
+		);
 	}
 
 	private static Result<FillStrokeColorsConfig, Problem> parse(
