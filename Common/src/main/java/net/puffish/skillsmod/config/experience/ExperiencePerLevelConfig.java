@@ -49,7 +49,7 @@ public class ExperiencePerLevelConfig {
 		return switch (type) {
 			case "expression" -> parseExpression(maybeDataElement);
 			case "values" -> parseValues(maybeDataElement);
-			default -> Result.failure(typeElementPath.createProblem("Expected a valid condition type"));
+			default -> Result.failure(typeElementPath.createProblem("Expected a valid experience per level type"));
 		};
 	}
 
