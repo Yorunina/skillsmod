@@ -18,11 +18,11 @@ public class SkillConnectionsConfig {
 	}
 
 	public static Result<SkillConnectionsConfig, Problem> parse(JsonElement rootElement, SkillsConfig skills) {
-		return rootElement.getAsObject()
-				.andThen(rootObject -> parse(rootObject, skills))
-				.orElse(problem -> rootElement.getAsArray()
+		return rootElement.getAsObject().flatMap(
+				rootObject -> parse(rootObject, skills),
+				problem -> rootElement.getAsArray()
 						.andThen(rootArray -> parseLegacy(rootArray, skills))
-				);
+		);
 	}
 
 	private static Result<SkillConnectionsConfig, Problem> parse(JsonObject rootObject, SkillsConfig skills) {
