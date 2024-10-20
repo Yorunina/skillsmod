@@ -23,11 +23,11 @@ public class PackConfig implements Config {
 
 	public static Result<PackConfig, Problem> parse(String name, JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject().andThen(
-				LegacyUtils.wrapNoUnusedConfig(rootObject -> parse(name, rootObject), context)
+				LegacyUtils.wrapNoUnusedConfig(rootObject -> parse(name, rootObject, context), context)
 		);
 	}
 
-	private static Result<PackConfig, Problem> parse(String name, JsonObject rootObject) {
+	private static Result<PackConfig, Problem> parse(String name, JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
 		var optVersion = rootObject.getInt("version")
@@ -49,6 +49,13 @@ public class PackConfig implements Config {
 			}
 			if (version > SkillsMod.MAX_CONFIG_VERSION) {
 				return Result.failure(Problem.message("Data pack `" + name + "` is for a newer version of the mod. Please update the mod."));
+			}
+			if (version < SkillsMod.MAX_CONFIG_VERSION) {
+				context.emitWarning(rootObject.getPath()
+						.getObject("version")
+						.createProblem("Data pack `" + name + "` uses outdated version. Please update the configuration version to " + SkillsMod.MAX_CONFIG_VERSION)
+						.toString()
+				);
 			}
 
 			return Result.success(new PackConfig(
