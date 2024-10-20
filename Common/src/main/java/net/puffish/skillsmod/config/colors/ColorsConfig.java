@@ -1,9 +1,11 @@
 package net.puffish.skillsmod.config.colors;
 
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 
@@ -23,16 +25,18 @@ public record ColorsConfig(
 		);
 	}
 
-	public static Result<ColorsConfig, Problem> parse(JsonElement rootElement) {
-		return rootElement.getAsObject().andThen(ColorsConfig::parse);
+	public static Result<ColorsConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context)
+		);
 	}
 
-	private static Result<ColorsConfig, Problem> parse(JsonObject rootObject) {
+	private static Result<ColorsConfig, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
 		var connections = rootObject.get("connections")
 				.getSuccess()
-				.flatMap(element -> ConnectionsColorsConfig.parse(element)
+				.flatMap(element -> ConnectionsColorsConfig.parse(element, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)
@@ -40,7 +44,7 @@ public record ColorsConfig(
 
 		var points = rootObject.get("points")
 				.getSuccess()
-				.flatMap(element -> FillStrokeColorsConfig.parse(element, DEFAULT_POINTS)
+				.flatMap(element -> FillStrokeColorsConfig.parse(element, DEFAULT_POINTS, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)

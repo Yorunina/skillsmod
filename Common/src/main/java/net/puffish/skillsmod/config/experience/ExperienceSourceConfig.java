@@ -13,6 +13,7 @@ import net.puffish.skillsmod.experience.source.ExperienceSourceRegistry;
 import net.puffish.skillsmod.impl.experience.source.ExperienceSourceConfigContextImpl;
 import net.puffish.skillsmod.impl.experience.source.ExperienceSourceDisposeContextImpl;
 import net.puffish.skillsmod.util.DisposeContext;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 
@@ -26,7 +27,9 @@ public class ExperienceSourceConfig {
 	}
 
 	public static Result<ExperienceSourceConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
-		return rootElement.getAsObject().andThen(rootObject -> parse(rootObject, context));
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context)
+		);
 	}
 
 	public static Result<ExperienceSourceConfig, Problem> parse(JsonObject rootObject, ConfigContext context) {

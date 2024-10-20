@@ -1,11 +1,13 @@
 package net.puffish.skillsmod.config;
 
 import net.puffish.skillsmod.SkillsMod;
+import net.puffish.skillsmod.api.config.ConfigContext;
+import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
-import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,26 +23,26 @@ public class ModConfig implements Config {
 		this.categories = categories;
 	}
 
-	public static Result<ModConfig, Problem> parse(JsonElement rootElement) {
-		return rootElement.getAsObject()
-				.andThen(ModConfig::parse);
+	public static Result<ModConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnusedConfig(ModConfig::parse, context)
+		);
 	}
 
-	public static Result<ModConfig, Problem> parse(JsonObject rootObject) {
+	private static Result<ModConfig, Problem> parse(JsonObject rootObject) {
 		var problems = new ArrayList<Problem>();
 
-		var version = rootObject.getInt("version")
-				.getSuccessOrElse(e -> Integer.MIN_VALUE);
+		var optVersion = rootObject.getInt("version")
+				.ifFailure(problems::add)
+				.getSuccess();
 
-		var showWarnings = rootObject.getBoolean("show_warnings")
-				.getSuccessOrElse(e -> false);
-
-		if (version < SkillsMod.MIN_CONFIG_VERSION) {
-			return Result.failure(Problem.message("Configuration is outdated. Check out the mod's wiki to learn how to update the configuration."));
-		}
-		if (version > SkillsMod.MAX_CONFIG_VERSION) {
-			return Result.failure(Problem.message("Configuration is for a newer version of the mod. Please update the mod."));
-		}
+		var showWarnings = rootObject.get("show_warnings")
+				.getSuccess() // ignore failure because this property is optional
+				.flatMap(element -> element.getAsBoolean()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
+				.orElse(false);
 
 		var categories = rootObject.get("categories")
 				.getSuccess() // ignore failure because this property is optional
@@ -54,6 +56,15 @@ public class ModConfig implements Config {
 				.orElseGet(List::of);
 
 		if (problems.isEmpty()) {
+			int version = optVersion.orElseThrow();
+
+			if (version < SkillsMod.MIN_CONFIG_VERSION) {
+				return Result.failure(Problem.message("Configuration is outdated. Check out the mod's wiki to learn how to update the configuration."));
+			}
+			if (version > SkillsMod.MAX_CONFIG_VERSION) {
+				return Result.failure(Problem.message("Configuration is for a newer version of the mod. Please update the mod."));
+			}
+
 			return Result.success(new ModConfig(
 					version,
 					showWarnings,
