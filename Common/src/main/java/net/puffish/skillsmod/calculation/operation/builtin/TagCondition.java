@@ -10,6 +10,7 @@ import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -38,7 +39,7 @@ public final class TagCondition implements Operation<Entity, Boolean> {
 	public static Result<TagCondition, Problem> parse(OperationConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(TagCondition::parse);
+				.andThen(LegacyUtils.wrapNoUnused(TagCondition::parse, context));
 	}
 
 	public static Result<TagCondition, Problem> parse(JsonObject rootObject) {

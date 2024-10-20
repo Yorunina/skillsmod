@@ -1,10 +1,12 @@
 package net.puffish.skillsmod.config.skill;
 
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.JsonArray;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 
@@ -17,20 +19,20 @@ public class SkillConnectionsConfig {
 		this.exclusive = exclusive;
 	}
 
-	public static Result<SkillConnectionsConfig, Problem> parse(JsonElement rootElement, SkillsConfig skills) {
+	public static Result<SkillConnectionsConfig, Problem> parse(JsonElement rootElement, SkillsConfig skills, ConfigContext context) {
 		return rootElement.getAsObject().flatMap(
-				rootObject -> parse(rootObject, skills),
+				LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, skills, context), context),
 				problem -> rootElement.getAsArray()
 						.andThen(rootArray -> parseLegacy(rootArray, skills))
 		);
 	}
 
-	private static Result<SkillConnectionsConfig, Problem> parse(JsonObject rootObject, SkillsConfig skills) {
+	private static Result<SkillConnectionsConfig, Problem> parse(JsonObject rootObject, SkillsConfig skills, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
 		var normal = rootObject.get("normal")
 				.getSuccess()
-				.flatMap(element -> SkillConnectionsGroupConfig.parse(element, skills)
+				.flatMap(element -> SkillConnectionsGroupConfig.parse(element, skills, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)
@@ -38,7 +40,7 @@ public class SkillConnectionsConfig {
 
 		var exclusive = rootObject.get("exclusive")
 				.getSuccess()
-				.flatMap(element -> SkillConnectionsGroupConfig.parse(element, skills)
+				.flatMap(element -> SkillConnectionsGroupConfig.parse(element, skills, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)
