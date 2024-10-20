@@ -17,7 +17,6 @@ public class FileConfigReader extends ConfigReader {
 	}
 
 	public Result<JsonElement, Problem> readFile(Path file) {
-		PathUtils.createFileIfMissing(file);
 		return JsonElement.parseFile(
 				file,
 				JsonPath.create(modConfigDir.relativize(file).toString())
