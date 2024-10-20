@@ -8,9 +8,10 @@ import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
-import net.puffish.skillsmod.util.DisposeContext;
 import net.puffish.skillsmod.config.FrameConfig;
 import net.puffish.skillsmod.config.IconConfig;
+import net.puffish.skillsmod.util.DisposeContext;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,8 +46,9 @@ public class SkillDefinitionConfig {
 	}
 
 	public static Result<SkillDefinitionConfig, Problem> parse(String id, JsonElement rootElement, ConfigContext context) {
-		return rootElement.getAsObject()
-				.andThen(rootObject -> SkillDefinitionConfig.parse(id, rootObject, context));
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnused(rootObject -> parse(id, rootObject, context), context)
+		);
 	}
 
 	public static Result<SkillDefinitionConfig, Problem> parse(String id, JsonObject rootObject, ConfigContext context) {
@@ -80,36 +82,57 @@ public class SkillDefinitionConfig {
 
 		var frame = rootObject.get("frame")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(element -> FrameConfig.parse(element)
+				.flatMap(element -> FrameConfig.parse(element, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)
 				.orElseGet(FrameConfig::createDefault);
 
-		var size = rootObject.getFloat("size")
+		var size = rootObject.get("size")
 				.getSuccess() // ignore failure because this property is optional
+				.flatMap(element -> element.getAsFloat()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
 				.orElse(1f);
 
 		var rewards = rootObject.getArray("rewards")
-				.andThen(array -> array.getAsList((i, element) -> SkillRewardConfig.parse(element, context)).mapFailure(Problem::combine))
-				.ifFailure(problems::add)
-				.getSuccess()
+				.getSuccess() // ignore failure because this property is optional
+				.flatMap(array -> array.getAsList((i, element) -> SkillRewardConfig.parse(element, context)).mapFailure(Problem::combine)
+						.ifFailure(problems::add)
+						.getSuccess())
 				.orElseGet(List::of);
 
-		var cost = rootObject.getInt("cost")
+		var cost = rootObject.get("cost")
 				.getSuccess() // ignore failure because this property is optional
+				.flatMap(element -> element.getAsInt()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
 				.orElse(1);
 
-		var requiredSkills = rootObject.getInt("required_skills")
+		var requiredSkills = rootObject.get("required_skills")
 				.getSuccess() // ignore failure because this property is optional
+				.flatMap(element -> element.getAsInt()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
 				.orElse(1);
 
-		var requiredPoints = rootObject.getInt("required_points")
+		var requiredPoints = rootObject.get("required_points")
 				.getSuccess() // ignore failure because this property is optional
+				.flatMap(element -> element.getAsInt()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
 				.orElse(0);
 
-		var requiredSpentPoints = rootObject.getInt("required_spent_points")
+		var requiredSpentPoints = rootObject.get("required_spent_points")
 				.getSuccess() // ignore failure because this property is optional
+				.flatMap(element -> element.getAsInt()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
 				.orElse(0);
 
 		if (problems.isEmpty()) {

@@ -13,8 +13,12 @@ import net.puffish.skillsmod.api.experience.source.ExperienceSource;
 import net.puffish.skillsmod.api.experience.source.ExperienceSourceConfigContext;
 import net.puffish.skillsmod.api.experience.source.ExperienceSourceDisposeContext;
 import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+
+import java.util.ArrayList;
+import java.util.Map;
 
 public class HealExperienceSource implements ExperienceSource {
 	private static final Identifier ID = SkillsMod.createIdentifier("heal");
@@ -50,21 +54,36 @@ public class HealExperienceSource implements ExperienceSource {
 	private static Result<HealExperienceSource, Problem> parse(ExperienceSourceConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(rootObject -> rootObject.get("variables")
-						.andThen(variablesElement -> Variables.parse(
-								variablesElement,
-								PROTOTYPE,
-								context
-						))
-						.andThen(variables -> rootObject.get("experience")
-								.andThen(experienceElement -> Calculation.parse(
-										experienceElement,
-										variables,
-										context
-								))
-						)
-						.mapSuccess(HealExperienceSource::new)
-				);
+				.andThen(rootObject -> rootObject.noUnused(o -> parse(o, context)));
+	}
+
+	private static Result<HealExperienceSource, Problem> parse(JsonObject rootObject, ExperienceSourceConfigContext context) {
+		var problems = new ArrayList<Problem>();
+
+		var variables = rootObject.get("variables")
+				.getSuccess() // ignore failure because this property is optional
+				.flatMap(variablesElement -> Variables.parse(variablesElement, PROTOTYPE, context)
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
+				.orElseGet(() -> Variables.create(Map.of()));
+
+		var optCalculation = rootObject.get("experience")
+				.andThen(experienceElement -> Calculation.parse(
+						experienceElement,
+						variables,
+						context
+				))
+				.ifFailure(problems::add)
+				.getSuccess();
+
+		if (problems.isEmpty()) {
+			return Result.success(new HealExperienceSource(
+					optCalculation.orElseThrow()
+			));
+		} else {
+			return Result.failure(Problem.combine(problems));
+		}
 	}
 
 	private record Data(ServerPlayerEntity player, float damage) { }

@@ -1,9 +1,11 @@
 package net.puffish.skillsmod.config.colors;
 
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 
@@ -41,16 +43,18 @@ public record ConnectionsColorsConfig(
 		);
 	}
 
-	public static Result<ConnectionsColorsConfig, Problem> parse(JsonElement rootElement) {
-		return rootElement.getAsObject().andThen(ConnectionsColorsConfig::parse);
+	public static Result<ConnectionsColorsConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context)
+		);
 	}
 
-	private static Result<ConnectionsColorsConfig, Problem> parse(JsonObject rootObject) {
+	private static Result<ConnectionsColorsConfig, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
 		var locked = rootObject.get("locked")
 				.getSuccess()
-				.flatMap(element -> FillStrokeColorsConfig.parse(element, DEFAULT_LOCKED)
+				.flatMap(element -> FillStrokeColorsConfig.parse(element, DEFAULT_LOCKED, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)
@@ -58,7 +62,7 @@ public record ConnectionsColorsConfig(
 
 		var available = rootObject.get("available")
 				.getSuccess()
-				.flatMap(element -> FillStrokeColorsConfig.parse(element, DEFAULT_AVAILABLE_AFFORDABLE)
+				.flatMap(element -> FillStrokeColorsConfig.parse(element, DEFAULT_AVAILABLE_AFFORDABLE, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)
@@ -66,7 +70,7 @@ public record ConnectionsColorsConfig(
 
 		var affordable = rootObject.get("affordable")
 				.getSuccess()
-				.flatMap(element -> FillStrokeColorsConfig.parse(element, DEFAULT_AVAILABLE_AFFORDABLE)
+				.flatMap(element -> FillStrokeColorsConfig.parse(element, DEFAULT_AVAILABLE_AFFORDABLE, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)
@@ -74,7 +78,7 @@ public record ConnectionsColorsConfig(
 
 		var unlocked = rootObject.get("unlocked")
 				.getSuccess()
-				.flatMap(element -> FillStrokeColorsConfig.parse(element, DEFAULT_UNLOCKED)
+				.flatMap(element -> FillStrokeColorsConfig.parse(element, DEFAULT_UNLOCKED, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)
@@ -82,7 +86,7 @@ public record ConnectionsColorsConfig(
 
 		var excluded = rootObject.get("excluded")
 				.getSuccess()
-				.flatMap(element -> FillStrokeColorsConfig.parse(element, DEFAULT_EXCLUDED)
+				.flatMap(element -> FillStrokeColorsConfig.parse(element, DEFAULT_EXCLUDED, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)

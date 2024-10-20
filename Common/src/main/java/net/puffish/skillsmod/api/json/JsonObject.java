@@ -5,6 +5,7 @@ import net.puffish.skillsmod.api.util.Result;
 
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 public interface JsonObject {
@@ -27,6 +28,8 @@ public interface JsonObject {
 	Stream<Map.Entry<String, JsonElement>> stream();
 
 	<S, F> Result<Map<String, S>, Map<String, F>> getAsMap(BiFunction<String, JsonElement, Result<S, F>> function);
+
+	<S> Result<S, Problem> noUnused(Function<JsonObject, Result<S, Problem>> function);
 
 	JsonPath getPath();
 

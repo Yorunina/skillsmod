@@ -31,6 +31,7 @@ import net.puffish.skillsmod.calculation.operation.builtin.ItemStackCondition;
 import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyEntityTypeTagCondition;
 import net.puffish.skillsmod.calculation.operation.builtin.legacy.LegacyItemTagCondition;
 import net.puffish.skillsmod.experience.source.builtin.util.AntiFarmingPerChunk;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -86,7 +87,7 @@ public class KillEntityExperienceSource implements ExperienceSource {
 	private static Result<KillEntityExperienceSource, Problem> parse(ExperienceSourceConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(rootObject -> parse(rootObject, context));
+				.andThen(LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context));
 	}
 	private static Result<KillEntityExperienceSource, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();

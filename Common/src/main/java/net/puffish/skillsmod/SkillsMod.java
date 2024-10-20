@@ -233,7 +233,7 @@ public class SkillsMod {
 		var context = new ConfigContextImpl(server);
 
 		reader.read(Path.of("config.json"))
-				.andThen(ModConfig::parse)
+				.andThen(rootElement -> ModConfig.parse(rootElement, context))
 				.andThen(modConfig -> loadCategories(reader, modConfig, SkillsAPI.MOD_ID, context)
 						.ifSuccess(map -> {
 							var cumulatedMap = new LinkedHashMap<>(map);
@@ -280,7 +280,7 @@ public class SkillsMod {
 			var context = new ConfigContextImpl(server);
 
 			reader.readResource(id, resource)
-					.andThen(rootElement -> PackConfig.parse(namespace, rootElement))
+					.andThen(rootElement -> PackConfig.parse(namespace, rootElement, context))
 					.andThen(packConfig -> loadCategories(reader, packConfig, namespace, context))
 					.andThen(map -> {
 						var problems = new ArrayList<Problem>();

@@ -1,5 +1,6 @@
 package net.puffish.skillsmod.config.skill;
 
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
@@ -16,12 +17,12 @@ public class SkillsConfig {
 		this.skills = skills;
 	}
 
-	public static Result<SkillsConfig, Problem> parse(JsonElement rootElement, SkillDefinitionsConfig definitions) {
-		return rootElement.getAsObject().andThen(rootObject -> SkillsConfig.parse(rootObject, definitions));
+	public static Result<SkillsConfig, Problem> parse(JsonElement rootElement, SkillDefinitionsConfig definitions, ConfigContext context) {
+		return rootElement.getAsObject().andThen(rootObject -> SkillsConfig.parse(rootObject, definitions, context));
 	}
 
-	public static Result<SkillsConfig, Problem> parse(JsonObject rootObject, SkillDefinitionsConfig definitions) {
-		return rootObject.getAsMap((key, value) -> SkillConfig.parse(key, value, definitions))
+	public static Result<SkillsConfig, Problem> parse(JsonObject rootObject, SkillDefinitionsConfig definitions, ConfigContext context) {
+		return rootObject.getAsMap((key, value) -> SkillConfig.parse(key, value, definitions, context))
 				.mapFailure(problems -> Problem.combine(problems.values()))
 				.mapSuccess(SkillsConfig::new);
 	}

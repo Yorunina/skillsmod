@@ -23,7 +23,7 @@ public class ExperienceConfig {
 
 	public static Result<Optional<ExperienceConfig>, Problem> parse(JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject()
-				.andThen(rootObject -> parse(rootObject, context));
+				.andThen(LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context));
 	}
 
 	public static Result<Optional<ExperienceConfig>, Problem> parse(JsonObject rootObject, ConfigContext context) {
@@ -36,7 +36,7 @@ public class ExperienceConfig {
 		).orElse(true);
 
 		var optExperiencePerLevel = rootObject.get("experience_per_level")
-				.andThen(ExperiencePerLevelConfig::parse)
+				.andThen(element -> ExperiencePerLevelConfig.parse(element, context))
 				.ifFailure(problems::add)
 				.getSuccess();
 
