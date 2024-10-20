@@ -16,11 +16,12 @@ import java.util.Optional;
 
 public record AntiFarmingPerChunk(int limitPerChunk, int resetAfterSeconds) {
 	public static Result<Optional<AntiFarmingPerChunk>, Problem> parse(JsonElement rootElement, ConfigContext context) {
-		return rootElement.getAsObject()
-				.andThen(rootObject -> parse(rootObject, context));
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context)
+		);
 	}
 
-	public static Result<Optional<AntiFarmingPerChunk>, Problem> parse(JsonObject rootObject, ConfigContext context) {
+	private static Result<Optional<AntiFarmingPerChunk>, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
 		var enabled = LegacyUtils.deprecated(

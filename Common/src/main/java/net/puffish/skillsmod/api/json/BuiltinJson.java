@@ -55,7 +55,7 @@ public final class BuiltinJson {
 
 	public static Result<StatusEffect, Problem> parseEffect(JsonElement element) {
 		return parseSomething(
-				element, 
+				element,
 				Registries.STATUS_EFFECT,
 				() -> "Expected effect",
 				id -> "Unknown effect `" + id + "`"
@@ -64,7 +64,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<StatusEffect>, Problem> parseEffectTag(JsonElement element) {
 		return parseSomethingTag(
-				element, 
+				element,
 				Registries.STATUS_EFFECT,
 				() -> "Expected effect tag",
 				id -> "Unknown effect tag `" + id + "`"
@@ -73,7 +73,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<StatusEffect>, Problem> parseEffectOrEffectTag(JsonElement element) {
 		return parseSomethingOrSomethingTag(
-				element, 
+				element,
 				Registries.STATUS_EFFECT,
 				() -> "Expected effect or effect tag",
 				id -> "Unknown effect or effect tag `" + id + "`"
@@ -82,7 +82,7 @@ public final class BuiltinJson {
 
 	public static Result<Block, Problem> parseBlock(JsonElement element) {
 		return parseSomething(
-				element, 
+				element,
 				Registries.BLOCK,
 				() -> "Expected block",
 				id -> "Unknown block `" + id + "`"
@@ -100,7 +100,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<Block>, Problem> parseBlockOrBlockTag(JsonElement element) {
 		return parseSomethingOrSomethingTag(
-				element, 
+				element,
 				Registries.BLOCK,
 				() -> "Expected block or block tag",
 				id -> "Unknown block or block tag `" + id + "`"
@@ -136,7 +136,7 @@ public final class BuiltinJson {
 
 	public static Result<EntityType<?>, Problem> parseEntityType(JsonElement element) {
 		return parseSomething(
-				element, 
+				element,
 				Registries.ENTITY_TYPE,
 				() -> "Expected entity type",
 				id -> "Unknown entity type `" + id + "`"
@@ -145,7 +145,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<EntityType<?>>, Problem> parseEntityTypeTag(JsonElement element) {
 		return parseSomethingTag(
-				element, 
+				element,
 				Registries.ENTITY_TYPE,
 				() -> "Expected entity type tag",
 				id -> "Unknown entity type tag `" + id + "`"
@@ -154,7 +154,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<EntityType<?>>, Problem> parseEntityTypeOrEntityTypeTag(JsonElement element) {
 		return parseSomethingOrSomethingTag(
-				element, 
+				element,
 				Registries.ENTITY_TYPE,
 				() -> "Expected entity type or entity type tag",
 				id -> "Unknown entity type or entity type tag `" + id + "`"
@@ -163,7 +163,7 @@ public final class BuiltinJson {
 
 	public static Result<Item, Problem> parseItem(JsonElement element) {
 		return parseSomething(
-				element, 
+				element,
 				Registries.ITEM,
 				() -> "Expected item",
 				id -> "Unknown item `" + id + "`"
@@ -172,7 +172,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<Item>, Problem> parseItemTag(JsonElement element) {
 		return parseSomethingTag(
-				element, 
+				element,
 				Registries.ITEM,
 				() -> "Expected item tag",
 				id -> "Unknown item tag `" + id + "`"
@@ -181,7 +181,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<Item>, Problem> parseItemOrItemTag(JsonElement element) {
 		return parseSomethingOrSomethingTag(
-				element, 
+				element,
 				Registries.ITEM,
 				() -> "Expected item or item tag",
 				id -> "Unknown item or item tag `" + id + "`"
@@ -190,7 +190,7 @@ public final class BuiltinJson {
 
 	public static Result<StatType<?>, Problem> parseStatType(JsonElement element) {
 		return parseSomething(
-				element, 
+				element,
 				Registries.STAT_TYPE,
 				() -> "Expected stat type",
 				id -> "Unknown stat type `" + id + "`"
@@ -199,7 +199,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<StatType<?>>, Problem> parseStatTypeTag(JsonElement element) {
 		return parseSomethingTag(
-				element, 
+				element,
 				Registries.STAT_TYPE,
 				() -> "Expected stat type tag",
 				id -> "Unknown stat type tag `" + id + "`"
@@ -208,7 +208,7 @@ public final class BuiltinJson {
 
 	public static Result<RegistryEntryList<StatType<?>>, Problem> parseStatTypeOrStatTypeTag(JsonElement element) {
 		return parseSomethingOrSomethingTag(
-				element, 
+				element,
 				Registries.STAT_TYPE,
 				() -> "Expected stat type or stat type tag",
 				id -> "Unknown stat type or stat type tag `" + id + "`"
@@ -273,15 +273,15 @@ public final class BuiltinJson {
 
 	public static Result<ItemStack, Problem> parseItemStack(JsonElement element) {
 		try {
-			return element.getAsObject().andThen(object -> {
+			return element.getAsObject().andThen(rootObject -> {
 				var problems = new ArrayList<Problem>();
 
-				var item = object.get("item")
+				var item = rootObject.get("item")
 						.andThen(BuiltinJson::parseItem)
 						.ifFailure(problems::add)
 						.getSuccess();
 
-				var nbt = object.get("nbt")
+				var nbt = rootObject.get("nbt")
 						.getSuccess()
 						.flatMap(nbtElement -> BuiltinJson.parseNbt(nbtElement)
 								.ifFailure(problems::add)

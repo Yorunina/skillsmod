@@ -14,6 +14,7 @@ import net.puffish.skillsmod.impl.rewards.RewardDisposeContextImpl;
 import net.puffish.skillsmod.reward.RewardRegistry;
 import net.puffish.skillsmod.reward.builtin.DummyReward;
 import net.puffish.skillsmod.util.DisposeContext;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 
@@ -27,8 +28,9 @@ public class SkillRewardConfig {
 	}
 
 	public static Result<SkillRewardConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
-		return rootElement.getAsObject()
-				.andThen(rootObject -> parse(rootObject, context));
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context)
+		);
 	}
 
 	public static Result<SkillRewardConfig, Problem> parse(JsonObject rootObject, ConfigContext context) {
@@ -46,8 +48,13 @@ public class SkillRewardConfig {
 
 		var maybeDataElement = rootObject.get("data");
 
-		var required = rootObject.getBoolean("required")
-				.getSuccessOrElse(e -> true);
+		var required = rootObject.get("required")
+				.getSuccess() // ignore failure because this property is optional
+				.flatMap(element -> element.getAsBoolean()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
+				.orElse(true);
 
 		if (problems.isEmpty()) {
 			return build(

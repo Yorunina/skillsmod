@@ -20,8 +20,10 @@ import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.experience.source.builtin.util.AntiFarmingPerEntity;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Optional;
 
 public class DealDamageExperienceSource implements ExperienceSource {
@@ -74,38 +76,39 @@ public class DealDamageExperienceSource implements ExperienceSource {
 	private static Result<DealDamageExperienceSource, Problem> parse(ExperienceSourceConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(rootObject -> parse(rootObject, context));
+				.andThen(LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context));
 	}
 
 	private static Result<DealDamageExperienceSource, Problem> parse(JsonObject rootObject, ExperienceSourceConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
-		var calculation = rootObject.get("variables")
-				.andThen(variablesElement -> Variables.parse(
-						variablesElement,
-						PROTOTYPE,
+		var variables = rootObject.get("variables")
+				.getSuccess() // ignore failure because this property is optional
+				.flatMap(variablesElement -> Variables.parse(variablesElement, PROTOTYPE, context)
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
+				.orElseGet(() -> Variables.create(Map.of()));
+
+		var optCalculation = rootObject.get("experience")
+				.andThen(experienceElement -> Calculation.parse(
+						experienceElement,
+						variables,
 						context
 				))
-				.andThen(variables -> rootObject.get("experience")
-						.andThen(experienceElement -> Calculation.parse(
-								experienceElement,
-								variables,
-								context
-						))
-				)
 				.ifFailure(problems::add)
 				.getSuccess();
 
 		var optAntiFarming = rootObject.get("anti_farming")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(element -> AntiFarmingPerEntity.parse(element)
+				.flatMap(element -> AntiFarmingPerEntity.parse(element, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				);
 
 		if (problems.isEmpty()) {
 			return Result.success(new DealDamageExperienceSource(
-					calculation.orElseThrow(),
+					optCalculation.orElseThrow(),
 					optAntiFarming
 			));
 		} else {

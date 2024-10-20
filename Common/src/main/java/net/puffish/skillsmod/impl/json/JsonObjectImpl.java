@@ -11,6 +11,7 @@ import net.puffish.skillsmod.util.JsonPathFailure;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class JsonObjectImpl implements JsonObject {
@@ -108,6 +109,20 @@ public class JsonObjectImpl implements JsonObject {
 			return Result.success(successes);
 		} else {
 			return Result.failure(failures);
+		}
+	}
+
+	@Override
+	public <S> Result<S, Problem> noUnused(Function<JsonObject, Result<S, Problem>> function) {
+		var tracking = new JsonObjectTrackingImpl(this);
+		var result = function.apply(tracking);
+
+		var problems = tracking.reportUnusedEntries();
+
+		if (problems.isEmpty()) {
+			return result;
+		} else {
+			return Result.failure(Problem.combine(problems));
 		}
 	}
 

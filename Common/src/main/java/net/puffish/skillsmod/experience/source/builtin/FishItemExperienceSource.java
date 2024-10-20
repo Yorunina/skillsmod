@@ -14,8 +14,13 @@ import net.puffish.skillsmod.api.experience.source.ExperienceSource;
 import net.puffish.skillsmod.api.experience.source.ExperienceSourceConfigContext;
 import net.puffish.skillsmod.api.experience.source.ExperienceSourceDisposeContext;
 import net.puffish.skillsmod.api.json.JsonElement;
+import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
+
+import java.util.ArrayList;
+import java.util.Map;
 
 public class FishItemExperienceSource implements ExperienceSource {
 	private static final Identifier ID = SkillsMod.createIdentifier("fish_item");
@@ -55,21 +60,36 @@ public class FishItemExperienceSource implements ExperienceSource {
 	private static Result<FishItemExperienceSource, Problem> parse(ExperienceSourceConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(rootObject -> rootObject.get("variables")
-						.andThen(variablesElement -> Variables.parse(
-								variablesElement,
-								PROTOTYPE,
-								context
-						))
-						.andThen(variables -> rootObject.get("experience")
-								.andThen(experienceElement -> Calculation.parse(
-										experienceElement,
-										variables,
-										context
-								))
-						)
-						.mapSuccess(FishItemExperienceSource::new)
-				);
+				.andThen(LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context));
+	}
+
+	private static Result<FishItemExperienceSource, Problem> parse(JsonObject rootObject, ExperienceSourceConfigContext context) {
+		var problems = new ArrayList<Problem>();
+
+		var variables = rootObject.get("variables")
+				.getSuccess() // ignore failure because this property is optional
+				.flatMap(variablesElement -> Variables.parse(variablesElement, PROTOTYPE, context)
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
+				.orElseGet(() -> Variables.create(Map.of()));
+
+		var optCalculation = rootObject.get("experience")
+				.andThen(experienceElement -> Calculation.parse(
+						experienceElement,
+						variables,
+						context
+				))
+				.ifFailure(problems::add)
+				.getSuccess();
+
+		if (problems.isEmpty()) {
+			return Result.success(new FishItemExperienceSource(
+					optCalculation.orElseThrow()
+			));
+		} else {
+			return Result.failure(Problem.combine(problems));
+		}
 	}
 
 	private record Data(ServerPlayerEntity player, ItemStack rod, ItemStack fished) { }

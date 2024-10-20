@@ -34,7 +34,7 @@ public class ScoreboardReward implements Reward {
 	private static Result<ScoreboardReward, Problem> parse(RewardConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(rootObject -> parse(rootObject, context));
+				.andThen(LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context));
 	}
 
 	private static Result<ScoreboardReward, Problem> parse(JsonObject rootObject, RewardConfigContext context) {
