@@ -6,15 +6,16 @@ import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.puffish.skillsmod.SkillsMod;
-import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.calculation.operation.Operation;
 import net.puffish.skillsmod.api.calculation.operation.OperationConfigContext;
+import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -43,7 +44,7 @@ public class AttributeOperation implements Operation<LivingEntity, EntityAttribu
 	public static Result<AttributeOperation, Problem> parse(OperationConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(AttributeOperation::parse);
+				.andThen(LegacyUtils.wrapNoUnused(AttributeOperation::parse, context));
 	}
 
 	public static Result<AttributeOperation, Problem> parse(JsonObject rootObject) {

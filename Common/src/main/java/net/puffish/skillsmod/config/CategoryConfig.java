@@ -1,15 +1,14 @@
 package net.puffish.skillsmod.config;
 
-import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.util.Identifier;
 import net.puffish.skillsmod.api.config.ConfigContext;
+import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.config.experience.ExperienceConfig;
 import net.puffish.skillsmod.config.skill.SkillConnectionsConfig;
 import net.puffish.skillsmod.config.skill.SkillDefinitionsConfig;
 import net.puffish.skillsmod.config.skill.SkillsConfig;
-import net.puffish.skillsmod.api.json.JsonElement;
-import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.util.DisposeContext;
 
 import java.util.ArrayList;
@@ -67,13 +66,13 @@ public class CategoryConfig {
 				.getSuccess();
 
 		var optSkills = optDefinitions.flatMap(
-				definitions -> SkillsConfig.parse(skillsElement, definitions)
+				definitions -> SkillsConfig.parse(skillsElement, definitions, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 		);
 
 		var optConnections = optSkills.flatMap(
-				skills -> SkillConnectionsConfig.parse(connectionsElement, skills)
+				skills -> SkillConnectionsConfig.parse(connectionsElement, skills, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 		);

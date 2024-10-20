@@ -18,6 +18,7 @@ import net.puffish.skillsmod.api.reward.RewardDisposeContext;
 import net.puffish.skillsmod.api.reward.RewardUpdateContext;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 
 import java.util.ArrayList;
@@ -49,7 +50,7 @@ public class AttributeReward implements Reward {
 	private static Result<AttributeReward, Problem> parse(RewardConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(AttributeReward::parse);
+				.andThen(LegacyUtils.wrapNoUnused(AttributeReward::parse, context));
 	}
 
 	private static Result<AttributeReward, Problem> parse(JsonObject rootObject) {

@@ -1,12 +1,14 @@
 package net.puffish.skillsmod.config.skill;
 
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.JsonArray;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
+import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.common.SkillConnection;
 import net.puffish.skillsmod.common.SkillPair;
-import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,9 +31,10 @@ public class SkillConnectionsGroupConfig {
 		return new SkillConnectionsGroupConfig(List.of(), Map.of());
 	}
 
-	public static Result<SkillConnectionsGroupConfig, Problem> parse(JsonElement rootElement, SkillsConfig skills) {
-		return rootElement.getAsObject()
-				.andThen(rootObject -> SkillConnectionsGroupConfig.parse(rootObject, skills));
+	public static Result<SkillConnectionsGroupConfig, Problem> parse(JsonElement rootElement, SkillsConfig skills, ConfigContext context) {
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, skills), context)
+		);
 	}
 
 	private static Result<SkillConnectionsGroupConfig, Problem> parse(JsonObject rootObject, SkillsConfig skills) {

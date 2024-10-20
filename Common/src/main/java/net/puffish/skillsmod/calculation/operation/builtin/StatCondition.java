@@ -3,13 +3,14 @@ package net.puffish.skillsmod.calculation.operation.builtin;
 import net.minecraft.stat.Stat;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.calculation.operation.Operation;
-import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.calculation.operation.OperationConfigContext;
+import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Objects;
@@ -34,7 +35,7 @@ public class StatCondition implements Operation<Stat<?>, Boolean> {
 	public static Result<StatCondition, Problem> parse(OperationConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(StatCondition::parse);
+				.andThen(LegacyUtils.wrapNoUnused(StatCondition::parse, context));
 	}
 
 	public static Result<StatCondition, Problem> parse(JsonObject rootObject) {

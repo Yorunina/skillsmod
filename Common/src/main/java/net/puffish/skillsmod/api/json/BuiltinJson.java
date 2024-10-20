@@ -283,15 +283,15 @@ public final class BuiltinJson {
 
 	public static Result<ItemStack, Problem> parseItemStack(JsonElement element) {
 		try {
-			return element.getAsObject().andThen(object -> {
+			return element.getAsObject().andThen(rootObject -> {
 				var problems = new ArrayList<Problem>();
 
-				var item = object.get("item")
+				var item = rootObject.get("item")
 						.andThen(BuiltinJson::parseItem)
 						.ifFailure(problems::add)
 						.getSuccess();
 
-				var components = object.get("components")
+				var components = rootObject.get("components")
 						.getSuccess()
 						.flatMap(nbtElement -> BuiltinJson.parseComponentChanges(nbtElement)
 								.ifFailure(problems::add)

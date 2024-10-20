@@ -8,6 +8,7 @@ import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -32,7 +33,7 @@ public final class SwitchOperation implements Operation<Boolean, Double> {
 	public static Result<SwitchOperation, Problem> parse(OperationConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(SwitchOperation::parse);
+				.andThen(LegacyUtils.wrapNoUnused(SwitchOperation::parse, context));
 	}
 
 	public static Result<SwitchOperation, Problem> parse(JsonObject rootObject) {

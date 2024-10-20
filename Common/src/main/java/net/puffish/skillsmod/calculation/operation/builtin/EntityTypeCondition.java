@@ -4,8 +4,8 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.registry.entry.RegistryEntryList;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.calculation.operation.Operation;
-import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.calculation.operation.OperationConfigContext;
+import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
@@ -34,7 +34,7 @@ public final class EntityTypeCondition implements Operation<EntityType<?>, Boole
 	public static Result<EntityTypeCondition, Problem> parse(OperationConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(rootObject -> parse(rootObject, context));
+				.andThen(LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context));
 	}
 
 	public static Result<EntityTypeCondition, Problem> parse(JsonObject rootObject, OperationConfigContext context) {

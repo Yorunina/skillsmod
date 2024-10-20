@@ -15,6 +15,7 @@ import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.calculation.LegacyBuiltinPrototypes;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -43,7 +44,7 @@ public class EffectOperation implements Operation<LivingEntity, StatusEffectInst
 	public static Result<EffectOperation, Problem> parse(OperationConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(EffectOperation::parse);
+				.andThen(LegacyUtils.wrapNoUnused(EffectOperation::parse, context));
 	}
 
 	public static Result<EffectOperation, Problem> parse(JsonObject rootObject) {
@@ -53,7 +54,7 @@ public class EffectOperation implements Operation<LivingEntity, StatusEffectInst
 				.andThen(BuiltinJson::parseEffect)
 				.ifFailure(problems::add)
 				.getSuccess()
-				.map(Registries.STATUS_EFFECT::getEntry);;
+				.map(Registries.STATUS_EFFECT::getEntry);
 
 		if (problems.isEmpty()) {
 			return Result.success(new EffectOperation(

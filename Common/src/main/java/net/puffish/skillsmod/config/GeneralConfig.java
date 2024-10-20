@@ -8,6 +8,7 @@ import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.config.colors.ColorsConfig;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 
@@ -43,7 +44,7 @@ public class GeneralConfig {
 
 	public static Result<GeneralConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject()
-				.andThen(rootObject -> parse(rootObject, context));
+				.andThen(LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context));
 	}
 
 	public static Result<GeneralConfig, Problem> parse(JsonObject rootObject, ConfigContext context) {
@@ -60,13 +61,13 @@ public class GeneralConfig {
 				.getSuccess();
 
 		var optBackground = rootObject.get("background")
-				.andThen(BackgroundConfig::parse)
+				.andThen(element -> BackgroundConfig.parse(element, context))
 				.ifFailure(problems::add)
 				.getSuccess();
 
 		var colors = rootObject.get("colors")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(element -> ColorsConfig.parse(element)
+				.flatMap(element -> ColorsConfig.parse(element, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)
