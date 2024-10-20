@@ -3,24 +3,12 @@ package net.puffish.skillsmod.util;
 import net.puffish.skillsmod.SkillsMod;
 import org.apache.commons.io.FileUtils;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 public class PathUtils {
-	public static void createFileIfMissing(Path path) {
-		if (!Files.exists(path)) {
-			try {
-				Files.createDirectories(path.getParent());
-				Files.createFile(path);
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-	}
-
 	public static boolean isDirectoryEmpty(Path path) {
 		try {
 			return FileUtils.isEmptyDirectory(path.toFile());
