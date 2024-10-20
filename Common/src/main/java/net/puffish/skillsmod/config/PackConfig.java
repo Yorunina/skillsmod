@@ -1,11 +1,13 @@
 package net.puffish.skillsmod.config;
 
 import net.puffish.skillsmod.SkillsMod;
+import net.puffish.skillsmod.api.config.ConfigContext;
+import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
-import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,23 +21,18 @@ public class PackConfig implements Config {
 		this.categories = categories;
 	}
 
-	public static Result<PackConfig, Problem> parse(String name, JsonElement rootElement) {
-		return rootElement.getAsObject()
-				.andThen(rootObject -> parse(name, rootObject));
+	public static Result<PackConfig, Problem> parse(String name, JsonElement rootElement, ConfigContext context) {
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnusedConfig(rootObject -> parse(name, rootObject), context)
+		);
 	}
 
-	public static Result<PackConfig, Problem> parse(String name, JsonObject rootObject) {
+	private static Result<PackConfig, Problem> parse(String name, JsonObject rootObject) {
 		var problems = new ArrayList<Problem>();
 
-		var version = rootObject.getInt("version")
-				.getSuccessOrElse(e -> Integer.MIN_VALUE);
-
-		if (version < SkillsMod.MIN_CONFIG_VERSION) {
-			return Result.failure(Problem.message("Data pack `" + name + "` is outdated. Check out the mod's wiki to learn how to update the data pack."));
-		}
-		if (version > SkillsMod.MAX_CONFIG_VERSION) {
-			return Result.failure(Problem.message("Data pack `" + name + "` is for a newer version of the mod. Please update the mod."));
-		}
+		var optVersion = rootObject.getInt("version")
+				.ifFailure(problems::add)
+				.getSuccess();
 
 		var optCategories = rootObject.getArray("categories")
 				.andThen(array -> array.getAsList((i, element) -> BuiltinJson.parseIdentifierPath(element))
@@ -45,6 +42,15 @@ public class PackConfig implements Config {
 				.getSuccess();
 
 		if (problems.isEmpty()) {
+			int version = optVersion.orElseThrow();
+
+			if (version < SkillsMod.MIN_CONFIG_VERSION) {
+				return Result.failure(Problem.message("Data pack `" + name + "` is outdated. Check out the mod's wiki to learn how to update the data pack."));
+			}
+			if (version > SkillsMod.MAX_CONFIG_VERSION) {
+				return Result.failure(Problem.message("Data pack `" + name + "` is for a newer version of the mod. Please update the mod."));
+			}
+
 			return Result.success(new PackConfig(
 					version,
 					optCategories.orElseThrow()

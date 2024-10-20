@@ -85,7 +85,9 @@ public class VariablesImpl<T, R> implements Variables<T, R> {
 			JsonElement rootElement,
 			PrototypeView<T> prototypeView,
 			ConfigContext context) {
-		return rootElement.getAsObject().andThen(rootObject -> parseVariable(rootObject, prototypeView, context));
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnused(rootObject -> parseVariable(rootObject, prototypeView, context), context)
+		);
 	}
 
 	public static <T> Result<Function<T, Double>, Problem> parseVariable(
@@ -123,8 +125,13 @@ public class VariablesImpl<T, R> implements Variables<T, R> {
 						.getSuccess()
 				);
 
-		var required = rootObject.getBoolean("required")
-				.getSuccessOrElse(e -> true);
+		var required = rootObject.get("required")
+				.getSuccess() // ignore failure because this property is optional
+				.flatMap(element -> element.getAsBoolean()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
+				.orElse(true);
 
 		if (problems.isEmpty()) {
 			return buildVariable(
@@ -150,7 +157,9 @@ public class VariablesImpl<T, R> implements Variables<T, R> {
 			PrototypeView<T> prototypeView,
 			ConfigContext context
 	) {
-		return rootElement.getAsObject().andThen(rootObject -> parseOperation(rootObject, prototypeView, context, ""));
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnused(rootObject -> parseOperation(rootObject, prototypeView, context, ""), context)
+		);
 	}
 
 	public static <T> Result<PrototypeView<T>, Problem> parseOperation(

@@ -1,12 +1,14 @@
 package net.puffish.skillsmod.config;
 
 import net.minecraft.text.Text;
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.config.colors.ColorsConfig;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 
@@ -40,12 +42,12 @@ public class GeneralConfig {
 		this.spentPointsLimit = spentPointsLimit;
 	}
 
-	public static Result<GeneralConfig, Problem> parse(JsonElement rootElement) {
+	public static Result<GeneralConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject()
-				.andThen(GeneralConfig::parse);
+				.andThen(LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context));
 	}
 
-	public static Result<GeneralConfig, Problem> parse(JsonObject rootObject) {
+	public static Result<GeneralConfig, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
 		var optTitle = rootObject.get("title")
@@ -59,13 +61,13 @@ public class GeneralConfig {
 				.getSuccess();
 
 		var optBackground = rootObject.get("background")
-				.andThen(BackgroundConfig::parse)
+				.andThen(element -> BackgroundConfig.parse(element, context))
 				.ifFailure(problems::add)
 				.getSuccess();
 
 		var colors = rootObject.get("colors")
 				.getSuccess() // ignore failure because this property is optional
-				.flatMap(element -> ColorsConfig.parse(element)
+				.flatMap(element -> ColorsConfig.parse(element, context)
 						.ifFailure(problems::add)
 						.getSuccess()
 				)

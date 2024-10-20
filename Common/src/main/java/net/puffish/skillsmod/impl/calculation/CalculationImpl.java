@@ -52,7 +52,7 @@ public class CalculationImpl<T> implements Calculation<T> {
 	) {
 		var problems = new ArrayList<Problem>();
 
-		var optCalculations = rootArray.getAsList((i, element) -> CalculationCase.parse(element, variableNames))
+		var optCalculations = rootArray.getAsList((i, element) -> CalculationCase.parse(element, variableNames, context))
 						.mapFailure(Problem::combine)
 						.ifFailure(problems::add)
 						.getSuccess();

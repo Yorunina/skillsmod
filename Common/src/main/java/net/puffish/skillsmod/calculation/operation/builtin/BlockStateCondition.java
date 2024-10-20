@@ -13,6 +13,7 @@ import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -37,7 +38,7 @@ public final class BlockStateCondition implements Operation<BlockState, Boolean>
 	public static Result<BlockStateCondition, Problem> parse(OperationConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(BlockStateCondition::parse);
+				.andThen(LegacyUtils.wrapNoUnused(BlockStateCondition::parse, context));
 	}
 
 	public static Result<BlockStateCondition, Problem> parse(JsonObject rootObject) {

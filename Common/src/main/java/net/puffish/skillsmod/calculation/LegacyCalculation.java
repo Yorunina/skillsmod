@@ -19,7 +19,9 @@ public class LegacyCalculation {
 			PrototypeView<T> prototype,
 			ConfigContext context
 	) {
-		return rootElement.getAsObject().andThen(rootObject -> parse(rootObject, prototype, context));
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, prototype, context), context)
+		);
 	}
 
 	public static <T> Result<Calculation<T>, Problem> parse(
@@ -43,12 +45,16 @@ public class LegacyCalculation {
 					);
 		}
 
+		var optCalculation = rootObject.get("experience")
+				.andThen(experienceElement -> Calculation.parse(
+						experienceElement,
+						Variables.combine(variablesList), context)
+				)
+				.ifFailure(problems::add)
+				.getSuccess();
+
 		if (problems.isEmpty()) {
-			return rootObject.get("experience")
-					.andThen(experienceElement -> Calculation.parse(
-							experienceElement,
-							Variables.combine(variablesList), context)
-					);
+			return Result.success(optCalculation.orElseThrow());
 		} else {
 			return Result.failure(Problem.combine(problems));
 		}

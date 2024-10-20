@@ -19,8 +19,7 @@ public class SkillDefinitionsConfig {
 	}
 
 	public static Result<SkillDefinitionsConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
-		return rootElement.getAsObject()
-				.andThen(rootObject -> parse(rootObject, context));
+		return rootElement.getAsObject().andThen(rootObject -> parse(rootObject, context));
 	}
 
 	public static Result<SkillDefinitionsConfig, Problem> parse(JsonObject rootObject, ConfigContext context) {

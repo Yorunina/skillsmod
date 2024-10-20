@@ -6,13 +6,14 @@ import net.minecraft.predicate.NbtPredicate;
 import net.minecraft.util.registry.RegistryEntryList;
 import net.puffish.skillsmod.SkillsMod;
 import net.puffish.skillsmod.api.calculation.operation.Operation;
-import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.calculation.operation.OperationConfigContext;
+import net.puffish.skillsmod.api.calculation.prototype.BuiltinPrototypes;
 import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -37,7 +38,7 @@ public final class ItemStackCondition implements Operation<ItemStack, Boolean> {
 	public static Result<ItemStackCondition, Problem> parse(OperationConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(ItemStackCondition::parse);
+				.andThen(LegacyUtils.wrapNoUnused(ItemStackCondition::parse, context));
 	}
 
 	public static Result<ItemStackCondition, Problem> parse(JsonObject rootObject) {
