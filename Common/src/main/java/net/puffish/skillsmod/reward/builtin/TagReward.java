@@ -11,6 +11,7 @@ import net.puffish.skillsmod.api.reward.RewardDisposeContext;
 import net.puffish.skillsmod.api.reward.RewardUpdateContext;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 
@@ -33,7 +34,7 @@ public class TagReward implements Reward {
 	private static Result<TagReward, Problem> parse(RewardConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(TagReward::parse);
+				.andThen(LegacyUtils.wrapNoUnused(TagReward::parse, context));
 	}
 
 	private static Result<TagReward, Problem> parse(JsonObject rootObject) {

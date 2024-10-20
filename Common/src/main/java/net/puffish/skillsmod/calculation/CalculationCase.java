@@ -1,14 +1,16 @@
 package net.puffish.skillsmod.calculation;
 
 import net.puffish.skillsmod.SkillsMod;
-import net.puffish.skillsmod.api.util.Problem;
-import net.puffish.skillsmod.expression.DefaultParser;
-import net.puffish.skillsmod.expression.Expression;
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.json.JsonPath;
+import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.expression.DefaultParser;
+import net.puffish.skillsmod.expression.Expression;
 import net.puffish.skillsmod.impl.util.ProblemImpl;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -51,11 +53,13 @@ public class CalculationCase {
 		}
 	}
 
-	public static Result<CalculationCase, Problem> parse(JsonElement rootElement, Set<String> expressionVariables) {
-		return rootElement.getAsObject().andThen(rootObject -> parse(rootObject, expressionVariables));
+	public static Result<CalculationCase, Problem> parse(JsonElement rootElement, Set<String> expressionVariables, ConfigContext context) {
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, expressionVariables), context)
+		);
 	}
 
-	public static Result<CalculationCase, Problem> parse(JsonObject rootObject, Set<String> expressionVariables) {
+	private static Result<CalculationCase, Problem> parse(JsonObject rootObject, Set<String> expressionVariables) {
 		var problems = new ArrayList<Problem>();
 
 		var condition = rootObject.get("condition")

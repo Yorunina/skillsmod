@@ -1,12 +1,14 @@
 package net.puffish.skillsmod.config;
 
 import net.minecraft.util.Identifier;
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.BuiltinJson;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
 import net.puffish.skillsmod.common.BackgroundPosition;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 
@@ -17,9 +19,9 @@ public record BackgroundConfig(
 		BackgroundPosition position
 ) {
 
-	public static Result<BackgroundConfig, Problem> parse(JsonElement rootElement) {
+	public static Result<BackgroundConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject().flatMap(
-				BackgroundConfig::parse,
+				LegacyUtils.wrapNoUnused(BackgroundConfig::parse, context),
 				failure -> BuiltinJson.parseIdentifier(rootElement)
 						.mapSuccess(texture -> new BackgroundConfig(texture, 16, 16, BackgroundPosition.TILE))
 		);
