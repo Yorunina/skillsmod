@@ -1,9 +1,11 @@
 package net.puffish.skillsmod.experience.source.builtin.util;
 
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,12 +14,13 @@ import java.util.Map;
 import java.util.Queue;
 
 public record AntiFarmingPerEntity(float limitPerEntity, int resetAfterSeconds) {
-	public static Result<AntiFarmingPerEntity, Problem> parse(JsonElement rootElement) {
-		return rootElement.getAsObject()
-				.andThen(AntiFarmingPerEntity::parse);
+	public static Result<AntiFarmingPerEntity, Problem> parse(JsonElement rootElement, ConfigContext context) {
+		return rootElement.getAsObject().andThen(
+				LegacyUtils.wrapNoUnused(AntiFarmingPerEntity::parse, context)
+		);
 	}
 
-	public static Result<AntiFarmingPerEntity, Problem> parse(JsonObject rootObject) {
+	private static Result<AntiFarmingPerEntity, Problem> parse(JsonObject rootObject) {
 		var problems = new ArrayList<Problem>();
 
 		var limitPerEntity = rootObject.getFloat("limit_per_entity")

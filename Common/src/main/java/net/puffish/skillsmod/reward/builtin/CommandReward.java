@@ -12,7 +12,9 @@ import net.puffish.skillsmod.api.reward.RewardDisposeContext;
 import net.puffish.skillsmod.api.reward.RewardUpdateContext;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -43,27 +45,45 @@ public class CommandReward implements Reward {
 	private static Result<CommandReward, Problem> parse(RewardConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(CommandReward::parse);
+				.andThen(LegacyUtils.wrapNoUnused(CommandReward::parse, context));
 	}
 
 	private static Result<CommandReward, Problem> parse(JsonObject rootObject) {
-		var command = rootObject.getString("command")
-				.getSuccess()
+		var problems = new ArrayList<Problem>();
+
+		var command = rootObject.get("command")
+				.getSuccess() // ignore failure because this property is optional
+				.flatMap(jsonElement -> jsonElement.getAsString()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
 				.orElse("");
 
-		var unlockCommand = rootObject.getString("unlock_command")
-				.getSuccess()
+		var unlockCommand = rootObject.get("unlock_command")
+				.getSuccess() // ignore failure because this property is optional
+				.flatMap(jsonElement -> jsonElement.getAsString()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
 				.orElse("");
 
-		var lockCommand = rootObject.getString("lock_command")
-				.getSuccess()
+		var lockCommand = rootObject.get("lock_command")
+				.getSuccess() // ignore failure because this property is optional
+				.flatMap(jsonElement -> jsonElement.getAsString()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
 				.orElse("");
 
-		return Result.success(new CommandReward(
-				command,
-				unlockCommand,
-				lockCommand
-		));
+		if (problems.isEmpty()) {
+			return Result.success(new CommandReward(
+					command,
+					unlockCommand,
+					lockCommand
+			));
+		} else {
+			return Result.failure(Problem.combine(problems));
+		}
 	}
 
 	private void executeCommand(ServerPlayerEntity player, String command) {

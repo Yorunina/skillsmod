@@ -32,7 +32,7 @@ public final class DamageTypeCondition implements Operation<String, Boolean> {
 	public static Result<DamageTypeCondition, Problem> parse(OperationConfigContext context) {
 		return context.getData()
 				.andThen(JsonElement::getAsObject)
-				.andThen(rootObject -> parse(rootObject, context));
+				.andThen(LegacyUtils.wrapNoUnused(rootObject -> parse(rootObject, context), context));
 	}
 
 	public static Result<DamageTypeCondition, Problem> parse(JsonObject rootObject, ConfigContext context) {

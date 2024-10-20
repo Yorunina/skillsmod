@@ -1,9 +1,11 @@
 package net.puffish.skillsmod.config.skill;
 
+import net.puffish.skillsmod.api.config.ConfigContext;
 import net.puffish.skillsmod.api.json.JsonElement;
 import net.puffish.skillsmod.api.json.JsonObject;
 import net.puffish.skillsmod.api.util.Problem;
 import net.puffish.skillsmod.api.util.Result;
+import net.puffish.skillsmod.util.LegacyUtils;
 
 import java.util.ArrayList;
 
@@ -22,13 +24,13 @@ public class SkillConfig {
 		this.isRoot = isRoot;
 	}
 
-	public static Result<SkillConfig, Problem> parse(String id, JsonElement rootElement, SkillDefinitionsConfig definitions) {
+	public static Result<SkillConfig, Problem> parse(String id, JsonElement rootElement, SkillDefinitionsConfig definitions, ConfigContext context) {
 		return rootElement.getAsObject().andThen(
-				rootObject -> SkillConfig.parse(id, rootObject, definitions)
+				LegacyUtils.wrapNoUnused(rootObject -> parse(id, rootObject, definitions), context)
 		);
 	}
 
-	public static Result<SkillConfig, Problem> parse(String id, JsonObject rootObject, SkillDefinitionsConfig definitions) {
+	private static Result<SkillConfig, Problem> parse(String id, JsonObject rootObject, SkillDefinitionsConfig definitions) {
 		var problems = new ArrayList<Problem>();
 
 		var optX = rootObject.getInt("x")
@@ -52,8 +54,12 @@ public class SkillConfig {
 				.ifFailure(problems::add)
 				.getSuccess();
 
-		var isRoot = rootObject.getBoolean("root")
+		var isRoot = rootObject.get("root")
 				.getSuccess() // ignore failure because this property is optional
+				.flatMap(element -> element.getAsBoolean()
+						.ifFailure(problems::add)
+						.getSuccess()
+				)
 				.orElse(false);
 
 		if (problems.isEmpty()) {
