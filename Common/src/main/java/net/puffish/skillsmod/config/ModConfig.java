@@ -25,11 +25,11 @@ public class ModConfig implements Config {
 
 	public static Result<ModConfig, Problem> parse(JsonElement rootElement, ConfigContext context) {
 		return rootElement.getAsObject().andThen(
-				LegacyUtils.wrapNoUnusedConfig(ModConfig::parse, context)
+				LegacyUtils.wrapNoUnusedConfig(rootObject -> parse(rootObject, context), context)
 		);
 	}
 
-	private static Result<ModConfig, Problem> parse(JsonObject rootObject) {
+	private static Result<ModConfig, Problem> parse(JsonObject rootObject, ConfigContext context) {
 		var problems = new ArrayList<Problem>();
 
 		var optVersion = rootObject.getInt("version")
@@ -63,6 +63,13 @@ public class ModConfig implements Config {
 			}
 			if (version > SkillsMod.MAX_CONFIG_VERSION) {
 				return Result.failure(Problem.message("Configuration is for a newer version of the mod. Please update the mod."));
+			}
+			if (version < SkillsMod.MAX_CONFIG_VERSION) {
+				context.emitWarning(rootObject.getPath()
+						.getObject("version")
+						.createProblem("Configuration uses outdated version. Please update the configuration version to " + SkillsMod.MAX_CONFIG_VERSION)
+						.toString()
+				);
 			}
 
 			return Result.success(new ModConfig(
