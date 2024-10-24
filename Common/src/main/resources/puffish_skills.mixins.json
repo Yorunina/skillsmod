@@ -13,7 +13,6 @@
 		"ItemStackMixin",
 		"LivingEntityMixin",
 		"PlayerEntityMixin",
-		"PersistentStateManagerMixin",
 		"ServerPlayerEntityMixin",
 		"WorldChunkMixin"
 	],
